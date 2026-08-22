@@ -1,0 +1,18 @@
+{
+  "name": "Sistema de Cotizaciones & Vinilos Pro",
+  "short_name": "CotizadorPro",
+  "description": "Calculadora de Vinilos por m², gestión de precios de proveedores, márgenes dinámicos y generador de cotizaciones en PDF.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%234f46e5'><rect width='512' height='512' rx='128' fill='%234f46e5'/><path d='M160 120h192c22 0 40 18 40 40v192c0 22-18 40-40 40H160c-22 0-40-18-40-40V160c0-22 18-40 40-40z' fill='none' stroke='white' stroke-width='32'/><circle cx='200' cy='220' r='24' fill='white'/><circle cx='312' cy='220' r='24' fill='white'/><path d='M180 320h152' stroke='white' stroke-width='32' stroke-linecap='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
