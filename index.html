@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistema Pro de Cotizaciones & Calculadora de Vinilos</title>
+    
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='4' width='20' height='16' rx='2'/><path d='M7 15h0'/><path d='M2 9.5h20'/></svg>">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- html2pdf.js for High-Res Client PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Confetti for approvals -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Sidebar Desktop -->
+    <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white border-r border-slate-800 shrink-0 select-none">
+        <div class="p-5 flex items-center gap-3 border-b border-slate-800/80">
+            <div id="sidebar-logo-container" class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/20 shrink-0">
+                <i data-lucide="calculator" class="w-5 h-5"></i>
+            </div>
+            <div class="overflow-hidden">
+                <h1 id="sidebar-company-name" class="font-bold text-sm text-white truncate leading-tight">Mi Empresa</h1>
+                <p class="text-[11px] text-indigo-400 font-medium tracking-wide">Cotizador & Vinilos Pro</p>
+            </div>
+        </div>
+
+        <!-- Navigation Menu Desktop -->
+        <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+            <button onclick="app.switchTab('tab-cotizador')" data-nav-tab="tab-cotizador" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="file-spreadsheet" class="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors"></i>
+                <span>Crear Cotización</span>
+                <span id="draft-item-count-badge" class="hidden ml-auto bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+            </button>
+
+            <button onclick="app.switchTab('tab-vinilos')" data-nav-tab="tab-vinilos" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="scissors" class="w-5 h-5 text-slate-400 group-hover:text-cyan-400 transition-colors"></i>
+                <span>Calculadora Vinilos</span>
+            </button>
+
+            <button onclick="app.switchTab('tab-historial')" data-nav-tab="tab-historial" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="history" class="w-5 h-5 text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                <span>Historial Cotizaciones</span>
+            </button>
+
+            <div class="pt-3 pb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Administración</div>
+
+            <button onclick="app.switchTab('tab-catalogo')" data-nav-tab="tab-catalogo" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="boxes" class="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors"></i>
+                <span>Proveedores & Precios</span>
+            </button>
+
+            <button onclick="app.switchTab('tab-ajustes')" data-nav-tab="tab-ajustes" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="settings" class="w-5 h-5 text-slate-400 group-hover:text-purple-400 transition-colors"></i>
+                <span>Configuración & Logo</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar Footer Status -->
+        <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
+            <div class="flex items-center justify-between text-xs text-slate-400 px-2 py-1">
+                <span class="flex items-center gap-1.5 font-medium">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Modo Offline Activo
+                </span>
+                <button onclick="app.quickBackup()" title="Descargar Respaldo Rápido" class="hover:text-white p-1 rounded transition-colors">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Top Header -->
+    <header class="md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 text-white border-b border-slate-800 shrink-0">
+        <div class="flex items-center gap-2.5">
+            <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                <i data-lucide="calculator" class="w-4 h-4"></i>
+            </div>
+            <span id="mobile-header-title" class="font-bold text-sm text-white">Cotizador Pro</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="app.switchTab('tab-ajustes')" class="p-2 text-slate-400 hover:text-white">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/70">
+        
+        <!-- Top Action / Context Bar -->
+        <div class="glass-header px-6 py-3.5 hidden md:flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <h2 id="page-current-title" class="text-xl font-extrabold text-slate-800">Nueva Cotización</h2>
+                <span id="page-current-subtitle" class="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full border border-indigo-200/60">Borrador Activo</span>
+            </div>
+            <div class="flex items-center gap-2" id="header-quick-actions">
+                <button onclick="app.startNewQuote()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 shadow-sm transition-all">
+                    <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i>
+                    Nueva Cotización
+                </button>
+                <button onclick="app.previewCurrentPDF()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 transition-all">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    Ver / Descargar PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Scrollable Tab Views Container -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8">
+
+            <!-- ============================================================== -->
+            <!-- TAB 1: CREADOR DE COTIZACIONES                                 -->
+            <!-- ============================================================== -->
+            <div id="tab-cotizador" class="tab-content active space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Encabezado de la Cotización: Datos Generales y Cliente -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Tarjeta: Datos del Cliente -->
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                                    <i data-lucide="user" class="w-4 h-4"></i>
+                                </span>
+                                <h3 class="font-bold text-sm text-slate-800">Información del Cliente</h3>
+                            </div>
+                            <span class="text-[11px] text-slate-400">Datos para la cabecera del PDF</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Nombre o Razón Social *</label>
+                                <input type="text" id="quote-client-name" placeholder="Ej. Inversiones El Sol C.A. / Juan Pérez" 
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Persona de Contacto</label>
+                                <input type="text" id="quote-client-contact" placeholder="Ej. Lic. Carlos Mendoza" 
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Teléfono / WhatsApp</label>
+                                <input type="text" id="quote-client-phone" placeholder="Ej. +58 412 1234567" 
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
+                                <input type="email" id="quote-client-email" placeholder="cliente@correo.com" 
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Dirección de Entrega</label>
+                                <input type="text" id="quote-client-address" placeholder="Ej. Av. Principal #10" 
+                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta: Metadatos y Fechas -->
+                    <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                                        <i data-lucide="file-check" class="w-4 h-4"></i>
+                                    </span>
+                                    <h3 class="font-bold text-sm text-slate-800">Folio & Estado</h3>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-bold text-slate-500">N°:</span>
+                                    <input type="text" id="quote-number-input" class="w-28 px-2.5 py-1 text-xs font-mono font-bold text-indigo-700 bg-indigo-50/50 border border-indigo-200 rounded-lg text-center focus:bg-white outline-none" />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha Emisión</label>
+                                    <input type="date" id="quote-date-input" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Válida Hasta</label>
+                                    <input type="date" id="quote-valid-until-input" class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Estado de la Cotización</label>
+                                <select id="quote-status-select" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                    <option value="Borrador">📝 Borrador (En preparación)</option>
+                                    <option value="Enviada">📤 Enviada al Cliente</option>
+                                    <option value="Aprobada">✅ Aprobada / En Producción</option>
+                                    <option value="Rechazada">❌ Rechazada / Vencida</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                            <span>Moneda: <strong id="quote-currency-badge" class="text-indigo-600 font-bold">$ USD</strong></span>
+                            <span>IVA Configurado: <strong id="quote-tax-badge" class="text-slate-700">16%</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Agregar Ítems / Productos a la Cotización -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div>
+                            <h3 class="font-bold text-base text-slate-800">Ítems & Servicios Presupuestados</h3>
+                            <p class="text-xs text-slate-500">El precio unitario y margen se ajustan automáticamente según la cantidad de venta</p>
+                        </div>
+                        
+                        <!-- Botones de Acción Rápida para añadir -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="app.openAddProductModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+                                <i data-lucide="package-plus" class="w-4 h-4"></i>
+                                + Catálogo / Proveedores
+                            </button>
+                            <button onclick="app.switchTab('tab-vinilos')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-cyan-50 text-cyan-700 hover:bg-cyan-100 transition-colors">
+                                <i data-lucide="scissors" class="w-4 h-4"></i>
+                                + Calcular Vinilo por m²
+                            </button>
+                            <button onclick="app.openAddCustomItemModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                + Ítem Libre
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Ítems de Cotización -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                    <th class="py-3 px-3 rounded-l-lg w-12 text-center">#</th>
+                                    <th class="py-3 px-3">Producto / Concepto</th>
+                                    <th class="py-3 px-3 w-28 text-center">Costo Prov.</th>
+                                    <th class="py-3 px-3 w-24 text-center">Margen %</th>
+                                    <th class="py-3 px-3 w-28 text-center">Cantidad</th>
+                                    <th class="py-3 px-3 w-32 text-right">Precio Venta Unit.</th>
+                                    <th class="py-3 px-3 w-32 text-right">Total</th>
+                                    <th class="py-3 px-3 rounded-r-lg w-12 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="quote-items-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Filas generadas dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Estado Vacío -->
+                    <div id="quote-empty-state" class="py-12 flex flex-col items-center justify-center text-center">
+                        <div class="h-14 w-14 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mb-3">
+                            <i data-lucide="shopping-cart" class="w-7 h-7"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-700 text-sm">No hay ítems en esta cotización</h4>
+                        <p class="text-xs text-slate-400 max-w-sm mt-1 mb-4">Agrega productos cargados de tus proveedores o usa la calculadora de vinilos por metro cuadrado.</p>
+                        <div class="flex gap-2">
+                            <button onclick="app.openAddProductModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl shadow-sm hover:bg-indigo-700">
+                                Explorar Catálogo
+                            </button>
+                            <button onclick="app.switchTab('tab-vinilos')" class="px-4 py-2 text-xs font-bold bg-cyan-600 text-white rounded-xl shadow-sm hover:bg-cyan-700">
+                                Calculadora de Vinilo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notas Adicionales y Cuadro de Totales -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-4 border-t border-slate-100">
+                        <div class="lg:col-span-7 space-y-3">
+                            <label class="block text-xs font-bold text-slate-600">Observaciones o Notas para el Cliente</label>
+                            <textarea id="quote-notes-input" rows="3" placeholder="Ej. Tiempo de entrega: 3 días hábiles. Incluye instalación en tienda..." 
+                                class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none resize-none"></textarea>
+                            
+                            <!-- Regla de Volumen Activa Info -->
+                            <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 flex items-start gap-2.5">
+                                <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5"></i>
+                                <div class="text-xs text-indigo-900 leading-relaxed">
+                                    <strong>Márgenes Automáticos por Volumen:</strong> Al cambiar las cantidades de los productos del catálogo, el sistema recalcula automáticamente el precio de venta según tus reglas de escala.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen Financiero -->
+                        <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                            <div class="flex justify-between items-center text-xs text-slate-600">
+                                <span class="font-medium">Subtotal Neto:</span>
+                                <span id="quote-subtotal-display" class="font-bold text-slate-800 font-mono text-sm">$ 0.00</span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs text-slate-600">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-medium">Descuento Especial:</span>
+                                    <input type="number" id="quote-discount-input" min="0" max="100" value="0" 
+                                        class="w-14 px-1.5 py-0.5 text-xs text-center font-bold bg-white border border-slate-200 rounded-md focus:border-indigo-500 outline-none" />
+                                    <span>%</span>
+                                </div>
+                                <span id="quote-discount-display" class="font-bold text-emerald-600 font-mono text-sm">-$ 0.00</span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs text-slate-600">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium">IVA / Impuesto:</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="quote-tax-toggle" class="sr-only peer" checked>
+                                        <div class="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                    <span id="quote-tax-rate-label" class="text-[11px] font-bold text-slate-500">(16%)</span>
+                                </div>
+                                <span id="quote-tax-display" class="font-bold text-slate-800 font-mono text-sm">$ 0.00</span>
+                            </div>
+
+                            <div class="border-t-2 border-slate-200 pt-3 flex justify-between items-baseline">
+                                <span class="text-sm font-extrabold text-slate-900 uppercase">TOTAL A PAGAR:</span>
+                                <span id="quote-total-display" class="text-2xl font-black text-indigo-700 font-mono">$ 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra Inferior de Acciones Principales -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <button onclick="app.saveCurrentQuote(true)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Guardar Cotización
+                        </button>
+                        <button onclick="app.startNewQuote()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all">
+                            <i data-lucide="file-plus" class="w-4 h-4"></i>
+                            Limpiar / Nueva
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="app.previewCurrentPDF()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-all">
+                            <i data-lucide="eye" class="w-4 h-4 text-indigo-300"></i>
+                            Vista Previa
+                        </button>
+                        <button onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-600/20 transition-all">
+                            <i data-lucide="file-down" class="w-4 h-4"></i>
+                            Descargar PDF
+                        </button>
+                        <button onclick="app.sendByEmail()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition-all">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                            Enviar por Correo
+                        </button>
+                        <button onclick="app.sendByWhatsApp()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            Enviar WhatsApp
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB 2: CALCULADORA DE VINILOS (CORTE, UV, TEXTIL)               -->
+            <!-- ============================================================== -->
+            <div id="tab-vinilos" class="tab-content space-y-6 max-w-6xl mx-auto">
+                
+                <!-- Encabezado de la Calculadora -->
+                <div class="bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 p-6 rounded-3xl text-white shadow-lg space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+                                <i data-lucide="scissors" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-black">Calculadora de Vinilos por Metro Cuadrado (m²)</h2>
+                                <p class="text-xs text-cyan-100">Calcula costos de material, mano de obra de corte, merma y precio de venta en segundos</p>
+                            </div>
+                        </div>
+                        <button onclick="app.openVinylPresetsModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-all">
+                            <i data-lucide="sliders" class="w-4 h-4"></i>
+                            Editar Precios Base / m²
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Panel de Entrada de Parámetros -->
+                    <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
+                        
+                        <!-- Selección de Tipo de Vinilo -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-2">Selecciona el Tipo de Trabajo / Vinilo</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="vinyl-type-selector-cards">
+                                <!-- Inyectado dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Dimensiones y Cantidad -->
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dimensiones de la Pieza</h4>
+                                <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                                    <button type="button" onclick="app.setVinylUnitMode('cm')" id="unit-btn-cm" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all">cm</button>
+                                    <button type="button" onclick="app.setVinylUnitMode('m')" id="unit-btn-m" class="px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all">metros</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Ancho (<span class="unit-label-span">cm</span>)</label>
+                                    <input type="number" id="vinyl-width-input" step="0.1" min="0" value="50" 
+                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Alto (<span class="unit-label-span">cm</span>)</label>
+                                    <input type="number" id="vinyl-height-input" step="0.1" min="0" value="30" 
+                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad (Pzas)</label>
+                                    <input type="number" id="vinyl-quantity-input" min="1" value="10" 
+                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center text-indigo-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de Costos y Margen -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Costo Mat. / m²</label>
+                                <div class="relative">
+                                    <input type="number" id="vinyl-cost-m2-input" step="0.1" 
+                                        class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                                    <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">$</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m²</label>
+                                <div class="relative">
+                                    <input type="number" id="vinyl-labor-m2-input" step="0.1" 
+                                        class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                                    <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">$</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">% Merma / Desp.</label>
+                                <div class="relative">
+                                    <input type="number" id="vinyl-waste-input" step="1" 
+                                        class="w-full pl-2 pr-6 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                                    <span class="absolute right-2.5 top-2 text-xs font-bold text-slate-400">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-indigo-600 mb-1">% Margen Ganancia</label>
+                                <div class="relative">
+                                    <input type="number" id="vinyl-margin-input" step="1" 
+                                        class="w-full pl-2 pr-6 py-2 text-xs font-black text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
+                                    <span class="absolute right-2.5 top-2 text-xs font-bold text-indigo-400">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Título Opcional para la Cotización -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Nombre / Detalle para la Cotización</label>
+                            <input type="text" id="vinyl-custom-title-input" placeholder="Ej. Vinilo Adhesivo para Rotulación de Vidrieras (Logo Empresa)" 
+                                class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                    </div>
+
+                    <!-- Panel de Resultados y Visualizador en Vivo -->
+                    <div class="lg:col-span-5 flex flex-col justify-between gap-5">
+                        
+                        <!-- Tarjeta de Resultados Financieros -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                            <h3 class="font-extrabold text-sm text-slate-800 border-b border-slate-100 pb-3 flex items-center justify-between">
+                                <span>Resumen del Cálculo</span>
+                                <span id="vinyl-m2-badge" class="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">0.00 m²</span>
+                            </h3>
+
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex justify-between text-slate-500">
+                                    <span>Área Neta Total:</span>
+                                    <span id="calc-net-area-display" class="font-bold text-slate-700">0.00 m²</span>
+                                </div>
+                                <div class="flex justify-between text-slate-500">
+                                    <span>Área con Merma (<span id="calc-waste-rate-display">15</span>%):</span>
+                                    <span id="calc-gross-area-display" class="font-bold text-slate-700">0.00 m²</span>
+                                </div>
+                                <div class="flex justify-between text-slate-500">
+                                    <span>Costo Material:</span>
+                                    <span id="calc-material-cost-display" class="font-bold text-slate-700">$ 0.00</span>
+                                </div>
+                                <div class="flex justify-between text-slate-500">
+                                    <span>Costo Mano de Obra / Corte:</span>
+                                    <span id="calc-labor-cost-display" class="font-bold text-slate-700">$ 0.00</span>
+                                </div>
+                                <div class="flex justify-between text-slate-600 pt-2 border-t border-slate-100">
+                                    <span class="font-semibold">Costo Base Total:</span>
+                                    <span id="calc-total-cost-display" class="font-bold text-slate-800">$ 0.00</span>
+                                </div>
+                                <div class="flex justify-between text-emerald-600">
+                                    <span class="font-semibold">Ganancia Neta Estimada:</span>
+                                    <span id="calc-profit-display" class="font-bold">+$ 0.00</span>
+                                </div>
+                            </div>
+
+                            <!-- Gran Cuadro de Precio Final -->
+                            <div class="bg-gradient-to-br from-indigo-50 to-cyan-50 p-4 rounded-2xl border border-indigo-100 space-y-2">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs font-bold text-slate-600 uppercase">Precio por Unidad:</span>
+                                    <span id="calc-unit-price-display" class="text-lg font-black text-indigo-600 font-mono">$ 0.00</span>
+                                </div>
+                                <div class="flex justify-between items-baseline border-t border-indigo-200/60 pt-2">
+                                    <span class="text-sm font-black text-slate-900 uppercase">PRECIO TOTAL VENTA:</span>
+                                    <span id="calc-total-sale-display" class="text-2xl font-black text-indigo-700 font-mono">$ 0.00</span>
+                                </div>
+                            </div>
+
+                            <!-- Botón Principal: Pasar a Cotización -->
+                            <button onclick="app.addVinylToCurrentQuote()" class="w-full py-3.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-95">
+                                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                                Agregar a Cotización Actual
+                            </button>
+                        </div>
+
+                        <!-- Previsualizador Visual de la Pieza -->
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2 text-center">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Proporción Visual Aproximada</span>
+                            <div class="vinyl-preview-box h-36 w-full">
+                                <div id="vinyl-visual-rect" class="vinyl-piece-rect" style="width: 140px; height: 80px;">
+                                    <span id="visual-dim-label" class="text-[11px] font-black text-indigo-700 font-mono">50 x 30 cm</span>
+                                    <span id="visual-qty-label" class="text-[10px] font-bold text-indigo-500">10 piezas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB 3: HISTORIAL DE COTIZACIONES                                -->
+            <!-- ============================================================== -->
+            <div id="tab-historial" class="tab-content space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Métricas Rápidas -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="text-xs text-slate-500 font-medium">Total Cotizaciones</div>
+                        <div id="metric-total-quotes" class="text-2xl font-black text-slate-800 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="text-xs text-emerald-600 font-medium">Aprobadas / Vendidas</div>
+                        <div id="metric-approved-quotes" class="text-2xl font-black text-emerald-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="text-xs text-blue-600 font-medium">Enviadas / En Espera</div>
+                        <div id="metric-sent-quotes" class="text-2xl font-black text-blue-600 mt-1">0</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="text-xs text-indigo-600 font-medium">Monto Total Aprobado</div>
+                        <div id="metric-approved-amount" class="text-2xl font-black text-indigo-600 mt-1 font-mono">$ 0.00</div>
+                    </div>
+                </div>
+
+                <!-- Tabla & Filtros -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div class="relative w-full sm:w-80">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                            <input type="text" id="history-search-input" placeholder="Buscar por cliente, folio o fecha..." 
+                                class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                        
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <select id="history-status-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                <option value="todos">Todos los Estados</option>
+                                <option value="Borrador">Borradores</option>
+                                <option value="Enviada">Enviadas</option>
+                                <option value="Aprobada">Aprobadas</option>
+                                <option value="Rechazada">Rechazadas</option>
+                            </select>
+                            <button onclick="app.startNewQuote()" class="px-3.5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shrink-0">
+                                + Crear Nueva
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Cotizaciones -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[750px]">
+                            <thead>
+                                <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                    <th class="py-3 px-3 w-28">Folio</th>
+                                    <th class="py-3 px-3">Cliente / Solicitante</th>
+                                    <th class="py-3 px-3 w-28 text-center">Fecha</th>
+                                    <th class="py-3 px-3 w-24 text-center">Ítems</th>
+                                    <th class="py-3 px-3 w-28 text-center">Estado</th>
+                                    <th class="py-3 px-3 w-32 text-right">Total</th>
+                                    <th class="py-3 px-3 w-40 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-quotes-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Inyectado dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB 4: CATÁLOGO DE PROVEEDORES & PRODUCTOS                     -->
+            <!-- ============================================================== -->
+            <div id="tab-catalogo" class="tab-content space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Sub-Tabs de Navegación -->
+                <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <button onclick="app.switchCatalogSubTab('products')" id="subtab-btn-products" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white transition-all">
+                        📦 Catálogo de Insumos & Precios
+                    </button>
+                    <button onclick="app.switchCatalogSubTab('suppliers')" id="subtab-btn-suppliers" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                        🏭 Base de Proveedores
+                    </button>
+                </div>
+
+                <!-- SUB-TAB 1: PRODUCTOS / INSUMOS -->
+                <div id="subtab-view-products" class="space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div class="relative w-full sm:w-80">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                                <input type="text" id="products-search-input" placeholder="Buscar por nombre, código o categoría..." 
+                                    class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <select id="products-category-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                    <option value="todas">Todas las Categorías</option>
+                                    <option value="Vinilos">Vinilos</option>
+                                    <option value="Textil">Textil</option>
+                                    <option value="Promocionales">Promocionales</option>
+                                    <option value="Insumos">Insumos</option>
+                                    <option value="Servicios">Servicios</option>
+                                </select>
+                                <button onclick="app.openProductModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all shrink-0">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    Nuevo Producto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Productos -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[800px]">
+                                <thead>
+                                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                        <th class="py-3 px-3 w-28">Código</th>
+                                        <th class="py-3 px-3">Producto / Insumo</th>
+                                        <th class="py-3 px-3 w-36">Proveedor</th>
+                                        <th class="py-3 px-3 w-24 text-center">Unidad</th>
+                                        <th class="py-3 px-3 w-28 text-right">Costo Prov.</th>
+                                        <th class="py-3 px-3 w-24 text-center">Margen</th>
+                                        <th class="py-3 px-3 w-32 text-right">Precio Venta (1u)</th>
+                                        <th class="py-3 px-3 w-28 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="products-tbody" class="divide-y divide-slate-100 text-sm">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB 2: PROVEEDORES -->
+                <div id="subtab-view-suppliers" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="font-bold text-sm text-slate-800">Proveedores Registrados</h3>
+                            <button onclick="app.openSupplierModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                Nuevo Proveedor
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="suppliers-cards-grid">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB 5: CONFIGURACIÓN & PERFIL DE EMPRESA                       -->
+            <!-- ============================================================== -->
+            <div id="tab-ajustes" class="tab-content space-y-6 max-w-5xl mx-auto">
+                
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-black text-slate-800">Identidad de Marca & Datos de Empresa</h2>
+                        <p class="text-xs text-slate-500">Esta información y tu logotipo aparecerán de forma automática en todas las cotizaciones en PDF</p>
+                    </div>
+
+                    <!-- Logo y Carga -->
+                    <div class="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div id="logo-preview-box" class="h-28 w-28 rounded-2xl bg-white border-2 border-dashed border-indigo-300 flex flex-col items-center justify-center text-center p-2 overflow-hidden shadow-inner shrink-0">
+                            <i data-lucide="image" class="w-8 h-8 text-indigo-400 mb-1"></i>
+                            <span class="text-[10px] text-slate-400 font-medium">Sin Logo</span>
+                        </div>
+
+                        <div class="space-y-2 text-center sm:text-left flex-1">
+                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Logotipo de la Empresa</h4>
+                            <p class="text-xs text-slate-500">Formatos recomendados: PNG o JPG con fondo transparente o blanco (máx. 2MB).</p>
+                            <div class="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all">
+                                    <i data-lucide="upload" class="w-4 h-4"></i>
+                                    Subir Nuevo Logo
+                                    <input type="file" id="logo-file-input" accept="image/*" class="hidden" onchange="app.handleLogoUpload(event)" />
+                                </label>
+                                <button type="button" onclick="app.removeLogo()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-200 text-slate-700 hover:bg-rose-100 hover:text-rose-700 transition-all">
+                                    Eliminar Logo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de Datos de Empresa -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Nombre Comercial / Empresa *</label>
+                            <input type="text" id="settings-company-name" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">RIF / NIT / Cédula Fiscal</label>
+                            <input type="text" id="settings-tax-id" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Teléfono Principal</label>
+                            <input type="text" id="settings-phone" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Correo de Contacto</label>
+                            <input type="email" id="settings-email" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Dirección Física o Taller</label>
+                            <input type="text" id="settings-address" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                    </div>
+
+                    <!-- Configuración Financiera -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Símbolo de Moneda</label>
+                            <input type="text" id="settings-currency" value="$" class="w-full px-3.5 py-2 text-sm text-center font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Código de Moneda</label>
+                            <input type="text" id="settings-currency-code" value="USD" class="w-full px-3.5 py-2 text-sm text-center font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">% Impuesto (IVA)</label>
+                            <input type="number" id="settings-tax-rate" value="16" class="w-full px-3.5 py-2 text-sm text-center font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        </div>
+                    </div>
+
+                    <!-- Datos Bancarios y Términos -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Cuentas Bancarias / Métodos de Pago</label>
+                            <textarea id="settings-bank-details" rows="4" class="w-full px-3.5 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Términos y Condiciones Predeterminados</label>
+                            <textarea id="settings-terms" rows="4" class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Escalas Globales de Márgenes por Volumen -->
+                    <div class="pt-4 border-t border-slate-100 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Reglas Globales de Escala por Cantidad (Márgenes %)</h3>
+                                <p class="text-xs text-slate-500">Porcentaje que se sumará al costo del proveedor según la cantidad cotizada</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3" id="global-tiers-inputs-container">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Botón Guardar Configuración -->
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <button onclick="app.saveProfileSettings()" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all">
+                            Guardar Cambios del Perfil
+                        </button>
+                    </div>
+
+                    <!-- Copias de Seguridad y Respaldo -->
+                    <div class="pt-6 border-t-2 border-slate-100 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Respaldar / Restaurar Toda la Información</h3>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button onclick="app.exportFullBackupJSON()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 shadow-sm transition-all">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                Descargar Copia de Seguridad (.JSON)
+                            </button>
+                            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 shadow-sm transition-all">
+                                <i data-lucide="upload" class="w-4 h-4"></i>
+                                Restaurar desde Archivo (.JSON)
+                                <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="app.importBackupJSON(event)" />
+                            </label>
+                            <button onclick="app.resetDataToDefault()" class="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all ml-auto">
+                                Restaurar Datos Demo de Fábrica
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-header border-t border-slate-200 z-40 flex items-center justify-around py-2 mobile-bottom-nav">
+        <button onclick="app.switchTab('tab-cotizador')" data-mobile-nav="tab-cotizador" class="flex flex-col items-center gap-1 text-indigo-600">
+            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Cotizar</span>
+        </button>
+        <button onclick="app.switchTab('tab-vinilos')" data-mobile-nav="tab-vinilos" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="scissors" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Vinilos</span>
+        </button>
+        <button onclick="app.switchTab('tab-historial')" data-mobile-nav="tab-historial" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="history" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Historial</span>
+        </button>
+        <button onclick="app.switchTab('tab-catalogo')" data-mobile-nav="tab-catalogo" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="boxes" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Precios</span>
+        </button>
+    </nav>
+
+    <!-- ============================================================== -->
+    <!-- MODALES DE LA APLICACIÓN                                       -->
+    <!-- ============================================================== -->
+
+    <!-- Modal: Vista Previa PDF -->
+    <div id="modal-pdf-preview" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
+                    <h3 class="font-bold text-sm">Vista Previa de Cotización</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        Descargar PDF
+                    </button>
+                    <button onclick="app.closeModal('modal-pdf-preview')" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-slate-200 flex justify-center" id="pdf-preview-render-area">
+                <!-- Documento HTML inyectado -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Agregar Producto de Catálogo a Cotización -->
+    <div id="modal-add-product" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-base text-slate-800">Seleccionar Producto del Catálogo</h3>
+                <button onclick="app.closeModal('modal-add-product')" class="p-1.5 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-4 border-b border-slate-100 shrink-0">
+                <input type="text" id="modal-search-product-input" placeholder="Escribe para buscar producto o insumo..." 
+                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-2" id="modal-products-list-container">
+                <!-- Lista de productos -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Agregar Ítem Libre / Servicio Manual -->
+    <div id="modal-add-custom-item" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-sm text-slate-800">Agregar Ítem Libre / Servicio</h3>
+                <button onclick="app.closeModal('modal-add-custom-item')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre o Descripción del Concepto *</label>
+                    <input type="text" id="custom-item-name" placeholder="Ej. Instalación de Avisos en Sitio" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Unidad</label>
+                        <input type="text" id="custom-item-unit" value="Servicio" 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad</label>
+                        <input type="number" id="custom-item-qty" value="1" min="1" 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Base ($)</label>
+                        <input type="number" id="custom-item-cost" step="0.1" value="10" 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">% Margen Ganancia</label>
+                        <input type="number" id="custom-item-margin" step="1" value="50" 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalles Extra</label>
+                    <input type="text" id="custom-item-notes" placeholder="Opcional..." 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="app.closeModal('modal-add-custom-item')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button onclick="app.submitCustomItem()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Agregar a Cotización</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear / Editar Producto -->
+    <div id="modal-edit-product" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="product-modal-title" class="font-bold text-sm text-slate-800">Nuevo Producto / Insumo</h3>
+                <button onclick="app.closeModal('modal-edit-product')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <input type="hidden" id="prod-form-id" />
+            <div class="space-y-3">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Código / SKU</label>
+                        <input type="text" id="prod-form-sku" placeholder="VIN-001" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Insumo / Producto *</label>
+                        <input type="text" id="prod-form-name" placeholder="Ej. Franela Algodón 24/1" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Proveedor</label>
+                        <select id="prod-form-supplier" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                            <!-- Inyectado dinámicamente -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
+                        <select id="prod-form-category" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                            <option value="Vinilos">Vinilos</option>
+                            <option value="Textil">Textil</option>
+                            <option value="Promocionales">Promocionales</option>
+                            <option value="Insumos">Insumos</option>
+                            <option value="Servicios">Servicios</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Unidad</label>
+                        <input type="text" id="prod-form-unit" value="Unidad" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Precio Costo Prov. ($)</label>
+                        <input type="number" id="prod-form-cost" step="0.01" value="5.00" 
+                            class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Margen Base (%)</label>
+                        <input type="number" id="prod-form-margin" step="1" value="50" 
+                            class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Especificaciones</label>
+                    <textarea id="prod-form-notes" rows="2" placeholder="Opcional..." 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="app.closeModal('modal-edit-product')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button onclick="app.submitProductForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Producto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear / Editar Proveedor -->
+    <div id="modal-edit-supplier" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="supplier-modal-title" class="font-bold text-sm text-slate-800">Nuevo Proveedor</h3>
+                <button onclick="app.closeModal('modal-edit-supplier')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <input type="hidden" id="sup-form-id" />
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Proveedor / Empresa *</label>
+                    <input type="text" id="sup-form-name" placeholder="Ej. Distribuidora Gráfica Nacional" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Contacto</label>
+                        <input type="text" id="sup-form-contact" placeholder="Ej. Carlos R." 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Teléfono</label>
+                        <input type="text" id="sup-form-phone" placeholder="+58 414..." 
+                            class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
+                    <input type="email" id="sup-form-email" placeholder="ventas@proveedor.com" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Categoría / Ramo</label>
+                    <input type="text" id="sup-form-category" placeholder="Vinilos, Tintas, Textil..." 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Condiciones Comerciales</label>
+                    <textarea id="sup-form-notes" rows="2" placeholder="Descuentos, días de despacho, etc..." 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="app.closeModal('modal-edit-supplier')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button onclick="app.submitSupplierForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Proveedor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de la Aplicación -->
+    <script src="js/db.js"></script>
+    <script src="js/vinilos.js"></script>
+    <script src="js/pdf-generator.js"></script>
+    <script src="js/cotizador.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Registrar Service Worker para soporte PWA offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration error', err));
+            });
+        }
+    </script>
+</body>
+</html>
