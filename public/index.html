@@ -53,7 +53,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=3.1">
+    <link rel="stylesheet" href="css/styles.css?v=3.2">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -506,7 +506,7 @@
                         <!-- Dimensiones y Cantidad -->
                         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
                             <div class="flex items-center justify-between">
-                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dimensiones de la Pieza</h4>
+                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dimensiones del Trabajo a Cotizar</h4>
                                 <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
                                     <button type="button" onclick="app.setVinylUnitMode('cm')" id="unit-btn-cm" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all">cm</button>
                                     <button type="button" onclick="app.setVinylUnitMode('m')" id="unit-btn-m" class="px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all">metros</button>
@@ -528,6 +528,40 @@
                                     <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad (Pzas)</label>
                                     <input type="number" id="vinyl-quantity-input" min="1" value="10" 
                                         class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center text-indigo-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Medidas del Material / Bobina Comprada (ej. 58 cm x 100 cm) -->
+                        <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="ruler" class="w-4 h-4 text-indigo-600"></i>
+                                    <h4 class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Medida de Compra del Vinilo / Bobina</h4>
+                                </div>
+                                <span id="vinyl-roll-calc-equivalent" class="text-[11px] font-bold text-indigo-700 bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200 shadow-sm">
+                                    Equivale a $7.76 / m²
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho Comprado (cm)</label>
+                                    <input type="number" id="vinyl-roll-width-input" step="1" value="58" placeholder="58"
+                                        class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo Comprado (cm)</label>
+                                    <input type="number" id="vinyl-roll-length-input" step="1" value="100" placeholder="100"
+                                        class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Precio Pagado ($)</label>
+                                    <div class="relative">
+                                        <input type="number" id="vinyl-roll-cost-input" step="0.01" value="4.50" placeholder="4.50"
+                                            class="w-full pl-5 pr-2 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
+                                        <span class="absolute left-2 top-2 text-xs font-bold text-slate-400">$</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1004,11 +1038,34 @@
                     <input type="text" id="vinyl-preset-form-name" placeholder="Ej. Vinilo Reflectivo de Seguridad" 
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                 </div>
+
+                <!-- Medida Habitual de Compra (ej. 58x100 cm) -->
+                <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-2">
+                    <label class="block text-xs font-bold text-indigo-950">Medida Habitual de Compra (Bobina / Pliego)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Ancho (cm)</label>
+                            <input type="number" id="vinyl-preset-form-roll-w" step="1" value="58" oninput="app.syncPresetCostFromRoll()"
+                                class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Largo (cm)</label>
+                            <input type="number" id="vinyl-preset-form-roll-l" step="1" value="100" oninput="app.syncPresetCostFromRoll()"
+                                class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Precio Pagado ($)</label>
+                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="4.50" oninput="app.syncPresetCostFromRoll()"
+                                class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none text-center" />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Mat. / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-cost" step="0.1" value="8.0" 
-                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Resultante / m² ($)</label>
+                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="7.76" 
+                            class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m² ($)</label>
@@ -1288,18 +1345,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=3.1"></script>
-    <script src="js/db.js?v=3.1"></script>
-    <script src="js/vinilos.js?v=3.1"></script>
-    <script src="js/pdf-generator.js?v=3.1"></script>
-    <script src="js/cotizador.js?v=3.1"></script>
-    <script src="js/app.js?v=3.1"></script>
+    <script src="js/firebase-config.js?v=3.2"></script>
+    <script src="js/db.js?v=3.2"></script>
+    <script src="js/vinilos.js?v=3.2"></script>
+    <script src="js/pdf-generator.js?v=3.2"></script>
+    <script src="js/cotizador.js?v=3.2"></script>
+    <script src="js/app.js?v=3.2"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=3.1').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=3.2').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

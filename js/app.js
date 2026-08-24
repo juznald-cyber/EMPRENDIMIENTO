@@ -131,10 +131,19 @@ class AppController {
     bindEvents() {
         // Eventos de la Calculadora de Vinilos
         const vinylInputs = ['vinyl-width-input', 'vinyl-height-input', 'vinyl-quantity-input', 
+                             'vinyl-roll-width-input', 'vinyl-roll-length-input', 'vinyl-roll-cost-input',
                              'vinyl-cost-m2-input', 'vinyl-labor-m2-input', 'vinyl-waste-input', 'vinyl-margin-input'];
         vinylInputs.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('input', () => this.calculateVinylLive());
+            if (el) {
+                el.addEventListener('input', () => {
+                    if (id.startsWith('vinyl-roll-')) {
+                        this.syncRollToCostM2();
+                    } else {
+                        this.calculateVinylLive();
+                    }
+                });
+            }
         });
 
         // Eventos del Cotizador
@@ -361,6 +370,36 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
+    syncRollToCostM2() {
+        const rollW = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
+        const rollL = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
+        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value) || 0;
+
+        const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const costInput = document.getElementById('vinyl-cost-m2-input');
+        const badge = document.getElementById('vinyl-roll-calc-equivalent');
+
+        if (costInput && costM2 > 0) {
+            costInput.value = costM2.toFixed(2);
+        }
+        if (badge) {
+            badge.innerText = `Equivale a $${costM2.toFixed(2)} / m²`;
+        }
+        this.calculateVinylLive();
+    }
+
+    syncPresetCostFromRoll() {
+        const rollW = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
+        const rollL = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
+        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
+
+        const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const costInput = document.getElementById('vinyl-preset-form-cost');
+        if (costInput && costM2 > 0) {
+            costInput.value = costM2.toFixed(2);
+        }
+    }
+
     selectVinylPreset(presetId, triggerCalc = true) {
         window.vinylCalc.currentPresetId = presetId;
         const preset = window.vinylCalc.getPreset(presetId);
@@ -368,15 +407,26 @@ class AppController {
 
         this.renderVinylTypeSelectors();
 
+        const rollWInp = document.getElementById('vinyl-roll-width-input');
+        const rollLInp = document.getElementById('vinyl-roll-length-input');
+        const rollCostInp = document.getElementById('vinyl-roll-cost-input');
+
         const costInp = document.getElementById('vinyl-cost-m2-input');
         const laborInp = document.getElementById('vinyl-labor-m2-input');
         const wasteInp = document.getElementById('vinyl-waste-input');
         const marginInp = document.getElementById('vinyl-margin-input');
 
-        if (costInp) costInp.value = preset.costPerM2;
+        if (rollWInp) rollWInp.value = preset.rollWidthCm || 58;
+        if (rollLInp) rollLInp.value = preset.rollLengthCm || 100;
+        if (rollCostInp) rollCostInp.value = preset.rollCost || (preset.costPerM2 ? ((preset.costPerM2 * (preset.rollWidthCm || 58) * (preset.rollLengthCm || 100)) / 10000).toFixed(2) : 4.50);
+
+        if (costInp) costInp.value = preset.costPerM2 || 7.76;
         if (laborInp) laborInp.value = preset.laborCostPerM2;
         if (wasteInp) wasteInp.value = preset.wasteRate;
         if (marginInp) marginInp.value = preset.defaultMargin;
+
+        const badge = document.getElementById('vinyl-roll-calc-equivalent');
+        if (badge) badge.innerText = `Equivale a $${(preset.costPerM2 || 7.76).toFixed(2)} / m²`;
 
         if (triggerCalc) {
             this.calculateVinylLive();
@@ -393,7 +443,10 @@ class AppController {
             if (title) title.innerText = 'Editar Tipo de Vinilo';
             document.getElementById('vinyl-preset-form-id').value = p.id;
             document.getElementById('vinyl-preset-form-name').value = p.name || '';
-            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
+            document.getElementById('vinyl-preset-form-roll-w').value = p.rollWidthCm || 58;
+            document.getElementById('vinyl-preset-form-roll-l').value = p.rollLengthCm || 100;
+            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 4.50;
+            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 7.76;
             document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 || 0;
             document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
             document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
@@ -403,7 +456,10 @@ class AppController {
             if (title) title.innerText = 'Nuevo Tipo de Vinilo / Trabajo';
             document.getElementById('vinyl-preset-form-id').value = '';
             document.getElementById('vinyl-preset-form-name').value = '';
-            document.getElementById('vinyl-preset-form-cost').value = '7.50';
+            document.getElementById('vinyl-preset-form-roll-w').value = '58';
+            document.getElementById('vinyl-preset-form-roll-l').value = '100';
+            document.getElementById('vinyl-preset-form-roll-cost').value = '4.50';
+            document.getElementById('vinyl-preset-form-cost').value = '7.76';
             document.getElementById('vinyl-preset-form-labor').value = '4.00';
             document.getElementById('vinyl-preset-form-waste').value = '12';
             document.getElementById('vinyl-preset-form-margin').value = '50';
@@ -417,6 +473,9 @@ class AppController {
     submitVinylPresetForm() {
         const id = document.getElementById('vinyl-preset-form-id').value;
         const name = document.getElementById('vinyl-preset-form-name').value.trim();
+        const rollWidthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-w').value) || 58;
+        const rollLengthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-l').value) || 100;
+        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 4.50;
         const costPerM2 = parseFloat(document.getElementById('vinyl-preset-form-cost').value) || 0;
         const laborCostPerM2 = parseFloat(document.getElementById('vinyl-preset-form-labor').value) || 0;
         const wasteRate = parseFloat(document.getElementById('vinyl-preset-form-waste').value) || 0;
@@ -431,6 +490,9 @@ class AppController {
         const preset = {
             id: id || undefined,
             name,
+            rollWidthCm,
+            rollLengthCm,
+            rollCost,
             costPerM2,
             laborCostPerM2,
             wasteRate,
@@ -481,6 +543,9 @@ class AppController {
         const width = parseFloat(document.getElementById('vinyl-width-input')?.value) || 0;
         const height = parseFloat(document.getElementById('vinyl-height-input')?.value) || 0;
         const qty = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
+        const rollWidthCm = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
+        const rollLengthCm = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
+        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value);
         const customCost = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value);
         const customLabor = parseFloat(document.getElementById('vinyl-labor-m2-input')?.value);
         const customWaste = parseFloat(document.getElementById('vinyl-waste-input')?.value);
@@ -493,6 +558,9 @@ class AppController {
             height,
             unitMode: window.vinylCalc.unitMode,
             quantity: qty,
+            rollWidthCm,
+            rollLengthCm,
+            rollCost,
             customCostM2: customCost,
             customLaborM2: customLabor,
             customWaste: customWaste,
