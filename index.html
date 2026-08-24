@@ -54,6 +54,99 @@
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
+    <!-- ============================================================== -->
+    <!-- PANTALLA DE AUTENTICACIÓN / LOGIN & REGISTRO                   -->
+    <!-- ============================================================== -->
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+            <!-- Header con Logo -->
+            <div class="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white text-center">
+                <div class="h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-md mx-auto flex items-center justify-center mb-3 shadow-inner">
+                    <i data-lucide="calculator" class="w-8 h-8 text-white"></i>
+                </div>
+                <h2 class="text-xl font-black tracking-tight">Sistema de Cotizaciones & Vinilos</h2>
+                <p class="text-xs text-indigo-100 mt-1">Ingresa a tu cuenta para gestionar precios y cotizaciones</p>
+            </div>
+
+            <!-- Tabs de Login / Registro -->
+            <div class="flex border-b border-slate-100">
+                <button type="button" onclick="app.switchAuthTab('login')" id="auth-tab-login" class="flex-1 py-3 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 transition-all">
+                    Iniciar Sesión
+                </button>
+                <button type="button" onclick="app.switchAuthTab('register')" id="auth-tab-register" class="flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-700 transition-all">
+                    Crear Nuevo Usuario
+                </button>
+            </div>
+
+            <!-- Formulario de Iniciar Sesión -->
+            <form id="form-login" onsubmit="app.handleLoginSubmit(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Usuario o Correo Electrónico</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                        <input type="text" id="login-identifier" value="admin" required placeholder="admin o correo@ejemplo.com" 
+                            class="w-full pl-10 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                        <input type="password" id="login-password" value="admin123" required placeholder="••••••••" 
+                            class="w-full pl-10 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        Ingresar al Sistema
+                    </button>
+                </div>
+
+                <p class="text-[11px] text-center text-slate-400">
+                    Usuario demo por defecto: <strong class="text-slate-700">admin</strong> / Clave: <strong class="text-slate-700">admin123</strong>
+                </p>
+            </form>
+
+            <!-- Formulario de Crear Usuario -->
+            <form id="form-register" onsubmit="app.handleRegisterSubmit(event)" class="p-6 space-y-3.5 hidden">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre Completo</label>
+                    <input type="text" id="register-name" required placeholder="Ej. Juan Pérez" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre de Usuario (Login)</label>
+                    <input type="text" id="register-username" required placeholder="juanperez" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
+                    <input type="email" id="register-email" required placeholder="juan@correo.com" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Contraseña</label>
+                    <input type="password" id="register-password" required minlength="4" placeholder="••••••••" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Crear Cuenta y Entrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- INTERFAZ PRINCIPAL DE LA APLICACIÓN                            -->
+    <!-- ============================================================== -->
+
     <!-- Sidebar Desktop -->
     <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white border-r border-slate-800 shrink-0 select-none">
         <div class="p-5 flex items-center gap-3 border-b border-slate-800/80">
@@ -97,15 +190,21 @@
             </button>
         </nav>
 
-        <!-- Sidebar Footer Status -->
-        <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
-            <div class="flex items-center justify-between text-xs text-slate-400 px-2 py-1">
-                <span class="flex items-center gap-1.5 font-medium">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Modo Offline Activo
-                </span>
-                <button onclick="app.quickBackup()" title="Descargar Respaldo Rápido" class="hover:text-white p-1 rounded transition-colors">
-                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
+        <!-- Sidebar Footer Status & Usuario -->
+        <div class="p-3 border-t border-slate-800/80 bg-slate-950/40 space-y-2">
+            <div class="flex items-center justify-between px-2 text-xs">
+                <div class="flex items-center gap-2 truncate">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span id="sidebar-user-name" class="font-bold text-slate-300 truncate">Admin</span>
+                </div>
+                <button onclick="app.logout()" title="Cerrar Sesión" class="text-slate-400 hover:text-rose-400 p-1 rounded transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-500 px-2">
+                <span>Modo Offline</span>
+                <button onclick="app.quickBackup()" title="Respaldo JSON" class="hover:text-white">
+                    <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
         </div>
@@ -120,8 +219,8 @@
             <span id="mobile-header-title" class="font-bold text-sm text-white">Cotizador Pro</span>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="app.switchTab('tab-ajustes')" class="p-2 text-slate-400 hover:text-white">
-                <i data-lucide="settings" class="w-5 h-5"></i>
+            <button onclick="app.logout()" title="Cerrar Sesión" class="p-2 text-slate-400 hover:text-rose-400">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
             </button>
         </div>
     </header>
@@ -142,7 +241,7 @@
                 </button>
                 <button onclick="app.previewCurrentPDF()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 transition-all">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
-                    Ver / Descargar PDF
+                    Ver / Descargar PDF (Carta)
                 </button>
             </div>
         </div>
@@ -155,7 +254,7 @@
             <!-- ============================================================== -->
             <div id="tab-cotizador" class="tab-content active space-y-6 max-w-7xl mx-auto">
                 
-                <!-- Encabezado de la Cotización: Datos Generales y Cliente -->
+                <!-- Encabezado de la Cotización: Datos Generales y Cliente con RUT -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     
                     <!-- Tarjeta: Datos del Cliente -->
@@ -165,36 +264,41 @@
                                 <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
                                     <i data-lucide="user" class="w-4 h-4"></i>
                                 </span>
-                                <h3 class="font-bold text-sm text-slate-800">Información del Cliente</h3>
+                                <h3 class="font-bold text-sm text-slate-800">Información del Cliente / Solicitante</h3>
                             </div>
                             <span class="text-[11px] text-slate-400">Datos para la cabecera del PDF</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div class="sm:col-span-2">
+                            <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Nombre o Razón Social *</label>
                                 <input type="text" id="quote-client-name" placeholder="Ej. Inversiones El Sol C.A. / Juan Pérez" 
-                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-indigo-700 mb-1">RUT / Cédula / NIT del Cliente</label>
+                                <input type="text" id="quote-client-rut" placeholder="Ej. 12.345.678-9 / J-12345678-0" 
+                                    class="w-full px-3.5 py-2 text-xs font-bold font-mono bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Persona de Contacto</label>
                                 <input type="text" id="quote-client-contact" placeholder="Ej. Lic. Carlos Mendoza" 
-                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Teléfono / WhatsApp</label>
                                 <input type="text" id="quote-client-phone" placeholder="Ej. +58 412 1234567" 
-                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Correo Electrónico</label>
                                 <input type="email" id="quote-client-email" placeholder="cliente@correo.com" 
-                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Dirección de Entrega</label>
                                 <input type="text" id="quote-client-address" placeholder="Ej. Av. Principal #10" 
-                                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all" />
                             </div>
                         </div>
                     </div>
@@ -249,7 +353,7 @@
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                         <div>
                             <h3 class="font-bold text-base text-slate-800">Ítems & Servicios Presupuestados</h3>
-                            <p class="text-xs text-slate-500">El precio unitario y margen se ajustan automáticamente según la cantidad de venta</p>
+                            <p class="text-xs text-slate-500">Costos y márgenes escalan automáticamente al cambiar las cantidades</p>
                         </div>
                         
                         <!-- Botones de Acción Rápida para añadir -->
@@ -318,7 +422,7 @@
                             <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 flex items-start gap-2.5">
                                 <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5"></i>
                                 <div class="text-xs text-indigo-900 leading-relaxed">
-                                    <strong>Márgenes Automáticos por Volumen:</strong> Al cambiar las cantidades de los productos del catálogo, el sistema recalcula automáticamente el precio de venta según tus reglas de escala.
+                                    <strong>Cálculo Automático Exacto:</strong> Los costos por escala de proveedor y los márgenes por volumen se aplican en vivo en base al subtotal e ítems.
                                 </div>
                             </div>
                         </div>
@@ -332,7 +436,7 @@
 
                             <div class="flex justify-between items-center text-xs text-slate-600">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="font-medium">Descuento Especial:</span>
+                                    <span class="font-medium">Descuento:</span>
                                     <input type="number" id="quote-discount-input" min="0" max="100" value="0" 
                                         class="w-14 px-1.5 py-0.5 text-xs text-center font-bold bg-white border border-slate-200 rounded-md focus:border-indigo-500 outline-none" />
                                     <span>%</span>
@@ -380,15 +484,15 @@
                         </button>
                         <button onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-600/20 transition-all">
                             <i data-lucide="file-down" class="w-4 h-4"></i>
-                            Descargar PDF
+                            Descargar PDF (Carta)
                         </button>
-                        <button onclick="app.sendByEmail()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition-all">
+                        <button onclick="app.sendByEmail()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition-all" title="Adjunta PDF y abre correo">
                             <i data-lucide="mail" class="w-4 h-4"></i>
-                            Enviar por Correo
+                            Enviar por Correo (+PDF)
                         </button>
-                        <button onclick="app.sendByWhatsApp()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all">
+                        <button onclick="app.sendByWhatsApp()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all" title="Adjunta PDF y abre WhatsApp">
                             <i data-lucide="message-circle" class="w-4 h-4"></i>
-                            Enviar WhatsApp
+                            Enviar WhatsApp (+PDF)
                         </button>
                     </div>
                 </div>
@@ -396,7 +500,7 @@
             </div>
 
             <!-- ============================================================== -->
-            <!-- TAB 2: CALCULADORA DE VINILOS (CORTE, UV, TEXTIL)               -->
+            <!-- TAB 2: CALCULADORA DE VINILOS (CRUD COMPLETO DE PRESETS)        -->
             <!-- ============================================================== -->
             <div id="tab-vinilos" class="tab-content space-y-6 max-w-6xl mx-auto">
                 
@@ -412,9 +516,9 @@
                                 <p class="text-xs text-cyan-100">Calcula costos de material, mano de obra de corte, merma y precio de venta en segundos</p>
                             </div>
                         </div>
-                        <button onclick="app.openVinylPresetsModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-all">
-                            <i data-lucide="sliders" class="w-4 h-4"></i>
-                            Editar Precios Base / m²
+                        <button onclick="app.openVinylPresetModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-50 shadow-md transition-all">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            + Agregar Nuevo Tipo de Vinilo
                         </button>
                     </div>
                 </div>
@@ -424,11 +528,14 @@
                     <!-- Panel de Entrada de Parámetros -->
                     <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
                         
-                        <!-- Selección de Tipo de Vinilo -->
+                        <!-- Selección de Tipo de Vinilo con Botones de Editar/Eliminar -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-2">Selecciona el Tipo de Trabajo / Vinilo</label>
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="vinyl-type-selector-cards">
-                                <!-- Inyectado dinámicamente -->
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs font-bold text-slate-600">Tipos de Vinilo / Trabajo Disponibles</label>
+                                <button onclick="app.openVinylPresetModal()" class="text-xs text-indigo-600 font-bold hover:underline">+ Crear Otro</button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="vinyl-type-selector-cards">
+                                <!-- Inyectado dinámicamente con opciones de editar y borrar -->
                             </div>
                         </div>
 
@@ -608,7 +715,7 @@
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                         <div class="relative w-full sm:w-80">
                             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-                            <input type="text" id="history-search-input" placeholder="Buscar por cliente, folio o fecha..." 
+                            <input type="text" id="history-search-input" placeholder="Buscar por cliente, RUT, folio..." 
                                 class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
                         </div>
                         
@@ -632,7 +739,7 @@
                             <thead>
                                 <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
                                     <th class="py-3 px-3 w-28">Folio</th>
-                                    <th class="py-3 px-3">Cliente / Solicitante</th>
+                                    <th class="py-3 px-3">Cliente / RUT</th>
                                     <th class="py-3 px-3 w-28 text-center">Fecha</th>
                                     <th class="py-3 px-3 w-24 text-center">Ítems</th>
                                     <th class="py-3 px-3 w-28 text-center">Estado</th>
@@ -654,13 +761,20 @@
             <!-- ============================================================== -->
             <div id="tab-catalogo" class="tab-content space-y-6 max-w-7xl mx-auto">
                 
-                <!-- Sub-Tabs de Navegación -->
-                <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <button onclick="app.switchCatalogSubTab('products')" id="subtab-btn-products" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white transition-all">
-                        📦 Catálogo de Insumos & Precios
-                    </button>
-                    <button onclick="app.switchCatalogSubTab('suppliers')" id="subtab-btn-suppliers" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
-                        🏭 Base de Proveedores
+                <!-- Sub-Tabs de Navegación + Botón de Gestionar Categorías -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div class="flex items-center gap-2">
+                        <button onclick="app.switchCatalogSubTab('products')" id="subtab-btn-products" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white transition-all">
+                            📦 Catálogo de Insumos & Precios
+                        </button>
+                        <button onclick="app.switchCatalogSubTab('suppliers')" id="subtab-btn-suppliers" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                            🏭 Base de Proveedores (con RUT)
+                        </button>
+                    </div>
+
+                    <button onclick="app.openCategoryManagerModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm transition-all">
+                        <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                        Gestionar Categorías
                     </button>
                 </div>
 
@@ -676,12 +790,7 @@
 
                             <div class="flex items-center gap-2">
                                 <select id="products-category-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
-                                    <option value="todas">Todas las Categorías</option>
-                                    <option value="Vinilos">Vinilos</option>
-                                    <option value="Textil">Textil</option>
-                                    <option value="Promocionales">Promocionales</option>
-                                    <option value="Insumos">Insumos</option>
-                                    <option value="Servicios">Servicios</option>
+                                    <!-- Inyectado dinámicamente -->
                                 </select>
                                 <button onclick="app.openProductModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all shrink-0">
                                     <i data-lucide="plus" class="w-4 h-4"></i>
@@ -699,7 +808,7 @@
                                         <th class="py-3 px-3">Producto / Insumo</th>
                                         <th class="py-3 px-3 w-36">Proveedor</th>
                                         <th class="py-3 px-3 w-24 text-center">Unidad</th>
-                                        <th class="py-3 px-3 w-28 text-right">Costo Prov.</th>
+                                        <th class="py-3 px-3 w-32 text-right">Costo Prov.</th>
                                         <th class="py-3 px-3 w-24 text-center">Margen</th>
                                         <th class="py-3 px-3 w-32 text-right">Precio Venta (1u)</th>
                                         <th class="py-3 px-3 w-28 text-center">Acciones</th>
@@ -713,11 +822,11 @@
                     </div>
                 </div>
 
-                <!-- SUB-TAB 2: PROVEEDORES -->
+                <!-- SUB-TAB 2: PROVEEDORES (CON RUT) -->
                 <div id="subtab-view-suppliers" class="hidden space-y-4">
                     <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 class="font-bold text-sm text-slate-800">Proveedores Registrados</h3>
+                            <h3 class="font-bold text-sm text-slate-800">Proveedores Registrados (con RUT / Identificación)</h3>
                             <button onclick="app.openSupplierModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all">
                                 <i data-lucide="user-plus" class="w-4 h-4"></i>
                                 Nuevo Proveedor
@@ -773,7 +882,7 @@
                             <input type="text" id="settings-company-name" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">RIF / NIT / Cédula Fiscal</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">RUT / Identificación Fiscal</label>
                             <input type="text" id="settings-tax-id" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
                         </div>
                         <div>
@@ -890,13 +999,13 @@
     <!-- MODALES DE LA APLICACIÓN                                       -->
     <!-- ============================================================== -->
 
-    <!-- Modal: Vista Previa PDF -->
+    <!-- Modal: Vista Previa PDF (Carta) -->
     <div id="modal-pdf-preview" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
                     <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i>
-                    <h3 class="font-bold text-sm">Vista Previa de Cotización</h3>
+                    <h3 class="font-bold text-sm">Vista Previa de Cotización (Tamaño Carta)</h3>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all">
@@ -911,6 +1020,88 @@
 
             <div class="flex-1 overflow-y-auto p-4 bg-slate-200 flex justify-center" id="pdf-preview-render-area">
                 <!-- Documento HTML inyectado -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear / Editar Tipo de Vinilo (CRUD Presets) -->
+    <div id="modal-edit-vinyl-preset" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="vinyl-modal-title" class="font-bold text-sm text-slate-800">Tipo de Vinilo / Trabajo</h3>
+                <button onclick="app.closeModal('modal-edit-vinyl-preset')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <input type="hidden" id="vinyl-preset-form-id" />
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Tipo de Vinilo *</label>
+                    <input type="text" id="vinyl-preset-form-name" placeholder="Ej. Vinilo Reflectivo de Seguridad" 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Mat. / m² ($)</label>
+                        <input type="number" id="vinyl-preset-form-cost" step="0.1" value="8.0" 
+                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m² ($)</label>
+                        <input type="number" id="vinyl-preset-form-labor" step="0.1" value="4.5" 
+                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">% Merma / Desperdicio</label>
+                        <input type="number" id="vinyl-preset-form-waste" step="1" value="12" 
+                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">% Margen Ganancia</label>
+                        <input type="number" id="vinyl-preset-form-margin" step="1" value="50" 
+                            class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Descripción / Aplicaciones</label>
+                    <input type="text" id="vinyl-preset-form-desc" placeholder="Ej. Para señalética de emergencia y vehículos..." 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+                <button type="button" id="vinyl-preset-delete-btn" onclick="app.deleteCurrentVinylPreset()" class="hidden text-xs font-bold text-rose-600 hover:underline">
+                    Eliminar Tipo
+                </button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="app.closeModal('modal-edit-vinyl-preset')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                    <button onclick="app.submitVinylPresetForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gestionar Categorías -->
+    <div id="modal-category-manager" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-sm text-slate-800">Gestionar Categorías</h3>
+                <button onclick="app.closeModal('modal-category-manager')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="flex gap-2">
+                <input type="text" id="new-category-input" placeholder="Nueva categoría (ej. Sublimación)..." 
+                    class="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                <button onclick="app.addNewCategoryFromModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shrink-0">
+                    + Agregar
+                </button>
+            </div>
+
+            <div class="space-y-1.5 max-h-60 overflow-y-auto" id="categories-list-container">
+                <!-- Lista de categorías inyectada -->
             </div>
         </div>
     </div>
@@ -986,9 +1177,9 @@
         </div>
     </div>
 
-    <!-- Modal: Crear / Editar Producto -->
+    <!-- Modal: Crear / Editar Producto (Con Búsqueda Tipeable y Escala de Costos por Cantidad) -->
     <div id="modal-edit-product" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="product-modal-title" class="font-bold text-sm text-slate-800">Nuevo Producto / Insumo</h3>
                 <button onclick="app.closeModal('modal-edit-product')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1010,22 +1201,23 @@
                     </div>
                 </div>
 
+                <!-- Proveedor y Categoría con Búsqueda Tipeable -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Proveedor</label>
-                        <select id="prod-form-supplier" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                        <label class="block text-xs font-bold text-indigo-700 mb-1">Proveedor (Tipea para buscar)</label>
+                        <input list="suppliers-datalist" id="prod-form-supplier-input" placeholder="Escribe el proveedor..." 
+                            class="w-full px-3 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white outline-none" />
+                        <datalist id="suppliers-datalist">
                             <!-- Inyectado dinámicamente -->
-                        </select>
+                        </datalist>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
-                        <select id="prod-form-category" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
-                            <option value="Vinilos">Vinilos</option>
-                            <option value="Textil">Textil</option>
-                            <option value="Promocionales">Promocionales</option>
-                            <option value="Insumos">Insumos</option>
-                            <option value="Servicios">Servicios</option>
-                        </select>
+                        <label class="block text-xs font-bold text-indigo-700 mb-1">Categoría (Tipea o elige)</label>
+                        <input list="categories-datalist" id="prod-form-category-input" placeholder="Escribe la categoría..." 
+                            class="w-full px-3 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white outline-none" />
+                        <datalist id="categories-datalist">
+                            <!-- Inyectado dinámicamente -->
+                        </datalist>
                     </div>
                 </div>
 
@@ -1036,7 +1228,7 @@
                             class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Precio Costo Prov. ($)</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Base 1u ($)</label>
                         <input type="number" id="prod-form-cost" step="0.01" value="5.00" 
                             class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
@@ -1044,6 +1236,19 @@
                         <label class="block text-xs font-bold text-slate-600 mb-1">Margen Base (%)</label>
                         <input type="number" id="prod-form-margin" step="1" value="50" 
                             class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+
+                <!-- Escala de Precios de Costo del Proveedor por Cantidad -->
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-800">Escala de Costos del Proveedor por Volumen</label>
+                        <button type="button" onclick="app.addCostTierRow()" class="text-xs text-indigo-600 font-bold hover:underline">+ Agregar Rango</button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Define si el proveedor te vende más barato por cantidad (ej: 1-12 unds: $5.00, 13-50 unds: $4.20):</p>
+                    
+                    <div id="cost-tiers-rows-container" class="space-y-1.5">
+                        <!-- Filas de rangos de costo inyectadas -->
                     </div>
                 </div>
 
@@ -1061,7 +1266,7 @@
         </div>
     </div>
 
-    <!-- Modal: Crear / Editar Proveedor -->
+    <!-- Modal: Crear / Editar Proveedor (Con RUT) -->
     <div id="modal-edit-supplier" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1076,6 +1281,11 @@
                     <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Proveedor / Empresa *</label>
                     <input type="text" id="sup-form-name" placeholder="Ej. Distribuidora Gráfica Nacional" 
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-indigo-700 mb-1">RUT / Identificación Fiscal del Proveedor</label>
+                    <input type="text" id="sup-form-rut" placeholder="Ej. J-12345678-0 / 76.543.210-K" 
+                        class="w-full px-3.5 py-2 text-xs font-bold font-mono bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white outline-none" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -1095,8 +1305,8 @@
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Categoría / Ramo</label>
-                    <input type="text" id="sup-form-category" placeholder="Vinilos, Tintas, Textil..." 
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Categoría Principal</label>
+                    <input list="categories-datalist" id="sup-form-category" placeholder="Vinilos, Textil..." 
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                 </div>
                 <div>

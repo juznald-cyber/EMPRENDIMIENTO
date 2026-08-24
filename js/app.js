@@ -11,8 +11,13 @@ class AppController {
             window.lucide.createIcons();
         }
 
+        // Verificar Autenticación de Usuario
+        this.checkAuthState();
+
         // Cargar Datos del Perfil y UI inicial
         this.loadProfileIntoUI();
+        this.renderCategoriesDataLists();
+        this.renderSuppliersDataList();
         this.renderGlobalTiersSettings();
         this.renderVinylTypeSelectors();
         this.calculateVinylLive();
@@ -22,30 +27,104 @@ class AppController {
         this.renderSuppliers();
         this.bindEvents();
 
-        console.log('Cotizador Pro App Inicializada Exitosamente.');
+        console.log('Cotizador Pro App Inicializada Exitosamente con Autenticación y Escalas.');
     }
 
+    // ==========================================
+    // AUTENTICACIÓN Y CONTROL DE ACCESO
+    // ==========================================
+    checkAuthState() {
+        const currentUser = window.db.getCurrentUser();
+        const authScreen = document.getElementById('auth-screen');
+        const sidebarUserName = document.getElementById('sidebar-user-name');
+
+        if (currentUser) {
+            if (authScreen) authScreen.classList.add('hidden');
+            if (sidebarUserName) sidebarUserName.innerText = currentUser.name || currentUser.username || 'Usuario';
+        } else {
+            if (authScreen) authScreen.classList.remove('hidden');
+        }
+    }
+
+    switchAuthTab(tab) {
+        const formLogin = document.getElementById('form-login');
+        const formRegister = document.getElementById('form-register');
+        const tabLogin = document.getElementById('auth-tab-login');
+        const tabRegister = document.getElementById('auth-tab-register');
+
+        if (tab === 'login') {
+            formLogin.classList.remove('hidden');
+            formRegister.classList.add('hidden');
+            tabLogin.className = 'flex-1 py-3 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 transition-all';
+            tabRegister.className = 'flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-700 transition-all';
+        } else {
+            formLogin.classList.add('hidden');
+            formRegister.classList.remove('hidden');
+            tabRegister.className = 'flex-1 py-3 text-xs font-bold text-emerald-600 border-b-2 border-emerald-600 transition-all';
+            tabLogin.className = 'flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-700 transition-all';
+        }
+    }
+
+    handleLoginSubmit(e) {
+        e.preventDefault();
+        const id = document.getElementById('login-identifier').value;
+        const pass = document.getElementById('login-password').value;
+
+        const res = window.db.login(id, pass);
+        if (res.success) {
+            this.checkAuthState();
+            this.showToast(`¡Bienvenido de nuevo, ${res.user.name}!`, 'success');
+            if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
+        } else {
+            this.showToast(res.message, 'error');
+        }
+    }
+
+    handleRegisterSubmit(e) {
+        e.preventDefault();
+        const name = document.getElementById('register-name').value;
+        const username = document.getElementById('register-username').value;
+        const email = document.getElementById('register-email').value;
+        const pass = document.getElementById('register-password').value;
+
+        const res = window.db.register(name, email, username, pass);
+        if (res.success) {
+            this.checkAuthState();
+            this.showToast(`¡Cuenta creada exitosamente! Bienvenido, ${res.user.name}`, 'success');
+            if (window.confetti) window.confetti({ particleCount: 40, spread: 70 });
+        } else {
+            this.showToast(res.message, 'error');
+        }
+    }
+
+    logout() {
+        if (confirm('¿Deseas cerrar tu sesión actual?')) {
+            window.db.logout();
+            this.checkAuthState();
+            this.showToast('Sesión cerrada correctamente.', 'info');
+        }
+    }
+
+    // ==========================================
+    // VINCULACIÓN DE EVENTOS
+    // ==========================================
     bindEvents() {
         // Eventos de la Calculadora de Vinilos
         const vinylInputs = ['vinyl-width-input', 'vinyl-height-input', 'vinyl-quantity-input', 
                              'vinyl-cost-m2-input', 'vinyl-labor-m2-input', 'vinyl-waste-input', 'vinyl-margin-input'];
         vinylInputs.forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', () => this.calculateVinylLive());
-            }
+            if (el) el.addEventListener('input', () => this.calculateVinylLive());
         });
 
         // Eventos del Cotizador
-        const quoteInputs = ['quote-client-name', 'quote-client-contact', 'quote-client-phone', 
+        const quoteInputs = ['quote-client-name', 'quote-client-rut', 'quote-client-contact', 'quote-client-phone', 
                              'quote-client-email', 'quote-client-address', 'quote-number-input', 
                              'quote-date-input', 'quote-valid-until-input', 'quote-status-select', 
                              'quote-notes-input'];
         quoteInputs.forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', () => this.syncQuoteHeaderFromUI());
-            }
+            if (el) el.addEventListener('input', () => this.syncQuoteHeaderFromUI());
         });
 
         const discountInput = document.getElementById('quote-discount-input');
@@ -91,14 +170,12 @@ class AppController {
     switchTab(tabId) {
         this.currentTab = tabId;
         
-        // Actualizar contenido de tabs
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
         });
         const targetTab = document.getElementById(tabId);
         if (targetTab) targetTab.classList.add('active');
 
-        // Actualizar botones desktop
         document.querySelectorAll('.nav-btn').forEach(btn => {
             const isMatch = btn.getAttribute('data-nav-tab') === tabId;
             btn.classList.toggle('bg-slate-800', isMatch);
@@ -106,14 +183,12 @@ class AppController {
             btn.classList.toggle('text-slate-300', !isMatch);
         });
 
-        // Actualizar botones mobile
         document.querySelectorAll('[data-mobile-nav]').forEach(btn => {
             const isMatch = btn.getAttribute('data-mobile-nav') === tabId;
             btn.classList.toggle('text-indigo-600', isMatch);
             btn.classList.toggle('text-slate-400', !isMatch);
         });
 
-        // Títulos de cabecera
         const titleMap = {
             'tab-cotizador': { title: 'Creador de Cotizaciones', sub: 'Borrador Activo' },
             'tab-vinilos': { title: 'Calculadora de Vinilos por m²', sub: 'Corte, UV y Textil' },
@@ -153,40 +228,118 @@ class AppController {
     }
 
     // ==========================================
-    // CALCULADORA DE VINILOS
+    // GESTOR DE CATEGORÍAS
+    // ==========================================
+    renderCategoriesDataLists() {
+        const categories = window.db.getCategories();
+        
+        // Datalist para inputs
+        const dl = document.getElementById('categories-datalist');
+        if (dl) {
+            dl.innerHTML = categories.map(c => `<option value="${this.escapeHTML(c)}"></option>`).join('');
+        }
+
+        // Filtro de categorías en productos
+        const catFilter = document.getElementById('products-category-filter');
+        if (catFilter) {
+            const curVal = catFilter.value;
+            catFilter.innerHTML = `<option value="todas">Todas las Categorías</option>` + 
+                categories.map(c => `<option value="${this.escapeHTML(c)}">${this.escapeHTML(c)}</option>`).join('');
+            if (curVal) catFilter.value = curVal;
+        }
+
+        // Lista en el modal de gestión
+        const listContainer = document.getElementById('categories-list-container');
+        if (listContainer) {
+            listContainer.innerHTML = categories.map(c => `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <span class="font-bold text-slate-700">${this.escapeHTML(c)}</span>
+                    <button onclick="app.deleteCategory('${this.escapeHTML(c)}')" class="p-1 text-slate-400 hover:text-rose-600 rounded">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+
+    openCategoryManagerModal() {
+        this.renderCategoriesDataLists();
+        document.getElementById('new-category-input').value = '';
+        this.openModal('modal-category-manager');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    addNewCategoryFromModal() {
+        const input = document.getElementById('new-category-input');
+        const name = input.value.trim();
+        if (!name) {
+            this.showToast('Escribe el nombre de la categoría.', 'warning');
+            return;
+        }
+        window.db.saveCategory(name);
+        this.renderCategoriesDataLists();
+        this.renderProducts();
+        input.value = '';
+        this.showToast(`Categoría "${name}" agregada.`, 'success');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    deleteCategory(name) {
+        if (confirm(`¿Deseas eliminar la categoría "${name}"?`)) {
+            window.db.deleteCategory(name);
+            this.renderCategoriesDataLists();
+            this.renderProducts();
+            this.showToast('Categoría eliminada.', 'info');
+        }
+    }
+
+    // ==========================================
+    // GESTOR DE PROVEEDORES EN DATALIST
+    // ==========================================
+    renderSuppliersDataList() {
+        const suppliers = window.db.getSuppliers();
+        const dl = document.getElementById('suppliers-datalist');
+        if (dl) {
+            dl.innerHTML = suppliers.map(s => `<option value="${this.escapeHTML(s.name)}">${s.rut ? 'RUT: ' + this.escapeHTML(s.rut) : ''}</option>`).join('');
+        }
+    }
+
+    // ==========================================
+    // CALCULADORA DE VINILOS (CRUD PRESETS)
     // ==========================================
     renderVinylTypeSelectors() {
         const presets = window.db.getVinylPresets();
         const container = document.getElementById('vinyl-type-selector-cards');
         if (!container) return;
 
-        const iconMap = {
-            'adhesivo': 'scissors',
-            'uv': 'sparkles',
-            'textil': 'shirt',
-            'lona': 'flag'
-        };
-
-        container.innerHTML = presets.map((p, idx) => `
-            <button type="button" onclick="app.selectVinylPreset('${p.id}')" 
-                id="preset-btn-${p.id}"
-                class="vinyl-preset-btn p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${idx === 0 ? 'bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="p-2 rounded-xl ${idx === 0 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}">
-                        <i data-lucide="${iconMap[p.type] || 'tag'}" class="w-4 h-4"></i>
-                    </span>
-                    <span class="text-[10px] font-bold text-slate-500">${p.unitName || 'm²'}</span>
+        container.innerHTML = presets.map((p) => {
+            const isSelected = p.id === window.vinylCalc.currentPresetId;
+            return `
+                <div id="preset-card-${p.id}" class="vinyl-preset-btn p-3 rounded-2xl border transition-all flex flex-col justify-between ${isSelected ? 'bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}">
+                    <div class="flex items-start justify-between mb-2">
+                        <button type="button" onclick="app.selectVinylPreset('${p.id}')" class="flex-1 text-left">
+                            <h5 class="text-xs font-bold text-slate-900 leading-tight">${this.escapeHTML(p.name)}</h5>
+                            <p class="text-[10px] text-indigo-600 font-semibold mt-0.5">Base: $${(parseFloat(p.costPerM2) || 0).toFixed(2)}/m² | M.O: $${(parseFloat(p.laborCostPerM2) || 0).toFixed(2)}</p>
+                        </button>
+                        <div class="flex items-center gap-1 shrink-0 ml-2">
+                            <button onclick="app.openVinylPresetModal('${p.id}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors" title="Editar este tipo">
+                                <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-200/60 pt-1.5 mt-1">
+                        <span>Merma: ${p.wasteRate || 10}%</span>
+                        <span class="font-bold text-slate-600">Margen: +${p.defaultMargin || 50}%</span>
+                    </div>
                 </div>
-                <div>
-                    <h5 class="text-xs font-bold text-slate-800 leading-tight">${p.name}</h5>
-                    <p class="text-[10px] text-slate-500 mt-1">Costo Base: $${p.costPerM2.toFixed(2)}/m²</p>
-                </div>
-            </button>
-        `).join('');
+            `;
+        }).join('');
 
-        if (presets.length > 0) {
+        if (presets.length > 0 && !presets.find(p => p.id === window.vinylCalc.currentPresetId)) {
             this.selectVinylPreset(presets[0].id, false);
         }
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     selectVinylPreset(presetId, triggerCalc = true) {
@@ -194,21 +347,8 @@ class AppController {
         const preset = window.vinylCalc.getPreset(presetId);
         if (!preset) return;
 
-        // Resaltar botón seleccionado
-        document.querySelectorAll('.vinyl-preset-btn').forEach(btn => {
-            btn.className = 'vinyl-preset-btn p-3 rounded-2xl border text-left transition-all flex flex-col justify-between bg-slate-50 border-slate-200 hover:bg-slate-100';
-            const iconWrap = btn.querySelector('span');
-            if (iconWrap) iconWrap.className = 'p-2 rounded-xl bg-white text-slate-600 border border-slate-200';
-        });
+        this.renderVinylTypeSelectors();
 
-        const activeBtn = document.getElementById(`preset-btn-${presetId}`);
-        if (activeBtn) {
-            activeBtn.className = 'vinyl-preset-btn p-3 rounded-2xl border text-left transition-all flex flex-col justify-between bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-200';
-            const iconWrap = activeBtn.querySelector('span');
-            if (iconWrap) iconWrap.className = 'p-2 rounded-xl bg-indigo-600 text-white';
-        }
-
-        // Cargar valores en los inputs
         document.getElementById('vinyl-cost-m2-input').value = preset.costPerM2;
         document.getElementById('vinyl-labor-m2-input').value = preset.laborCostPerM2;
         document.getElementById('vinyl-waste-input').value = preset.wasteRate;
@@ -217,7 +357,82 @@ class AppController {
         if (triggerCalc) {
             this.calculateVinylLive();
         }
-        if (window.lucide) window.lucide.createIcons();
+    }
+
+    openVinylPresetModal(id = null) {
+        const title = document.getElementById('vinyl-modal-title');
+        const deleteBtn = document.getElementById('vinyl-preset-delete-btn');
+
+        if (id) {
+            const p = window.db.getVinylPresetById(id);
+            if (!p) return;
+            title.innerText = 'Editar Tipo de Vinilo';
+            document.getElementById('vinyl-preset-form-id').value = p.id;
+            document.getElementById('vinyl-preset-form-name').value = p.name || '';
+            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
+            document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 || 0;
+            document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
+            document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
+            document.getElementById('vinyl-preset-form-desc').value = p.description || '';
+            deleteBtn.classList.remove('hidden');
+        } else {
+            title.innerText = 'Nuevo Tipo de Vinilo / Trabajo';
+            document.getElementById('vinyl-preset-form-id').value = '';
+            document.getElementById('vinyl-preset-form-name').value = '';
+            document.getElementById('vinyl-preset-form-cost').value = '7.50';
+            document.getElementById('vinyl-preset-form-labor').value = '4.00';
+            document.getElementById('vinyl-preset-form-waste').value = '12';
+            document.getElementById('vinyl-preset-form-margin').value = '50';
+            document.getElementById('vinyl-preset-form-desc').value = '';
+            deleteBtn.classList.add('hidden');
+        }
+
+        this.openModal('modal-edit-vinyl-preset');
+    }
+
+    submitVinylPresetForm() {
+        const id = document.getElementById('vinyl-preset-form-id').value;
+        const name = document.getElementById('vinyl-preset-form-name').value.trim();
+        const costPerM2 = parseFloat(document.getElementById('vinyl-preset-form-cost').value) || 0;
+        const laborCostPerM2 = parseFloat(document.getElementById('vinyl-preset-form-labor').value) || 0;
+        const wasteRate = parseFloat(document.getElementById('vinyl-preset-form-waste').value) || 0;
+        const defaultMargin = parseFloat(document.getElementById('vinyl-preset-form-margin').value) || 0;
+        const description = document.getElementById('vinyl-preset-form-desc').value.trim();
+
+        if (!name) {
+            this.showToast('Por favor escribe el nombre del tipo de vinilo.', 'warning');
+            return;
+        }
+
+        const preset = {
+            id: id || undefined,
+            name,
+            costPerM2,
+            laborCostPerM2,
+            wasteRate,
+            defaultMargin,
+            description,
+            unitName: 'm²'
+        };
+
+        const saved = window.db.saveVinylPreset(preset);
+        this.selectVinylPreset(saved.id);
+        this.closeModal('modal-edit-vinyl-preset');
+        this.showToast(`Tipo de vinilo "${saved.name}" guardado con éxito.`, 'success');
+    }
+
+    deleteCurrentVinylPreset() {
+        const id = document.getElementById('vinyl-preset-form-id').value;
+        if (!id) return;
+
+        if (confirm('¿Deseas eliminar este tipo de vinilo de la calculadora?')) {
+            window.db.deleteVinylPreset(id);
+            this.renderVinylTypeSelectors();
+            const first = window.db.getVinylPresets()[0];
+            if (first) this.selectVinylPreset(first.id);
+            this.closeModal('modal-edit-vinyl-preset');
+            this.showToast('Tipo de vinilo eliminado.', 'info');
+        }
     }
 
     setVinylUnitMode(mode) {
@@ -263,7 +478,6 @@ class AppController {
 
         const currency = window.db.getProfile().currency || '$';
 
-        // Actualizar UI
         document.getElementById('vinyl-m2-badge').innerText = `${res.totalNetAreaM2} m²`;
         document.getElementById('calc-net-area-display').innerText = `${res.totalNetAreaM2} m² (${qty} unds de ${res.unitAreaM2} m²)`;
         document.getElementById('calc-waste-rate-display').innerText = res.wasteRate;
@@ -275,7 +489,6 @@ class AppController {
         document.getElementById('calc-unit-price-display').innerText = `${currency} ${res.unitPrice.toFixed(2)}`;
         document.getElementById('calc-total-sale-display').innerText = `${currency} ${res.totalSalePrice.toFixed(2)}`;
 
-        // Actualizar Proporción Visual
         const visualRect = document.getElementById('vinyl-visual-rect');
         const visualDimLabel = document.getElementById('visual-dim-label');
         const visualQtyLabel = document.getElementById('visual-qty-label');
@@ -326,8 +539,8 @@ class AppController {
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
-        // Llenar campos de cabecera
         document.getElementById('quote-client-name').value = q.client?.name || '';
+        document.getElementById('quote-client-rut').value = q.client?.rut || '';
         document.getElementById('quote-client-contact').value = q.client?.contact || '';
         document.getElementById('quote-client-phone').value = q.client?.phone || '';
         document.getElementById('quote-client-email').value = q.client?.email || '';
@@ -344,7 +557,6 @@ class AppController {
         document.getElementById('quote-tax-rate-label').innerText = `(${profile.taxRate || 16}%)`;
         document.getElementById('quote-tax-toggle').checked = profile.enableTax;
 
-        // Renderizar tabla de ítems
         const tbody = document.getElementById('quote-items-tbody');
         const emptyState = document.getElementById('quote-empty-state');
         const badgeCount = document.getElementById('draft-item-count-badge');
@@ -411,7 +623,9 @@ class AppController {
 
     syncQuoteHeaderFromUI() {
         const q = window.cotizador.currentQuote;
+        if (!q.client) q.client = {};
         q.client.name = document.getElementById('quote-client-name')?.value || '';
+        q.client.rut = document.getElementById('quote-client-rut')?.value || '';
         q.client.contact = document.getElementById('quote-client-contact')?.value || '';
         q.client.phone = document.getElementById('quote-client-phone')?.value || '';
         q.client.email = document.getElementById('quote-client-email')?.value || '';
@@ -487,7 +701,7 @@ class AppController {
     }
 
     // ==========================================
-    // VISTA PREVIA Y EXPORTACIÓN PDF / EMAIL / WA
+    // VISTA PREVIA Y EXPORTACIÓN PDF / EMAIL / WA (CON ADJUNTO)
     // ==========================================
     previewCurrentPDF() {
         this.syncQuoteHeaderFromUI();
@@ -507,24 +721,26 @@ class AppController {
         const quote = window.cotizador.currentQuote;
         const profile = window.db.getProfile();
 
-        this.showToast('Generando documento PDF en alta calidad...', 'info');
+        this.showToast('Generando documento PDF en tamaño Carta...', 'info');
         window.pdfGenerator.downloadPDF(quote, profile);
     }
 
-    sendByEmail() {
+    async sendByEmail() {
         this.syncQuoteHeaderFromUI();
+        window.cotizador.recalculateTotals();
         const quote = window.cotizador.currentQuote;
         const profile = window.db.getProfile();
-        window.pdfGenerator.prepareEmail(quote, profile);
-        this.showToast('Abriendo plantilla de correo...', 'info');
+        this.showToast('Preparando envío por correo con PDF adjunto...', 'info');
+        await window.pdfGenerator.prepareEmailWithAttachment(quote, profile);
     }
 
-    sendByWhatsApp() {
+    async sendByWhatsApp() {
         this.syncQuoteHeaderFromUI();
+        window.cotizador.recalculateTotals();
         const quote = window.cotizador.currentQuote;
         const profile = window.db.getProfile();
-        window.pdfGenerator.prepareWhatsApp(quote, profile);
-        this.showToast('Abriendo enlace de WhatsApp con el resumen...', 'info');
+        this.showToast('Preparando envío por WhatsApp con PDF...', 'info');
+        await window.pdfGenerator.prepareWhatsAppWithAttachment(quote, profile);
     }
 
     // ==========================================
@@ -535,7 +751,6 @@ class AppController {
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
-        // Métricas
         const totalCount = quotes.length;
         const approvedQuotes = quotes.filter(q => q.status === 'Aprobada');
         const sentQuotes = quotes.filter(q => q.status === 'Enviada');
@@ -546,7 +761,6 @@ class AppController {
         document.getElementById('metric-sent-quotes').innerText = sentQuotes.length;
         document.getElementById('metric-approved-amount').innerText = `${currency} ${approvedTotalAmount.toFixed(2)}`;
 
-        // Filtro de búsqueda y estado
         const query = (document.getElementById('history-search-input')?.value || '').toLowerCase();
         const statusFilter = document.getElementById('history-status-filter')?.value || 'todos';
 
@@ -554,6 +768,7 @@ class AppController {
             const matchQuery = !query || 
                 (q.quoteNumber || '').toLowerCase().includes(query) ||
                 (q.client?.name || '').toLowerCase().includes(query) ||
+                (q.client?.rut || '').toLowerCase().includes(query) ||
                 (q.date || '').toLowerCase().includes(query);
             
             const matchStatus = statusFilter === 'todos' || q.status === statusFilter;
@@ -586,7 +801,10 @@ class AppController {
                 <td class="py-3 px-3 font-mono font-bold text-xs text-indigo-700">${q.quoteNumber}</td>
                 <td class="py-3 px-3">
                     <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(q.client?.name || 'Cliente Particular')}</div>
-                    ${q.client?.phone ? `<div class="text-[11px] text-slate-400">${this.escapeHTML(q.client.phone)}</div>` : ''}
+                    <div class="text-[11px] text-slate-400">
+                        ${q.client?.rut ? `<span class="font-mono text-indigo-600 font-bold">RUT: ${this.escapeHTML(q.client.rut)}</span> • ` : ''}
+                        ${q.client?.phone ? this.escapeHTML(q.client.phone) : ''}
+                    </div>
                 </td>
                 <td class="py-3 px-3 text-center text-xs text-slate-500 font-medium">${q.date || '-'}</td>
                 <td class="py-3 px-3 text-center text-xs font-bold text-slate-700">${q.items.length}</td>
@@ -691,20 +909,29 @@ class AppController {
         }
 
         tbody.innerHTML = filtered.map(p => {
-            const sup = suppliers.find(s => s.id === p.supplierId);
+            const sup = suppliers.find(s => s.id === p.supplierId || s.name === p.supplierId);
             const margin = window.db.getMarginForQuantity(p, 1);
-            const salePrice = window.db.calculateSalePrice(p.costPrice, margin);
+            const cost1u = window.db.getCostForQuantity(p, 1);
+            const salePrice = window.db.calculateSalePrice(cost1u, margin);
+            const hasTiers = p.costTiers && p.costTiers.length > 0;
 
             return `
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
                     <td class="py-3 px-3">
                         <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
-                        <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md mt-0.5">${p.category || 'General'}</span>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
+                            ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
+                        </div>
                     </td>
-                    <td class="py-3 px-3 text-xs text-slate-600">${sup ? this.escapeHTML(sup.name) : '<span class="text-slate-400">Sin Asignar</span>'}</td>
+                    <td class="py-3 px-3 text-xs text-slate-600">
+                        ${sup ? `<span class="font-semibold text-slate-800">${this.escapeHTML(sup.name)}</span> ${sup.rut ? `<span class="block text-[10px] text-slate-400">RUT: ${this.escapeHTML(sup.rut)}</span>` : ''}` : '<span class="text-slate-400">Sin Asignar</span>'}
+                    </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
-                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700">${currency} ${(parseFloat(p.costPrice) || 0).toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700">
+                        ${currency} ${(parseFloat(cost1u) || 0).toFixed(2)}
+                    </td>
                     <td class="py-3 px-3 text-center">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
                     </td>
@@ -741,12 +968,15 @@ class AppController {
         }
 
         grid.innerHTML = suppliers.map(s => {
-            const count = products.filter(p => p.supplierId === s.id).length;
+            const count = products.filter(p => p.supplierId === s.id || p.supplierId === s.name).length;
             return `
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all flex flex-col justify-between space-y-3">
                     <div>
                         <div class="flex items-start justify-between">
-                            <h4 class="font-bold text-sm text-slate-900 leading-snug">${this.escapeHTML(s.name)}</h4>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-900 leading-snug">${this.escapeHTML(s.name)}</h4>
+                                ${s.rut ? `<span class="inline-block font-mono text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded mt-0.5">RUT: ${this.escapeHTML(s.rut)}</span>` : ''}
+                            </div>
                             <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">${count} productos</span>
                         </div>
                         <span class="text-[11px] text-indigo-600 font-semibold mt-1 block">${this.escapeHTML(s.category || 'General')}</span>
@@ -802,15 +1032,16 @@ class AppController {
         }
 
         container.innerHTML = filtered.map(p => {
+            const cost1u = window.db.getCostForQuantity(p, 1);
             const margin = window.db.getMarginForQuantity(p, 1);
-            const salePrice = window.db.calculateSalePrice(p.costPrice, margin);
+            const salePrice = window.db.calculateSalePrice(cost1u, margin);
 
             return `
                 <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex items-center justify-between transition-colors">
                     <div>
                         <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency}${p.costPrice.toFixed(2)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency}${salePrice.toFixed(2)}</span></p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency}${cost1u.toFixed(2)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency}${salePrice.toFixed(2)}</span></p>
                     </div>
                     <button onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar
@@ -856,11 +1087,13 @@ class AppController {
         this.showToast('Ítem libre agregado a la cotización.', 'success');
     }
 
-    // Modal Crear/Editar Producto
+    // Modal Crear/Editar Producto (Con Typeahead y Escalas de Costo)
     openProductModal(id = null) {
+        this.renderCategoriesDataLists();
+        this.renderSuppliersDataList();
         const suppliers = window.db.getSuppliers();
-        const supSelect = document.getElementById('prod-form-supplier');
-        supSelect.innerHTML = suppliers.map(s => `<option value="${s.id}">${this.escapeHTML(s.name)}</option>`).join('');
+        const container = document.getElementById('cost-tiers-rows-container');
+        container.innerHTML = '';
 
         if (id) {
             const p = window.db.getProductById(id);
@@ -869,18 +1102,25 @@ class AppController {
             document.getElementById('prod-form-id').value = p.id;
             document.getElementById('prod-form-sku').value = p.sku || '';
             document.getElementById('prod-form-name').value = p.name || '';
-            document.getElementById('prod-form-supplier').value = p.supplierId || (suppliers[0]?.id || '');
-            document.getElementById('prod-form-category').value = p.category || 'Vinilos';
+            
+            const matchedSup = suppliers.find(s => s.id === p.supplierId);
+            document.getElementById('prod-form-supplier-input').value = matchedSup ? matchedSup.name : (p.supplierId || '');
+            document.getElementById('prod-form-category-input').value = p.category || 'Vinilos';
             document.getElementById('prod-form-unit').value = p.unit || 'Unidad';
             document.getElementById('prod-form-cost').value = p.costPrice || 0;
             document.getElementById('prod-form-margin').value = p.defaultMargin || 50;
             document.getElementById('prod-form-notes').value = p.notes || '';
+
+            if (p.costTiers && p.costTiers.length > 0) {
+                p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
+            }
         } else {
             document.getElementById('product-modal-title').innerText = 'Nuevo Producto / Insumo';
             document.getElementById('prod-form-id').value = '';
             document.getElementById('prod-form-sku').value = 'PROD-' + Math.floor(Math.random() * 900 + 100);
             document.getElementById('prod-form-name').value = '';
-            document.getElementById('prod-form-category').value = 'Vinilos';
+            document.getElementById('prod-form-supplier-input').value = suppliers[0]?.name || '';
+            document.getElementById('prod-form-category-input').value = 'Vinilos';
             document.getElementById('prod-form-unit').value = 'Unidad';
             document.getElementById('prod-form-cost').value = '5.00';
             document.getElementById('prod-form-margin').value = '50';
@@ -889,12 +1129,42 @@ class AppController {
         this.openModal('modal-edit-product');
     }
 
+    addCostTierRow(min = 1, max = 10, cost = '') {
+        const container = document.getElementById('cost-tiers-rows-container');
+        if (!container) return;
+
+        const row = document.createElement('div');
+        row.className = 'cost-tier-row grid grid-cols-12 gap-2 items-center';
+        row.innerHTML = `
+            <div class="col-span-3">
+                <input type="number" min="1" value="${min}" placeholder="Min" class="tier-min w-full px-2 py-1 text-xs text-center font-bold bg-white border border-slate-200 rounded-lg outline-none" />
+            </div>
+            <div class="col-span-1 text-center text-xs text-slate-400 font-bold">a</div>
+            <div class="col-span-3">
+                <input type="number" min="1" value="${max === 999999 ? '' : max}" placeholder="Max (+)" class="tier-max w-full px-2 py-1 text-xs text-center font-bold bg-white border border-slate-200 rounded-lg outline-none" />
+            </div>
+            <div class="col-span-4">
+                <div class="relative">
+                    <span class="absolute left-2 top-1 text-xs text-slate-400">$</span>
+                    <input type="number" step="0.01" value="${cost}" placeholder="Costo" class="tier-cost w-full pl-5 pr-2 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none" />
+                </div>
+            </div>
+            <div class="col-span-1 text-center">
+                <button type="button" onclick="this.closest('.cost-tier-row').remove()" class="text-rose-500 hover:text-rose-700 p-1">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+        if (window.lucide) window.lucide.createIcons();
+    }
+
     submitProductForm() {
         const id = document.getElementById('prod-form-id').value;
         const name = document.getElementById('prod-form-name').value.trim();
         const sku = document.getElementById('prod-form-sku').value.trim();
-        const supplierId = document.getElementById('prod-form-supplier').value;
-        const category = document.getElementById('prod-form-category').value;
+        const supplierName = document.getElementById('prod-form-supplier-input').value.trim();
+        const category = document.getElementById('prod-form-category-input').value.trim() || 'General';
         const unit = document.getElementById('prod-form-unit').value.trim();
         const costPrice = parseFloat(document.getElementById('prod-form-cost').value) || 0;
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
@@ -905,6 +1175,27 @@ class AppController {
             return;
         }
 
+        // Buscar proveedor por nombre o crear referencia
+        const suppliers = window.db.getSuppliers();
+        const matchedSup = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+        const supplierId = matchedSup ? matchedSup.id : (supplierName || 'sup_1');
+
+        // Leer escalas de costo por cantidad
+        const costTiers = [];
+        document.querySelectorAll('.cost-tier-row').forEach(row => {
+            const min = parseInt(row.querySelector('.tier-min')?.value, 10) || 1;
+            const maxVal = row.querySelector('.tier-max')?.value;
+            const max = maxVal ? parseInt(maxVal, 10) : 999999;
+            const cost = parseFloat(row.querySelector('.tier-cost')?.value);
+            if (!isNaN(cost) && cost >= 0) {
+                costTiers.push({ min, max, cost });
+            }
+        });
+        costTiers.sort((a, b) => a.min - b.min);
+
+        // Guardar categoría si es nueva
+        window.db.saveCategory(category);
+
         const product = {
             id: id || undefined,
             name,
@@ -913,12 +1204,14 @@ class AppController {
             category,
             unit,
             costPrice,
+            costTiers,
             defaultMargin,
             notes,
             useGlobalTiers: true
         };
 
         window.db.saveProduct(product);
+        this.renderCategoriesDataLists();
         this.renderProducts();
         this.closeModal('modal-edit-product');
         this.showToast('Producto guardado correctamente.', 'success');
@@ -932,14 +1225,16 @@ class AppController {
         }
     }
 
-    // Modal Crear/Editar Proveedor
+    // Modal Crear/Editar Proveedor (Con RUT)
     openSupplierModal(id = null) {
+        this.renderCategoriesDataLists();
         if (id) {
             const s = window.db.getSupplierById(id);
             if (!s) return;
             document.getElementById('supplier-modal-title').innerText = 'Editar Proveedor';
             document.getElementById('sup-form-id').value = s.id;
             document.getElementById('sup-form-name').value = s.name || '';
+            document.getElementById('sup-form-rut').value = s.rut || '';
             document.getElementById('sup-form-contact').value = s.contact || '';
             document.getElementById('sup-form-phone').value = s.phone || '';
             document.getElementById('sup-form-email').value = s.email || '';
@@ -949,6 +1244,7 @@ class AppController {
             document.getElementById('supplier-modal-title').innerText = 'Nuevo Proveedor';
             document.getElementById('sup-form-id').value = '';
             document.getElementById('sup-form-name').value = '';
+            document.getElementById('sup-form-rut').value = '';
             document.getElementById('sup-form-contact').value = '';
             document.getElementById('sup-form-phone').value = '';
             document.getElementById('sup-form-email').value = '';
@@ -961,6 +1257,7 @@ class AppController {
     submitSupplierForm() {
         const id = document.getElementById('sup-form-id').value;
         const name = document.getElementById('sup-form-name').value.trim();
+        const rut = document.getElementById('sup-form-rut').value.trim();
         const contact = document.getElementById('sup-form-contact').value.trim();
         const phone = document.getElementById('sup-form-phone').value.trim();
         const email = document.getElementById('sup-form-email').value.trim();
@@ -972,9 +1269,12 @@ class AppController {
             return;
         }
 
+        if (category) window.db.saveCategory(category);
+
         const supplier = {
             id: id || undefined,
             name,
+            rut,
             contact,
             phone,
             email,
@@ -983,6 +1283,7 @@ class AppController {
         };
 
         window.db.saveSupplier(supplier);
+        this.renderSuppliersDataList();
         this.renderSuppliers();
         this.closeModal('modal-edit-supplier');
         this.showToast('Proveedor guardado correctamente.', 'success');
@@ -991,13 +1292,14 @@ class AppController {
     deleteSupplier(id) {
         if (confirm('¿Deseas eliminar este proveedor?')) {
             window.db.deleteSupplier(id);
+            this.renderSuppliersDataList();
             this.renderSuppliers();
             this.showToast('Proveedor eliminado.', 'info');
         }
     }
 
     // ==========================================
-    // CONFIGURACIÓN & IDENTIDAD DE EMPRESA
+    // CONFIGURACIÓN & PERFIL DE EMPRESA
     // ==========================================
     loadProfileIntoUI() {
         const p = window.db.getProfile();
@@ -1096,7 +1398,6 @@ class AppController {
         const bankDetails = document.getElementById('settings-bank-details').value.trim();
         const terms = document.getElementById('settings-terms').value.trim();
 
-        // Guardar escalas globales
         const tiers = window.db.getGlobalTiers();
         tiers.forEach((t, idx) => {
             const input = document.getElementById(`global-tier-input-${idx}`);
@@ -1104,7 +1405,6 @@ class AppController {
         });
         window.db.saveGlobalTiers(tiers);
 
-        // Guardar perfil
         window.db.saveProfile({
             companyName,
             taxId,
@@ -1149,12 +1449,15 @@ class AppController {
                 const parsed = JSON.parse(e.target.result);
                 window.db.importAllData(parsed);
                 this.loadProfileIntoUI();
+                this.renderCategoriesDataLists();
+                this.renderSuppliersDataList();
                 this.renderGlobalTiersSettings();
                 this.renderVinylTypeSelectors();
                 this.renderProducts();
                 this.renderSuppliers();
                 this.renderHistory();
                 this.renderQuoteDraft();
+                this.checkAuthState();
                 this.showToast('¡Respaldo restaurado con éxito!', 'success');
             } catch (err) {
                 alert('El archivo seleccionado no tiene un formato JSON válido.');
@@ -1167,12 +1470,15 @@ class AppController {
         if (confirm('¿Deseas restaurar la base de datos a sus valores iniciales de demostración?')) {
             window.db.resetToFactory();
             this.loadProfileIntoUI();
+            this.renderCategoriesDataLists();
+            this.renderSuppliersDataList();
             this.renderGlobalTiersSettings();
             this.renderVinylTypeSelectors();
             this.renderProducts();
             this.renderSuppliers();
             this.renderHistory();
             this.renderQuoteDraft();
+            this.checkAuthState();
             this.showToast('Datos de fábrica restaurados.', 'info');
         }
     }
@@ -1218,12 +1524,10 @@ class AppController {
         container.appendChild(toast);
         if (window.lucide) window.lucide.createIcons();
 
-        // Animar entrada
         setTimeout(() => {
             toast.classList.remove('translate-y-2', 'opacity-0');
         }, 10);
 
-        // Animar salida
         setTimeout(() => {
             toast.classList.add('translate-y-2', 'opacity-0');
             setTimeout(() => toast.remove(), 250);

@@ -1,13 +1,26 @@
-// js/vinilos.js - Calculadora Especializada de Vinilos por Metro Cuadrado
+// js/vinilos.js - Calculadora Especializada de Vinilos por Metro Cuadrado (Con soporte CRUD)
 class VinylCalculator {
     constructor() {
         this.currentPresetId = 'vin_adh';
         this.unitMode = 'cm'; // 'cm' o 'm'
     }
 
+    getPresets() {
+        return window.db.getVinylPresets();
+    }
+
     getPreset(id) {
-        const presets = window.db.getVinylPresets();
-        return presets.find(p => p.id === id) || presets[0];
+        const presets = this.getPresets();
+        return presets.find(p => p.id === id) || presets[0] || {
+            id: 'vin_custom',
+            name: 'Vinilo Personalizado',
+            type: 'adhesivo',
+            costPerM2: 6.50,
+            laborCostPerM2: 4.00,
+            defaultMargin: 50,
+            wasteRate: 10,
+            unitName: 'm²'
+        };
     }
 
     calculate(params) {
@@ -93,7 +106,7 @@ class VinylCalculator {
             id: 'vinyl_item_' + Date.now(),
             isVinyl: true,
             vinylPresetId: p.id,
-            vinylType: p.type,
+            vinylType: p.type || 'adhesivo',
             name: title,
             unit: 'Pza / m²',
             dimensions: {

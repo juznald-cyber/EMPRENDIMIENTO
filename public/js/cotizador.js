@@ -17,6 +17,7 @@ class CotizadorManager {
             validUntil: validDate,
             client: {
                 name: '',
+                rut: '',
                 contact: '',
                 phone: '',
                 email: '',
@@ -43,6 +44,8 @@ class CotizadorManager {
         const found = window.db.getQuoteById(id);
         if (found) {
             this.currentQuote = JSON.parse(JSON.stringify(found));
+            if (!this.currentQuote.client) this.currentQuote.client = {};
+            if (!this.currentQuote.client.rut) this.currentQuote.client.rut = '';
             this.isEditing = true;
             this.recalculateTotals();
             return this.currentQuote;
@@ -59,6 +62,7 @@ class CotizadorManager {
             this.currentQuote.date = new Date().toISOString().split('T')[0];
             this.currentQuote.validUntil = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
             this.currentQuote.status = 'Borrador';
+            if (!this.currentQuote.client) this.currentQuote.client = {};
             this.isEditing = false;
             this.recalculateTotals();
             return this.currentQuote;
@@ -71,12 +75,14 @@ class CotizadorManager {
         if (!product) return false;
 
         const qty = parseInt(quantity, 10) || 1;
-        // Calcular margen dinámico según volumen si no se forzó un margen personalizado
+        // Obtener costo según escala de cantidad del proveedor
+        const costPrice = window.db.getCostForQuantity(product, qty);
+
+        // Calcular margen dinámico según volumen si no se forzó uno personalizado
         const margin = customMargin !== null && !isNaN(customMargin) 
             ? parseFloat(customMargin) 
             : window.db.getMarginForQuantity(product, qty);
 
-        const costPrice = parseFloat(product.costPrice) || 0;
         const unitPrice = window.db.calculateSalePrice(costPrice, margin);
         const lineTotal = Number((unitPrice * qty).toFixed(2));
 
@@ -138,10 +144,11 @@ class CotizadorManager {
         const qty = Math.max(1, parseInt(newQty, 10) || 1);
         item.quantity = qty;
 
-        // Si proviene de un producto del catálogo y no es vinilo estático, recalcular margen por volumen
+        // Si proviene de un producto del catálogo, recalcular costo por escala y margen por volumen
         if (item.productId) {
             const product = window.db.getProductById(item.productId);
             if (product) {
+                item.costPrice = window.db.getCostForQuantity(product, qty);
                 item.margin = window.db.getMarginForQuantity(product, qty);
                 item.unitPrice = window.db.calculateSalePrice(item.costPrice, item.margin);
             }
@@ -196,12 +203,13 @@ class CotizadorManager {
 
         // Descuento
         const discountPct = parseFloat(this.currentQuote.discountPercentage) || 0;
-        const discountAmount = Number(((subtotal * discountPct) / 100).toFixed(2));
+        const discountAmount = Number(((this.currentQuote.subtotal * discountPct) / 100).toFixed(2));
         this.currentQuote.discountAmount = discountAmount;
 
-        const taxableBase = Math.max(0, subtotal - discountAmount);
+        // Base Imponible
+        const taxableBase = Math.max(0, this.currentQuote.subtotal - discountAmount);
 
-        // Impuestos
+        // Impuestos (IVA)
         if (profile.enableTax) {
             const taxRate = parseFloat(this.currentQuote.taxRate !== undefined ? this.currentQuote.taxRate : profile.taxRate) || 0;
             const taxAmount = Number(((taxableBase * taxRate) / 100).toFixed(2));

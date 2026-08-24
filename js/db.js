@@ -1,15 +1,43 @@
-// js/db.js - Base de Datos Local y Gestor de Estado
+// js/db.js - Base de Datos Local, Autenticación y Gestor de Estado
 const DB_KEYS = {
     PROFILE: 'cotizador_profile',
     SUPPLIERS: 'cotizador_suppliers',
     PRODUCTS: 'cotizador_products',
+    CATEGORIES: 'cotizador_categories',
     VINYLS: 'cotizador_vinyls',
     QUOTES: 'cotizador_quotes',
     GLOBAL_TIERS: 'cotizador_global_tiers',
+    USERS: 'cotizador_users',
+    CURRENT_USER: 'cotizador_current_user',
     SETTINGS: 'cotizador_settings'
 };
 
-// Datos iniciales de demostración y configuración por defecto
+// Usuario Administrador Inicial
+const DEFAULT_USERS = [
+    {
+        id: 'usr_admin',
+        name: 'Administrador Principal',
+        email: 'admin@cotizador.com',
+        username: 'admin',
+        password: 'admin123', // Clave inicial personalizable
+        role: 'admin',
+        createdAt: new Date().toISOString()
+    }
+];
+
+// Categorías Iniciales
+const DEFAULT_CATEGORIES = [
+    'Vinilos',
+    'Textil',
+    'Promocionales',
+    'Insumos',
+    'Servicios',
+    'Papelería',
+    'Sublimación',
+    'Gigantografía'
+];
+
+// Datos iniciales de perfil
 const DEFAULT_PROFILE = {
     companyName: 'Mi Empresa Creativa',
     taxId: 'J-12345678-0',
@@ -35,29 +63,32 @@ const DEFAULT_GLOBAL_TIERS = [
 const DEFAULT_SUPPLIERS = [
     {
         id: 'sup_1',
+        rut: 'J-29837482-1',
         name: 'Distribuidora Gráfica Nacional',
         contact: 'Carlos Rodríguez',
         phone: '+58 414 5551122',
         email: 'ventas@distribuidoragrafica.com',
-        category: 'Vinilos y Materiales Publicitarios',
+        category: 'Vinilos',
         notes: 'Descuento del 5% por pronto pago en transferencias.'
     },
     {
         id: 'sup_2',
+        rut: 'J-31092834-0',
         name: 'Textiles & Confección Global',
         contact: 'María Elena Pérez',
         phone: '+58 424 9998877',
         email: 'pedidos@textilesglobal.com',
-        category: 'Prendas, Gorras y Textil',
+        category: 'Textil',
         notes: 'Entregas los días martes y jueves.'
     },
     {
         id: 'sup_3',
+        rut: 'J-40192837-9',
         name: 'Insumos Tecnológicos UV',
         contact: 'Ing. Fernando Mendoza',
         phone: '+58 416 3334455',
         email: 'contacto@insumosuv.com',
-        category: 'Tintas e Impresión UV',
+        category: 'Insumos',
         notes: 'Distribuidor directo de consumibles DTF UV.'
     }
 ];
@@ -71,6 +102,11 @@ const DEFAULT_PRODUCTS = [
         category: 'Vinilos',
         unit: 'Rollo',
         costPrice: 85.00,
+        costTiers: [
+            { min: 1, max: 2, cost: 85.00 },
+            { min: 3, max: 5, cost: 80.00 },
+            { min: 6, max: 999999, cost: 75.00 }
+        ],
         defaultMargin: 45,
         useGlobalTiers: true,
         customTiers: [],
@@ -84,6 +120,11 @@ const DEFAULT_PRODUCTS = [
         category: 'Textil',
         unit: 'Unidad',
         costPrice: 4.50,
+        costTiers: [
+            { min: 1, max: 12, cost: 4.50 },
+            { min: 13, max: 50, cost: 3.90 },
+            { min: 51, max: 999999, cost: 3.40 }
+        ],
         defaultMargin: 50,
         useGlobalTiers: true,
         customTiers: [
@@ -101,6 +142,11 @@ const DEFAULT_PRODUCTS = [
         category: 'Textil',
         unit: 'Unidad',
         costPrice: 2.20,
+        costTiers: [
+            { min: 1, max: 10, cost: 2.20 },
+            { min: 11, max: 50, cost: 1.90 },
+            { min: 51, max: 999999, cost: 1.60 }
+        ],
         defaultMargin: 60,
         useGlobalTiers: true,
         customTiers: [],
@@ -114,6 +160,10 @@ const DEFAULT_PRODUCTS = [
         category: 'Promocionales',
         unit: 'Unidad',
         costPrice: 1.60,
+        costTiers: [
+            { min: 1, max: 24, cost: 1.60 },
+            { min: 25, max: 999999, cost: 1.30 }
+        ],
         defaultMargin: 55,
         useGlobalTiers: true,
         customTiers: [],
@@ -127,6 +177,7 @@ const DEFAULT_PRODUCTS = [
         category: 'Insumos',
         unit: 'Metro',
         costPrice: 0.90,
+        costTiers: [],
         defaultMargin: 50,
         useGlobalTiers: true,
         customTiers: [],
@@ -139,10 +190,10 @@ const DEFAULT_VINYLS = [
         id: 'vin_adh',
         type: 'adhesivo',
         name: 'Vinilo Adhesivo de Corte (Rotulación / Calcomanía)',
-        costPerM2: 6.50, // Costo base de material por m2
-        laborCostPerM2: 4.00, // Mano de obra de corte / pelado / transfer por m2
-        defaultMargin: 55, // Margen de venta %
-        wasteRate: 15, // 15% de merma / desperdicio
+        costPerM2: 6.50,
+        laborCostPerM2: 4.00,
+        defaultMargin: 55,
+        wasteRate: 15,
         description: 'Ideal para rotulación vehicular, vidrieras, señalética y stickers troquelados.',
         unitName: 'm²'
     },
@@ -189,6 +240,7 @@ const DEFAULT_QUOTES = [
         validUntil: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
         client: {
             name: 'Restaurante El Gourmet C.A.',
+            rut: 'J-40918273-0',
             contact: 'Lic. Alejandro Morales',
             phone: '+58 414 7776655',
             email: 'compras@elgourmet.com',
@@ -200,11 +252,11 @@ const DEFAULT_QUOTES = [
                 productId: 'prod_2',
                 name: 'Franela de Algodón Cuello Redondo - Uniforme con Logo Estampado',
                 unit: 'Unidad',
-                costPrice: 4.50,
+                costPrice: 3.90, // Costo por tier de 25 unds
                 margin: 45,
                 quantity: 25,
-                unitPrice: 6.53,
-                total: 163.25,
+                unitPrice: 5.66,
+                total: 141.50,
                 notes: 'Color negro, tallas variadas (S, M, L)'
             },
             {
@@ -213,7 +265,7 @@ const DEFAULT_QUOTES = [
                 vinylType: 'uv',
                 name: 'Stickers DTF UV para Personalizar Termos (Medida 8x8 cm)',
                 unit: 'm²',
-                dimensions: { widthCm: 8, heightCm: 8, count: 100, areaM2: 0.64 },
+                dimensions: { width: 8, height: 8, count: 100, areaM2: 0.64, unitMode: 'cm' },
                 costPrice: 15.36,
                 margin: 60,
                 quantity: 1,
@@ -222,24 +274,30 @@ const DEFAULT_QUOTES = [
                 notes: 'Impresión DTF UV en alta resolución barniz incluido'
             }
         ],
-        subtotal: 201.65,
+        subtotal: 179.90,
         discountPercentage: 0,
         discountAmount: 0,
         taxRate: 16,
-        taxAmount: 32.26,
-        total: 233.91,
+        taxAmount: 28.78,
+        total: 208.68,
         status: 'Aprobada',
         notes: 'Tiempo estimado de entrega: 5 días hábiles luego del abono inicial.'
     }
 ];
 
-// Motor de persistencia y métodos de base de datos
+// Motor de Persistencia y Métodos de Base de Datos
 class Database {
     constructor() {
         this.init();
     }
 
     init() {
+        if (!localStorage.getItem(DB_KEYS.USERS)) {
+            this.set(DB_KEYS.USERS, DEFAULT_USERS);
+        }
+        if (!localStorage.getItem(DB_KEYS.CATEGORIES)) {
+            this.set(DB_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+        }
         if (!localStorage.getItem(DB_KEYS.PROFILE)) {
             this.set(DB_KEYS.PROFILE, DEFAULT_PROFILE);
         }
@@ -280,7 +338,99 @@ class Database {
         }
     }
 
-    // Perfil de la Empresa
+    // ==========================================
+    // AUTENTICACIÓN Y USUARIOS
+    // ==========================================
+    getUsers() {
+        return this.get(DB_KEYS.USERS, DEFAULT_USERS);
+    }
+
+    getCurrentUser() {
+        return this.get(DB_KEYS.CURRENT_USER, null);
+    }
+
+    setCurrentUser(user) {
+        if (user) {
+            const safeUser = { id: user.id, name: user.name, email: user.email, username: user.username, role: user.role };
+            this.set(DB_KEYS.CURRENT_USER, safeUser);
+        } else {
+            localStorage.removeItem(DB_KEYS.CURRENT_USER);
+        }
+    }
+
+    login(identifier, password) {
+        const users = this.getUsers();
+        const cleanId = (identifier || '').trim().toLowerCase();
+        const user = users.find(u => 
+            (u.email.toLowerCase() === cleanId || u.username.toLowerCase() === cleanId) && 
+            u.password === password
+        );
+        if (user) {
+            this.setCurrentUser(user);
+            return { success: true, user };
+        }
+        return { success: false, message: 'Usuario o contraseña incorrectos.' };
+    }
+
+    register(name, email, username, password) {
+        const users = this.getUsers();
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanUsername = (username || '').trim().toLowerCase();
+
+        if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
+            return { success: false, message: 'El correo electrónico ya está registrado.' };
+        }
+        if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
+            return { success: false, message: 'El nombre de usuario ya está en uso.' };
+        }
+
+        const newUser = {
+            id: 'usr_' + Date.now(),
+            name: name.trim(),
+            email: cleanEmail,
+            username: cleanUsername,
+            password: password,
+            role: 'usuario',
+            createdAt: new Date().toISOString()
+        };
+
+        users.push(newUser);
+        this.set(DB_KEYS.USERS, users);
+        this.setCurrentUser(newUser);
+        return { success: true, user: newUser };
+    }
+
+    logout() {
+        this.setCurrentUser(null);
+    }
+
+    // ==========================================
+    // CATEGORÍAS DINÁMICAS
+    // ==========================================
+    getCategories() {
+        return this.get(DB_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+    }
+
+    saveCategory(name) {
+        const cat = (name || '').trim();
+        if (!cat) return false;
+        const categories = this.getCategories();
+        if (!categories.includes(cat)) {
+            categories.push(cat);
+            this.set(DB_KEYS.CATEGORIES, categories);
+        }
+        return true;
+    }
+
+    deleteCategory(name) {
+        const categories = this.getCategories().filter(c => c !== name);
+        this.set(DB_KEYS.CATEGORIES, categories);
+        return true;
+    }
+
+    // ==========================================
+    // PERFIL DE LA EMPRESA
+    // ==========================================
     getProfile() {
         return this.get(DB_KEYS.PROFILE, DEFAULT_PROFILE);
     }
@@ -292,7 +442,9 @@ class Database {
         return updated;
     }
 
-    // Escalas Globales de Márgenes por Volumen
+    // ==========================================
+    // REGLAS GLOBALES DE MÁRGENES
+    // ==========================================
     getGlobalTiers() {
         return this.get(DB_KEYS.GLOBAL_TIERS, DEFAULT_GLOBAL_TIERS);
     }
@@ -302,7 +454,9 @@ class Database {
         return tiers;
     }
 
-    // Proveedores
+    // ==========================================
+    // PROVEEDORES
+    // ==========================================
     getSuppliers() {
         return this.get(DB_KEYS.SUPPLIERS, []);
     }
@@ -334,13 +488,26 @@ class Database {
         return true;
     }
 
-    // Productos / Insumos
+    // ==========================================
+    // PRODUCTOS / INSUMOS CON ESCALA DE COSTO
+    // ==========================================
     getProducts() {
         return this.get(DB_KEYS.PRODUCTS, []);
     }
 
     getProductById(id) {
         return this.getProducts().find(p => p.id === id);
+    }
+
+    getCostForQuantity(product, quantity) {
+        const qty = parseFloat(quantity) || 1;
+        if (product && product.costTiers && product.costTiers.length > 0) {
+            const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
+            if (matchedTier && !isNaN(matchedTier.cost)) {
+                return parseFloat(matchedTier.cost);
+            }
+        }
+        return parseFloat(product?.costPrice) || 0;
     }
 
     saveProduct(product) {
@@ -383,7 +550,7 @@ class Database {
             if (matchedTier) return parseFloat(matchedTier.margin);
         }
 
-        // 3. Margen por defecto del producto o perfil
+        // 3. Margen por defecto del producto
         return product?.defaultMargin !== undefined ? parseFloat(product.defaultMargin) : 40;
     }
 
@@ -393,9 +560,15 @@ class Database {
         return Number((cost * (1 + margin / 100)).toFixed(2));
     }
 
-    // Vinilos
+    // ==========================================
+    // VINILOS PRESETS (CRUD COMPLETO)
+    // ==========================================
     getVinylPresets() {
         return this.get(DB_KEYS.VINYLS, DEFAULT_VINYLS);
+    }
+
+    getVinylPresetById(id) {
+        return this.getVinylPresets().find(v => v.id === id);
     }
 
     saveVinylPreset(vinyl) {
@@ -412,7 +585,15 @@ class Database {
         return vinyl;
     }
 
-    // Cotizaciones
+    deleteVinylPreset(id) {
+        const list = this.getVinylPresets().filter(v => v.id !== id);
+        this.set(DB_KEYS.VINYLS, list);
+        return true;
+    }
+
+    // ==========================================
+    // COTIZACIONES
+    // ==========================================
     getQuotes() {
         return this.get(DB_KEYS.QUOTES, []);
     }
@@ -458,11 +639,15 @@ class Database {
         return true;
     }
 
-    // Respaldo y Restauración
+    // ==========================================
+    // RESPALDO Y RESTAURACIÓN
+    // ==========================================
     exportAllData() {
         return {
-            version: '1.0',
+            version: '2.0',
             exportDate: new Date().toISOString(),
+            users: this.getUsers(),
+            categories: this.getCategories(),
             profile: this.getProfile(),
             globalTiers: this.getGlobalTiers(),
             suppliers: this.getSuppliers(),
@@ -476,6 +661,8 @@ class Database {
         if (!jsonData || typeof jsonData !== 'object') {
             throw new Error('Formato de respaldo no válido.');
         }
+        if (jsonData.users) this.set(DB_KEYS.USERS, jsonData.users);
+        if (jsonData.categories) this.set(DB_KEYS.CATEGORIES, jsonData.categories);
         if (jsonData.profile) this.set(DB_KEYS.PROFILE, jsonData.profile);
         if (jsonData.globalTiers) this.set(DB_KEYS.GLOBAL_TIERS, jsonData.globalTiers);
         if (jsonData.suppliers) this.set(DB_KEYS.SUPPLIERS, jsonData.suppliers);
@@ -486,6 +673,8 @@ class Database {
     }
 
     resetToFactory() {
+        this.set(DB_KEYS.USERS, DEFAULT_USERS);
+        this.set(DB_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
         this.set(DB_KEYS.PROFILE, DEFAULT_PROFILE);
         this.set(DB_KEYS.GLOBAL_TIERS, DEFAULT_GLOBAL_TIERS);
         this.set(DB_KEYS.SUPPLIERS, DEFAULT_SUPPLIERS);
