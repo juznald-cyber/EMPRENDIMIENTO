@@ -1,8 +1,9 @@
-// js/app.js - Controlador Principal de la Aplicación y Eventos de UI
+// js/app.js - Controlador Principal de la Aplicación con Firebase Authentication
 class AppController {
     constructor() {
         this.currentTab = 'tab-cotizador';
         this.catalogSubTab = 'products';
+        this.currentUser = null;
     }
 
     init() {
@@ -11,8 +12,8 @@ class AppController {
             window.lucide.createIcons();
         }
 
-        // Verificar Autenticación de Usuario
-        this.checkAuthState();
+        // Configurar Listener de Firebase Authentication
+        this.setupFirebaseAuthListener();
 
         // Cargar Datos del Perfil y UI inicial
         this.loadProfileIntoUI();
@@ -25,25 +26,34 @@ class AppController {
         this.renderHistory();
         this.renderProducts();
         this.renderSuppliers();
-        this.renderUsersList();
         this.bindEvents();
 
-        console.log('Cotizador Pro App Inicializada Exitosamente (v2.3).');
+        console.log('Cotizador Pro App Inicializada con Firebase Authentication.');
     }
 
     // ==========================================
-    // AUTENTICACIÓN Y CONTROL DE ACCESO
+    // FIREBASE AUTHENTICATION (LOGIN & LOGOUT)
     // ==========================================
-    checkAuthState() {
-        const currentUser = window.db.getCurrentUser();
+    setupFirebaseAuthListener() {
         const authScreen = document.getElementById('auth-screen');
         const sidebarUserName = document.getElementById('sidebar-user-name');
 
-        if (currentUser) {
-            if (authScreen) authScreen.classList.add('hidden');
-            if (sidebarUserName) sidebarUserName.innerText = currentUser.name || currentUser.username || 'Usuario';
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().onAuthStateChanged((user) => {
+                this.currentUser = user;
+                if (user) {
+                    // Usuario autenticado en Firebase
+                    if (authScreen) authScreen.classList.add('hidden');
+                    if (sidebarUserName) sidebarUserName.innerText = user.email || 'Usuario';
+                    console.log('Usuario autenticado en Firebase:', user.email);
+                } else {
+                    // Sin sesión activa
+                    if (authScreen) authScreen.classList.remove('hidden');
+                    if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
+                }
+            });
         } else {
-            if (authScreen) authScreen.classList.remove('hidden');
+            console.warn('Firebase Auth SDK no disponible de momento.');
         }
     }
 
@@ -62,100 +72,53 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    handleLoginSubmit(e) {
+    async handleLoginSubmit(e) {
         e.preventDefault();
-        const id = document.getElementById('login-identifier').value;
-        const pass = document.getElementById('login-password').value;
+        const email = (document.getElementById('login-email')?.value || '').trim();
+        const pass = document.getElementById('login-password')?.value || '';
+        const submitBtn = document.getElementById('login-submit-btn');
 
-        const res = window.db.login(id, pass);
-        if (res.success) {
-            this.checkAuthState();
-            this.showToast(`¡Bienvenido, ${res.user.name}!`, 'success');
-            if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
-        } else {
-            this.showToast(res.message, 'error');
-        }
-    }
-
-    logout() {
-        if (confirm('¿Deseas cerrar tu sesión actual?')) {
-            window.db.logout();
-            this.checkAuthState();
-            this.showToast('Sesión cerrada correctamente.', 'info');
-        }
-    }
-
-    // ==========================================
-    // GESTIÓN DE USUARIOS (DESDE CONFIGURACIÓN)
-    // ==========================================
-    renderUsersList() {
-        const users = window.db.getUsers();
-        const current = window.db.getCurrentUser();
-        const container = document.getElementById('settings-users-list');
-        if (!container) return;
-
-        container.innerHTML = users.map(u => {
-            const isSelf = current && current.id === u.id;
-            return `
-                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                    <div class="flex items-center gap-2.5">
-                        <div class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                            ${(u.name || u.username || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <div class="font-bold text-slate-800">${this.escapeHTML(u.name)} ${isSelf ? '<span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">(Tú)</span>' : ''}</div>
-                            <div class="text-[11px] text-slate-500 font-mono">Usuario: ${this.escapeHTML(u.username)} | ${this.escapeHTML(u.email)}</div>
-                        </div>
-                    </div>
-                    ${!isSelf ? `
-                        <button onclick="app.deleteUser('${u.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar usuario">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-        }).join('');
-
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    openCreateUserModal() {
-        document.getElementById('new-user-name').value = '';
-        document.getElementById('new-user-username').value = '';
-        document.getElementById('new-user-email').value = '';
-        document.getElementById('new-user-password').value = '';
-        this.openModal('modal-create-user');
-    }
-
-    submitNewUserFromSettings() {
-        const name = document.getElementById('new-user-name').value.trim();
-        const username = document.getElementById('new-user-username').value.trim();
-        const email = document.getElementById('new-user-email').value.trim();
-        const password = document.getElementById('new-user-password').value;
-
-        if (!name || !username || !password) {
-            this.showToast('Por favor completa todos los campos obligatorios.', 'warning');
+        if (!email || !pass) {
+            this.showToast('Por favor introduce tu correo y contraseña.', 'warning');
             return;
         }
 
-        const res = window.db.register(name, email, username, password, 'usuario');
-        if (res.success) {
-            this.renderUsersList();
-            this.closeModal('modal-create-user');
-            this.showToast(`Usuario "${name}" creado exitosamente.`, 'success');
-        } else {
-            this.showToast(res.message, 'error');
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+            this.showToast('Firebase no está inicializado. Verifica tu conexión.', 'error');
+            return;
+        }
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Verificando con Firebase...';
+            }
+
+            const userCredential = await firebase.auth().signInWithEmailAndPassword(email, pass);
+            this.showToast(`¡Bienvenido! Sesión iniciada como ${userCredential.user.email}`, 'success');
+            if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
+        } catch (error) {
+            console.error('Error de autenticación en Firebase:', error);
+            const msg = window.getFirebaseAuthErrorMessage ? window.getFirebaseAuthErrorMessage(error.code) : error.message;
+            this.showToast(msg, 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> Ingresar con Firebase`;
+                if (window.lucide) window.lucide.createIcons();
+            }
         }
     }
 
-    deleteUser(id) {
-        if (confirm('¿Estás seguro de eliminar este usuario? Ya no podrá acceder al sistema.')) {
-            const res = window.db.deleteUser(id);
-            if (res.success) {
-                this.renderUsersList();
-                this.showToast('Usuario eliminado.', 'info');
-            } else {
-                this.showToast(res.message, 'warning');
+    async logout() {
+        if (confirm('¿Deseas cerrar tu sesión actual de Firebase?')) {
+            try {
+                if (typeof firebase !== 'undefined' && firebase.auth) {
+                    await firebase.auth().signOut();
+                }
+                this.showToast('Sesión de Firebase cerrada correctamente.', 'info');
+            } catch (error) {
+                this.showToast('Error al cerrar sesión: ' + error.message, 'error');
             }
         }
     }
@@ -1509,8 +1472,6 @@ class AppController {
                 this.renderSuppliers();
                 this.renderHistory();
                 this.renderQuoteDraft();
-                this.renderUsersList();
-                this.checkAuthState();
                 this.showToast('¡Respaldo restaurado con éxito!', 'success');
             } catch (err) {
                 alert('El archivo seleccionado no tiene un formato JSON válido.');
@@ -1531,8 +1492,6 @@ class AppController {
             this.renderSuppliers();
             this.renderHistory();
             this.renderQuoteDraft();
-            this.renderUsersList();
-            this.checkAuthState();
             this.showToast('Datos de fábrica restaurados.', 'info');
         }
     }

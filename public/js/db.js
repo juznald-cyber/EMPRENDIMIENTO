@@ -7,23 +7,8 @@ const DB_KEYS = {
     VINYLS: 'cotizador_vinyls',
     QUOTES: 'cotizador_quotes',
     GLOBAL_TIERS: 'cotizador_global_tiers',
-    USERS: 'cotizador_users',
-    CURRENT_USER: 'cotizador_current_user',
     SETTINGS: 'cotizador_settings'
 };
-
-// Usuario Administrador Inicial
-const DEFAULT_USERS = [
-    {
-        id: 'usr_admin',
-        name: 'Administrador Principal',
-        email: 'admin@cotizador.com',
-        username: 'admin',
-        password: 'admin123', // Clave inicial personalizable
-        role: 'admin',
-        createdAt: new Date().toISOString()
-    }
-];
 
 // Categorías Iniciales
 const DEFAULT_CATEGORIES = [
@@ -336,84 +321,6 @@ class Database {
             console.error(`Error guardando ${key} en localStorage:`, e);
             return false;
         }
-    }
-
-    // ==========================================
-    // AUTENTICACIÓN Y USUARIOS
-    // ==========================================
-    getUsers() {
-        return this.get(DB_KEYS.USERS, DEFAULT_USERS);
-    }
-
-    getCurrentUser() {
-        return this.get(DB_KEYS.CURRENT_USER, null);
-    }
-
-    setCurrentUser(user) {
-        if (user) {
-            const safeUser = { id: user.id, name: user.name, email: user.email, username: user.username, role: user.role };
-            this.set(DB_KEYS.CURRENT_USER, safeUser);
-        } else {
-            localStorage.removeItem(DB_KEYS.CURRENT_USER);
-        }
-    }
-
-    login(identifier, password) {
-        const users = this.getUsers();
-        const cleanId = (identifier || '').trim().toLowerCase();
-        const user = users.find(u => 
-            (u.email.toLowerCase() === cleanId || u.username.toLowerCase() === cleanId) && 
-            u.password === password
-        );
-        if (user) {
-            this.setCurrentUser(user);
-            return { success: true, user };
-        }
-        return { success: false, message: 'Usuario o contraseña incorrectos.' };
-    }
-
-    register(name, email, username, password, role = 'usuario') {
-        const users = this.getUsers();
-        const cleanEmail = (email || '').trim().toLowerCase();
-        const cleanUsername = (username || '').trim().toLowerCase();
-
-        if (users.some(u => u.email.toLowerCase() === cleanEmail)) {
-            return { success: false, message: 'El correo electrónico ya está registrado.' };
-        }
-        if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
-            return { success: false, message: 'El nombre de usuario ya está en uso.' };
-        }
-
-        const newUser = {
-            id: 'usr_' + Date.now(),
-            name: name.trim(),
-            email: cleanEmail,
-            username: cleanUsername,
-            password: password,
-            role: role,
-            createdAt: new Date().toISOString()
-        };
-
-        users.push(newUser);
-        this.set(DB_KEYS.USERS, users);
-        return { success: true, user: newUser };
-    }
-
-    deleteUser(id) {
-        const currentUser = this.getCurrentUser();
-        if (currentUser && currentUser.id === id) {
-            return { success: false, message: 'No puedes eliminar el usuario con el que estás conectado actualmente.' };
-        }
-        const users = this.getUsers().filter(u => u.id !== id);
-        if (users.length === 0) {
-            return { success: false, message: 'Debe existir al menos un usuario en el sistema.' };
-        }
-        this.set(DB_KEYS.USERS, users);
-        return { success: true };
-    }
-
-    logout() {
-        this.setCurrentUser(null);
     }
 
     // ==========================================

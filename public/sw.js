@@ -1,9 +1,10 @@
 // sw.js - Service Worker con auto-actualización forzada y purga de caché vieja
-const CACHE_NAME = 'cotizador-pro-v2.3';
+const CACHE_NAME = 'cotizador-pro-v2.4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './css/styles.css',
+    './js/firebase-config.js',
     './js/db.js',
     './js/vinilos.js',
     './js/pdf-generator.js',
