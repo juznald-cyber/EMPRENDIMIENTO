@@ -122,7 +122,7 @@ class VinylCalculator {
             unitPrice: Number(unitPrice.toFixed(2)),
             unitCost: Number(unitCost.toFixed(2)),
             profitAmount: Number((totalSalePrice - totalBaseCost).toFixed(2)),
-            notes
+            notes: notes ? notes.trim() : ''
         };
     }
 
@@ -136,23 +136,18 @@ class VinylCalculator {
             vinylPresetId: p.id,
             vinylType: p.type || 'adhesivo',
             name: title,
-            unit: 'Pza / m²',
+            unit: 'Pza',
             dimensions: {
                 width: calcResult.widthInput,
                 height: calcResult.heightInput,
-                unitMode: calcResult.unitMode,
-                areaM2: calcResult.totalNetAreaM2,
-                grossAreaM2: calcResult.totalGrossAreaM2,
-                wasteRate: calcResult.wasteRate,
-                rollWidthCm: calcResult.rollWidthCm,
-                rollLengthCm: calcResult.rollLengthCm
+                unitMode: calcResult.unitMode
             },
             quantity: calcResult.quantity,
             costPrice: calcResult.unitCost, // Costo unitario
             margin: calcResult.margin,
             unitPrice: calcResult.unitPrice, // Precio unitario de venta
             total: calcResult.totalSalePrice,
-            notes: calcResult.notes || `Área total: ${calcResult.totalNetAreaM2} m² (${calcResult.totalGrossAreaM2} m² con ${calcResult.wasteRate}% merma). Medida bobina: ${calcResult.rollWidthCm}x${calcResult.rollLengthCm}cm.`
+            notes: calcResult.notes || '' // Limpio: sin detalles internos de merma o bobina
         };
     }
 }

@@ -18,7 +18,6 @@ class PDFGenerator {
                 <td class="py-2.5 px-2 text-slate-800">
                     <div class="font-bold text-xs leading-tight">${this.escapeHTML(item.name)}</div>
                     ${item.notes ? `<div class="text-[10px] text-slate-500 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
-                    ${item.dimensions ? `<div class="text-[10px] text-indigo-600 font-semibold mt-0.5">📐 Medidas: ${item.dimensions.width}x${item.dimensions.height} ${item.dimensions.unitMode || 'cm'} (${item.dimensions.areaM2} m²)</div>` : ''}
                 </td>
                 <td class="py-2.5 px-2 text-slate-600 text-center">${item.unit || 'Unid'}</td>
                 <td class="py-2.5 px-2 text-slate-800 text-center font-bold">${item.quantity}</td>

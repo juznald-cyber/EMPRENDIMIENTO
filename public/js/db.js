@@ -449,6 +449,166 @@ class Database {
         return true;
     }
 
+    // ==========================================
+    // CARGA MASIVA Y PARSER CSV (PROVEEDORES Y PRODUCTOS)
+    // ==========================================
+    parseCSV(text) {
+        const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+        if (lines.length === 0) return [];
+
+        const firstLine = lines[0];
+        let sep = ',';
+        if (firstLine.includes(';') && firstLine.split(';').length >= firstLine.split(',').length) {
+            sep = ';';
+        } else if (firstLine.includes('\t')) {
+            sep = '\t';
+        }
+
+        const parseLine = (line) => {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"' || char === "'") {
+                    inQuotes = !inQuotes;
+                } else if (char === sep && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result.map(s => s.replace(/^["']|["']$/g, '').trim());
+        };
+
+        return lines.map(parseLine);
+    }
+
+    importSuppliersFromCSV(csvText) {
+        const rows = this.parseCSV(csvText);
+        if (rows.length < 2) throw new Error('El archivo CSV debe contener al menos una fila de encabezados y una de datos.');
+
+        const headers = rows[0].map(h => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        
+        const idxName = headers.findIndex(h => h.includes('nombre') || h.includes('proveedor') || h.includes('empresa'));
+        const idxRut = headers.findIndex(h => h.includes('rut') || h.includes('nit') || h.includes('identificacion') || h.includes('cif') || h.includes('ruc'));
+        const idxContact = headers.findIndex(h => h.includes('contacto') || h.includes('persona') || h.includes('atencion'));
+        const idxPhone = headers.findIndex(h => h.includes('telefono') || h.includes('celular') || h.includes('movil') || h.includes('whatsapp'));
+        const idxEmail = headers.findIndex(h => h.includes('correo') || h.includes('email') || h.includes('mail'));
+        const idxCategory = headers.findIndex(h => h.includes('categoria') || h.includes('rubro'));
+        const idxNotes = headers.findIndex(h => h.includes('nota') || h.includes('observacion') || h.includes('detalle'));
+
+        if (idxName === -1) throw new Error('No se encontró la columna "Nombre" o "Empresa" en el archivo CSV.');
+
+        let count = 0;
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const name = row[idxName];
+            if (!name) continue;
+
+            const rut = idxRut !== -1 ? row[idxRut] || '' : '';
+            const contact = idxContact !== -1 ? row[idxContact] || '' : '';
+            const phone = idxPhone !== -1 ? row[idxPhone] || '' : '';
+            const email = idxEmail !== -1 ? row[idxEmail] || '' : '';
+            const category = idxCategory !== -1 ? row[idxCategory] || 'General' : 'General';
+            const notes = idxNotes !== -1 ? row[idxNotes] || '' : '';
+
+            this.saveSupplier({ name, rut, contact, phone, email, category, notes });
+            if (category) this.saveCategory(category);
+            count++;
+        }
+        return count;
+    }
+
+    importProductsFromCSV(csvText) {
+        const rows = this.parseCSV(csvText);
+        if (rows.length < 2) throw new Error('El archivo CSV debe contener al menos una fila de encabezados y una de datos.');
+
+        const headers = rows[0].map(h => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+
+        const idxSku = headers.findIndex(h => h.includes('sku') || h.includes('codigo') || h.includes('ref'));
+        const idxName = headers.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('insumo') || h.includes('descripcion'));
+        const idxSup = headers.findIndex(h => h.includes('proveedor') || h.includes('supplier'));
+        const idxCat = headers.findIndex(h => h.includes('categoria') || h.includes('rubro'));
+        const idxUnit = headers.findIndex(h => h.includes('unidad') || h.includes('unit') || h.includes('medida'));
+        const idxCost = headers.findIndex(h => h.includes('costo') || h.includes('cost') || h.includes('precio'));
+        const idxMargin = headers.findIndex(h => h.includes('margen') || h.includes('ganancia') || h.includes('margin'));
+        const idxUrl = headers.findIndex(h => h.includes('url') || h.includes('enlace') || h.includes('link') || h.includes('web') || h.includes('pagina'));
+        const idxNotes = headers.findIndex(h => h.includes('nota') || h.includes('observacion') || h.includes('especificacion'));
+
+        if (idxName === -1) throw new Error('No se encontró la columna "Nombre" o "Producto" en el archivo CSV.');
+
+        const suppliers = this.getSuppliers();
+        let count = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const name = row[idxName];
+            if (!name) continue;
+
+            const sku = idxSku !== -1 && row[idxSku] ? row[idxSku] : ('PROD-' + Math.floor(Math.random() * 9000 + 1000));
+            const supplierRaw = idxSup !== -1 ? row[idxSup] || '' : '';
+            let matchedSup = suppliers.find(s => s.name.toLowerCase() === supplierRaw.toLowerCase() || s.id === supplierRaw);
+            if (!matchedSup && supplierRaw.trim()) {
+                matchedSup = this.saveSupplier({ name: supplierRaw.trim(), category: 'General' });
+            }
+            const supplierId = matchedSup ? matchedSup.id : (suppliers[0]?.id || 'sup_1');
+
+            const category = idxCat !== -1 && row[idxCat] ? row[idxCat] : 'General';
+            const unit = idxUnit !== -1 && row[idxUnit] ? row[idxUnit] : 'Unidad';
+            const costPrice = idxCost !== -1 ? (parseFloat((row[idxCost] || '0').replace('$', '').replace(',', '.')) || 0) : 0;
+            const defaultMargin = idxMargin !== -1 ? (parseFloat((row[idxMargin] || '50').replace('%', '')) || 50) : 50;
+            const url = idxUrl !== -1 ? (row[idxUrl] || '').trim() : '';
+            const notes = idxNotes !== -1 ? row[idxNotes] || '' : '';
+
+            this.saveProduct({
+                sku,
+                name,
+                supplierId,
+                category,
+                unit,
+                costPrice,
+                defaultMargin,
+                url,
+                notes,
+                costTiers: [],
+                useGlobalTiers: true
+            });
+            if (category) this.saveCategory(category);
+            count++;
+        }
+        return count;
+    }
+
+    downloadSuppliersTemplateCSV() {
+        const csvContent = "\uFEFF" + "Nombre,RUT,Contacto,Telefono,Email,Categoria,Notas\n" +
+            "Distribuidora Gráfica Nacional,J-29837482-1,Carlos Rodríguez,+58 414 5551122,ventas@distribuidoragrafica.com,Vinilos,Descuento 5% pronto pago\n" +
+            "Textiles & Confección Global,J-31092834-0,María Elena Pérez,+58 424 9998877,pedidos@textilesglobal.com,Textil,Entregas martes y jueves\n" +
+            "Insumos Tecnológicos UV,J-40192837-9,Fernando Mendoza,+58 416 3334455,contacto@insumosuv.com,Insumos,Consumibles DTF UV";
+        this.triggerDownloadCSV(csvContent, 'Plantilla_Importar_Proveedores.csv');
+    }
+
+    downloadProductsTemplateCSV() {
+        const csvContent = "\uFEFF" + "SKU,Nombre,Proveedor,Categoria,Unidad,Costo,Margen,URL_Producto,Notas\n" +
+            "VIN-ADH-BLA,Bobina Vinilo Adhesivo Blanco (1.22m x 50m),Distribuidora Gráfica Nacional,Vinilos,Rollo,85.00,45,https://proveedor.com/vinilo-blanco,Marca Oracal 651\n" +
+            "FRA-ALG-NEG,Franela de Algodón 24/1 Cuello Redondo,Textiles & Confección Global,Textil,Unidad,4.20,50,https://proveedor.com/franela-algodon,Colores variados\n" +
+            "LAM-UV-500,Lámina Acrílico Transparente 3mm 120x240,Insumos Tecnológicos UV,Insumos,Plancha,38.00,40,https://proveedor.com/acrilico-3mm,Corte láser";
+        this.triggerDownloadCSV(csvContent, 'Plantilla_Importar_Productos.csv');
+    }
+
+    triggerDownloadCSV(content, filename) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     // Calculador de Márgenes Dinámicos según Cantidad
     getMarginForQuantity(product, quantity) {
         const qty = parseFloat(quantity) || 1;

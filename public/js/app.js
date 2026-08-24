@@ -1059,9 +1059,10 @@ class AppController {
                     <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
                     <td class="py-3 px-3">
                         <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
-                        <div class="flex items-center gap-1.5 mt-0.5">
+                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
                             <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                             ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
+                            ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors" title="Ver producto en la web del proveedor"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
                         </div>
                     </td>
                     <td class="py-3 px-3 text-xs text-slate-600">
@@ -1250,6 +1251,7 @@ class AppController {
             document.getElementById('prod-form-unit').value = p.unit || 'Unidad';
             document.getElementById('prod-form-cost').value = p.costPrice || 0;
             document.getElementById('prod-form-margin').value = p.defaultMargin || 50;
+            document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
 
             if (p.costTiers && p.costTiers.length > 0) {
@@ -1267,6 +1269,7 @@ class AppController {
             document.getElementById('prod-form-unit').value = 'Unidad';
             document.getElementById('prod-form-cost').value = '5.00';
             document.getElementById('prod-form-margin').value = '50';
+            document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
         }
         this.openModal('modal-edit-product');
@@ -1311,6 +1314,7 @@ class AppController {
         const unit = document.getElementById('prod-form-unit').value.trim();
         const costPrice = parseFloat(document.getElementById('prod-form-cost').value) || 0;
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
+        const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
 
         if (!name) {
@@ -1346,6 +1350,7 @@ class AppController {
             costPrice,
             costTiers,
             defaultMargin,
+            url,
             notes,
             useGlobalTiers: true
         };
@@ -1363,6 +1368,98 @@ class AppController {
             this.renderProducts();
             this.showToast('Producto eliminado.', 'info');
         }
+    }
+
+    // ==========================================
+    // CONTROLADORES DE IMPORTACIÓN MASIVA (CSV)
+    // ==========================================
+    openImportSuppliersModal() {
+        const fileInp = document.getElementById('import-suppliers-file-input');
+        const txtArea = document.getElementById('import-suppliers-textarea');
+        if (fileInp) fileInp.value = '';
+        if (txtArea) txtArea.value = '';
+        this.openModal('modal-import-suppliers');
+    }
+
+    handleSuppliersCSVFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const txt = e.target.result;
+            const txtArea = document.getElementById('import-suppliers-textarea');
+            if (txtArea) txtArea.value = txt;
+        };
+        reader.readAsText(file);
+    }
+
+    submitImportSuppliers() {
+        const txtArea = document.getElementById('import-suppliers-textarea');
+        const csvText = txtArea ? txtArea.value.trim() : '';
+        if (!csvText) {
+            this.showToast('Por favor selecciona un archivo o pega los datos CSV.', 'warning');
+            return;
+        }
+
+        try {
+            const count = window.db.importSuppliersFromCSV(csvText);
+            this.renderSuppliers();
+            this.renderSuppliersDataList();
+            this.renderCategoriesDataLists();
+            this.closeModal('modal-import-suppliers');
+            this.showToast(`¡Se importaron ${count} proveedores exitosamente!`, 'success');
+        } catch (err) {
+            this.showToast(err.message || 'Error al procesar el archivo CSV.', 'error');
+        }
+    }
+
+    downloadSuppliersTemplate() {
+        window.db.downloadSuppliersTemplateCSV();
+        this.showToast('Descargando plantilla de proveedores...', 'info');
+    }
+
+    openImportProductsModal() {
+        const fileInp = document.getElementById('import-products-file-input');
+        const txtArea = document.getElementById('import-products-textarea');
+        if (fileInp) fileInp.value = '';
+        if (txtArea) txtArea.value = '';
+        this.openModal('modal-import-products');
+    }
+
+    handleProductsCSVFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const txt = e.target.result;
+            const txtArea = document.getElementById('import-products-textarea');
+            if (txtArea) txtArea.value = txt;
+        };
+        reader.readAsText(file);
+    }
+
+    submitImportProducts() {
+        const txtArea = document.getElementById('import-products-textarea');
+        const csvText = txtArea ? txtArea.value.trim() : '';
+        if (!csvText) {
+            this.showToast('Por favor selecciona un archivo o pega los datos CSV.', 'warning');
+            return;
+        }
+
+        try {
+            const count = window.db.importProductsFromCSV(csvText);
+            this.renderProducts();
+            this.renderCategoriesDataLists();
+            this.closeModal('modal-import-products');
+            this.showToast(`¡Se importaron ${count} productos exitosamente!`, 'success');
+        } catch (err) {
+            this.showToast(err.message || 'Error al procesar el archivo CSV.', 'error');
+        }
+    }
+
+    downloadProductsTemplate() {
+        window.db.downloadProductsTemplateCSV();
+        this.showToast('Descargando plantilla de productos...', 'info');
     }
 
     // Modal Crear/Editar Proveedor (Con RUT)
