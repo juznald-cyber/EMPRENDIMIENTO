@@ -46,8 +46,8 @@
     <!-- Confetti for approvals -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+    <!-- Custom Styles con Cache Busting -->
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1323,18 +1323,20 @@
         </div>
     </div>
 
-    <!-- Scripts de la Aplicación -->
-    <script src="js/db.js"></script>
-    <script src="js/vinilos.js"></script>
-    <script src="js/pdf-generator.js"></script>
-    <script src="js/cotizador.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Scripts de la Aplicación con Cache Busting -->
+    <script src="js/db.js?v=2.2"></script>
+    <script src="js/vinilos.js?v=2.2"></script>
+    <script src="js/pdf-generator.js?v=2.2"></script>
+    <script src="js/cotizador.js?v=2.2"></script>
+    <script src="js/app.js?v=2.2"></script>
 
     <script>
-        // Registrar Service Worker para soporte PWA offline
+        // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration error', err));
+                navigator.serviceWorker.register('./sw.js?v=2.2').then(reg => {
+                    reg.update();
+                }).catch(err => console.log('SW registration error', err));
             });
         }
     </script>
