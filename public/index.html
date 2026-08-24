@@ -53,7 +53,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=2.9">
+    <link rel="stylesheet" href="css/styles.css?v=3.0">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -964,7 +964,7 @@
     <!-- ============================================================== -->
 
     <!-- Modal: Vista Previa PDF (Carta) -->
-    <div id="modal-pdf-preview" class="modal-overlay fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-pdf-preview" class="modal-overlay fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
@@ -989,7 +989,7 @@
     </div>
 
     <!-- Modal: Crear / Editar Tipo de Vinilo (CRUD Presets) -->
-    <div id="modal-edit-vinyl-preset" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-edit-vinyl-preset" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="vinyl-modal-title" class="font-bold text-sm text-slate-800">Tipo de Vinilo / Trabajo</h3>
@@ -1047,7 +1047,7 @@
     </div>
 
     <!-- Modal: Gestionar Categorías -->
-    <div id="modal-category-manager" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-category-manager" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Gestionar Categorías</h3>
@@ -1071,7 +1071,7 @@
     </div>
 
     <!-- Modal: Agregar Producto de Catálogo a Cotización -->
-    <div id="modal-add-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-add-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 class="font-bold text-base text-slate-800">Seleccionar Producto del Catálogo</h3>
@@ -1090,7 +1090,7 @@
     </div>
 
     <!-- Modal: Agregar Ítem Libre / Servicio Manual -->
-    <div id="modal-add-custom-item" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-add-custom-item" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Agregar Ítem Libre / Servicio</h3>
@@ -1142,7 +1142,7 @@
     </div>
 
     <!-- Modal: Crear / Editar Producto -->
-    <div id="modal-edit-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-edit-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="product-modal-title" class="font-bold text-sm text-slate-800">Nuevo Producto / Insumo</h3>
@@ -1231,7 +1231,7 @@
     </div>
 
     <!-- Modal: Crear / Editar Proveedor (Con RUT) -->
-    <div id="modal-edit-supplier" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div id="modal-edit-supplier" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="supplier-modal-title" class="font-bold text-sm text-slate-800">Nuevo Proveedor</h3>
@@ -1288,18 +1288,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=2.9"></script>
-    <script src="js/db.js?v=2.9"></script>
-    <script src="js/vinilos.js?v=2.9"></script>
-    <script src="js/pdf-generator.js?v=2.9"></script>
-    <script src="js/cotizador.js?v=2.9"></script>
-    <script src="js/app.js?v=2.9"></script>
+    <script src="js/firebase-config.js?v=3.0"></script>
+    <script src="js/db.js?v=3.0"></script>
+    <script src="js/vinilos.js?v=3.0"></script>
+    <script src="js/pdf-generator.js?v=3.0"></script>
+    <script src="js/cotizador.js?v=3.0"></script>
+    <script src="js/app.js?v=3.0"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.9').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=3.0').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

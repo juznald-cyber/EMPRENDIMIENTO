@@ -1574,18 +1574,18 @@ class AppController {
     openModal(id) {
         const m = document.getElementById(id);
         if (m) {
-            m.style.setProperty('display', 'flex', 'important');
             m.classList.add('active');
             m.classList.remove('hidden');
+            m.style.display = 'flex';
         }
     }
 
     closeModal(id) {
         const m = document.getElementById(id);
         if (m) {
-            m.style.setProperty('display', 'none', 'important');
             m.classList.remove('active');
             m.classList.add('hidden');
+            m.style.display = 'none';
         }
     }
 
