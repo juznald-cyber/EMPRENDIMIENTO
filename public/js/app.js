@@ -84,26 +84,8 @@ class AppController {
         }
 
         if (typeof firebase === 'undefined' || !firebase.auth) {
-            this.showToast('El servicio de autenticación no está listo. Verifica tu conexión.', 'error');
+            this.showToast('Cargando servicios de autenticación... Por favor reintenta en un momento.', 'warning');
             return;
-        }
-
-        // Si falta la API Key en este navegador/dominio, solicitarla amistosamente
-        if (!firebase.apps.length) {
-            const userApiKey = prompt('Para conectar tu consola de Firebase en este navegador, por favor pega tu Clave de API Web de Firebase (la encuentras en Firebase Console > Configuración del Proyecto > General):');
-            if (userApiKey && userApiKey.trim().length > 5) {
-                const config = {
-                    apiKey: userApiKey.trim(),
-                    authDomain: "emprendimiento-f8b3a.firebaseapp.com",
-                    projectId: "emprendimiento-f8b3a",
-                    storageBucket: "emprendimiento-f8b3a.appspot.com"
-                };
-                localStorage.setItem('cotizador_firebase_config', JSON.stringify(config));
-                firebase.initializeApp(config);
-            } else {
-                this.showToast('Se requiere la Clave de API de Firebase para iniciar sesión.', 'warning');
-                return;
-            }
         }
 
         try {
@@ -113,7 +95,7 @@ class AppController {
             }
 
             const userCredential = await firebase.auth().signInWithEmailAndPassword(email, pass);
-            this.showToast(`¡Bienvenido! Sesión iniciada.`, 'success');
+            this.showToast(`¡Bienvenido! Sesión iniciada con éxito.`, 'success');
             if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
         } catch (error) {
             console.error('Error de autenticación en Firebase:', error);
