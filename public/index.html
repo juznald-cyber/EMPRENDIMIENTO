@@ -53,7 +53,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=2.4">
+    <link rel="stylesheet" href="css/styles.css?v=2.9">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1288,18 +1288,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=2.8"></script>
-    <script src="js/db.js?v=2.8"></script>
-    <script src="js/vinilos.js?v=2.8"></script>
-    <script src="js/pdf-generator.js?v=2.8"></script>
-    <script src="js/cotizador.js?v=2.8"></script>
-    <script src="js/app.js?v=2.8"></script>
+    <script src="js/firebase-config.js?v=2.9"></script>
+    <script src="js/db.js?v=2.9"></script>
+    <script src="js/vinilos.js?v=2.9"></script>
+    <script src="js/pdf-generator.js?v=2.9"></script>
+    <script src="js/cotizador.js?v=2.9"></script>
+    <script src="js/app.js?v=2.9"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.8').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=2.9').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
