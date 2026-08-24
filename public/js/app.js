@@ -43,10 +43,16 @@ class AppController {
             firebase.auth().onAuthStateChanged((user) => {
                 this.currentUser = user;
                 if (user) {
-                    if (authScreen) authScreen.classList.add('hidden');
+                    if (authScreen) {
+                        authScreen.style.setProperty('display', 'none', 'important');
+                        authScreen.classList.add('hidden');
+                    }
                     if (sidebarUserName) sidebarUserName.innerText = user.email || 'Usuario';
                 } else {
-                    if (authScreen) authScreen.classList.remove('hidden');
+                    if (authScreen) {
+                        authScreen.style.setProperty('display', 'flex', 'important');
+                        authScreen.classList.remove('hidden');
+                    }
                     if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
                 }
             });
@@ -1567,12 +1573,20 @@ class AppController {
     // ==========================================
     openModal(id) {
         const m = document.getElementById(id);
-        if (m) m.classList.remove('hidden');
+        if (m) {
+            m.style.setProperty('display', 'flex', 'important');
+            m.classList.add('active');
+            m.classList.remove('hidden');
+        }
     }
 
     closeModal(id) {
         const m = document.getElementById(id);
-        if (m) m.classList.add('hidden');
+        if (m) {
+            m.style.setProperty('display', 'none', 'important');
+            m.classList.remove('active');
+            m.classList.add('hidden');
+        }
     }
 
     showToast(message, type = 'info') {

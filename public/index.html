@@ -964,7 +964,7 @@
     <!-- ============================================================== -->
 
     <!-- Modal: Vista Previa PDF (Carta) -->
-    <div id="modal-pdf-preview" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-pdf-preview" class="modal-overlay fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
@@ -972,11 +972,11 @@
                     <h3 class="font-bold text-sm">Vista Previa de Cotización (Tamaño Carta)</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all">
+                    <button type="button" onclick="app.downloadCurrentPDF()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         Descargar PDF
                     </button>
-                    <button onclick="app.closeModal('modal-pdf-preview')" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
+                    <button type="button" onclick="app.closeModal('modal-pdf-preview')" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -989,11 +989,11 @@
     </div>
 
     <!-- Modal: Crear / Editar Tipo de Vinilo (CRUD Presets) -->
-    <div id="modal-edit-vinyl-preset" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-edit-vinyl-preset" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="vinyl-modal-title" class="font-bold text-sm text-slate-800">Tipo de Vinilo / Trabajo</h3>
-                <button onclick="app.closeModal('modal-edit-vinyl-preset')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-edit-vinyl-preset')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1039,19 +1039,19 @@
                     Eliminar Tipo
                 </button>
                 <div class="flex gap-2 ml-auto">
-                    <button onclick="app.closeModal('modal-edit-vinyl-preset')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
-                    <button onclick="app.submitVinylPresetForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar</button>
+                    <button type="button" onclick="app.closeModal('modal-edit-vinyl-preset')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                    <button type="button" onclick="app.submitVinylPresetForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modal: Gestionar Categorías -->
-    <div id="modal-category-manager" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-category-manager" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Gestionar Categorías</h3>
-                <button onclick="app.closeModal('modal-category-manager')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-category-manager')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1059,7 +1059,7 @@
             <div class="flex gap-2">
                 <input type="text" id="new-category-input" placeholder="Nueva categoría (ej. Sublimación)..." 
                     class="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
-                <button onclick="app.addNewCategoryFromModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shrink-0">
+                <button type="button" onclick="app.addNewCategoryFromModal()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shrink-0">
                     + Agregar
                 </button>
             </div>
@@ -1071,11 +1071,11 @@
     </div>
 
     <!-- Modal: Agregar Producto de Catálogo a Cotización -->
-    <div id="modal-add-product" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-add-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                 <h3 class="font-bold text-base text-slate-800">Seleccionar Producto del Catálogo</h3>
-                <button onclick="app.closeModal('modal-add-product')" class="p-1.5 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-add-product')" class="p-1.5 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1090,11 +1090,11 @@
     </div>
 
     <!-- Modal: Agregar Ítem Libre / Servicio Manual -->
-    <div id="modal-add-custom-item" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-add-custom-item" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Agregar Ítem Libre / Servicio</h3>
-                <button onclick="app.closeModal('modal-add-custom-item')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-add-custom-item')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1135,18 +1135,18 @@
                 </div>
             </div>
             <div class="flex justify-end gap-2 pt-2">
-                <button onclick="app.closeModal('modal-add-custom-item')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
-                <button onclick="app.submitCustomItem()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Agregar a Cotización</button>
+                <button type="button" onclick="app.closeModal('modal-add-custom-item')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="app.submitCustomItem()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Agregar a Cotización</button>
             </div>
         </div>
     </div>
 
     <!-- Modal: Crear / Editar Producto -->
-    <div id="modal-edit-product" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-edit-product" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="product-modal-title" class="font-bold text-sm text-slate-800">Nuevo Producto / Insumo</h3>
-                <button onclick="app.closeModal('modal-edit-product')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-edit-product')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1224,18 +1224,18 @@
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button onclick="app.closeModal('modal-edit-product')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
-                <button onclick="app.submitProductForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Producto</button>
+                <button type="button" onclick="app.closeModal('modal-edit-product')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="app.submitProductForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Producto</button>
             </div>
         </div>
     </div>
 
     <!-- Modal: Crear / Editar Proveedor (Con RUT) -->
-    <div id="modal-edit-supplier" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-edit-supplier" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="supplier-modal-title" class="font-bold text-sm text-slate-800">Nuevo Proveedor</h3>
-                <button onclick="app.closeModal('modal-edit-supplier')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-edit-supplier')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1281,25 +1281,25 @@
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button onclick="app.closeModal('modal-edit-supplier')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
-                <button onclick="app.submitSupplierForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Proveedor</button>
+                <button type="button" onclick="app.closeModal('modal-edit-supplier')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="app.submitSupplierForm()" class="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Guardar Proveedor</button>
             </div>
         </div>
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=2.7"></script>
-    <script src="js/db.js?v=2.7"></script>
-    <script src="js/vinilos.js?v=2.7"></script>
-    <script src="js/pdf-generator.js?v=2.7"></script>
-    <script src="js/cotizador.js?v=2.7"></script>
-    <script src="js/app.js?v=2.7"></script>
+    <script src="js/firebase-config.js?v=2.8"></script>
+    <script src="js/db.js?v=2.8"></script>
+    <script src="js/vinilos.js?v=2.8"></script>
+    <script src="js/pdf-generator.js?v=2.8"></script>
+    <script src="js/cotizador.js?v=2.8"></script>
+    <script src="js/app.js?v=2.8"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.7').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=2.8').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

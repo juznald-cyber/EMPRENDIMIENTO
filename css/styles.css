@@ -24,6 +24,22 @@ body {
     font-family: var(--font-mono);
 }
 
+/* Modales y Overlays con Alta Prioridad */
+.hidden, [hidden] {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+.modal-overlay {
+    display: none !important;
+    pointer-events: none;
+}
+
+.modal-overlay.active, .modal-overlay[style*="display: flex"] {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
     width: 6px;
@@ -64,7 +80,7 @@ body {
 }
 
 .tab-content.active {
-    display: block;
+    display: block !important;
     opacity: 1;
     transform: translateY(0);
 }
