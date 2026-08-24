@@ -84,18 +84,36 @@ class AppController {
         }
 
         if (typeof firebase === 'undefined' || !firebase.auth) {
-            this.showToast('Firebase no está inicializado. Verifica tu conexión.', 'error');
+            this.showToast('El servicio de autenticación no está listo. Verifica tu conexión.', 'error');
             return;
+        }
+
+        // Si falta la API Key en este navegador/dominio, solicitarla amistosamente
+        if (!firebase.apps.length) {
+            const userApiKey = prompt('Para conectar tu consola de Firebase en este navegador, por favor pega tu Clave de API Web de Firebase (la encuentras en Firebase Console > Configuración del Proyecto > General):');
+            if (userApiKey && userApiKey.trim().length > 5) {
+                const config = {
+                    apiKey: userApiKey.trim(),
+                    authDomain: "emprendimiento-f8b3a.firebaseapp.com",
+                    projectId: "emprendimiento-f8b3a",
+                    storageBucket: "emprendimiento-f8b3a.appspot.com"
+                };
+                localStorage.setItem('cotizador_firebase_config', JSON.stringify(config));
+                firebase.initializeApp(config);
+            } else {
+                this.showToast('Se requiere la Clave de API de Firebase para iniciar sesión.', 'warning');
+                return;
+            }
         }
 
         try {
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerText = 'Verificando con Firebase...';
+                submitBtn.innerText = 'Verificando...';
             }
 
             const userCredential = await firebase.auth().signInWithEmailAndPassword(email, pass);
-            this.showToast(`¡Bienvenido! Sesión iniciada como ${userCredential.user.email}`, 'success');
+            this.showToast(`¡Bienvenido! Sesión iniciada.`, 'success');
             if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
         } catch (error) {
             console.error('Error de autenticación en Firebase:', error);
@@ -104,19 +122,19 @@ class AppController {
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> Ingresar con Firebase`;
+                submitBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i> INGRESAR`;
                 if (window.lucide) window.lucide.createIcons();
             }
         }
     }
 
     async logout() {
-        if (confirm('¿Deseas cerrar tu sesión actual de Firebase?')) {
+        if (confirm('¿Deseas cerrar tu sesión actual?')) {
             try {
                 if (typeof firebase !== 'undefined' && firebase.auth) {
                     await firebase.auth().signOut();
                 }
-                this.showToast('Sesión de Firebase cerrada correctamente.', 'info');
+                this.showToast('Sesión cerrada correctamente.', 'info');
             } catch (error) {
                 this.showToast('Error al cerrar sesión: ' + error.message, 'error');
             }
