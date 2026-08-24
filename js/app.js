@@ -1371,9 +1371,10 @@ class AppController {
     }
 
     // ==========================================
-    // CONTROLADORES DE IMPORTACIÓN MASIVA (CSV)
+    // CONTROLADORES DE IMPORTACIÓN MASIVA (EXCEL XLS/XLSX & CSV)
     // ==========================================
     openImportSuppliersModal() {
+        this.importedSupplierRows = null;
         const fileInp = document.getElementById('import-suppliers-file-input');
         const txtArea = document.getElementById('import-suppliers-textarea');
         if (fileInp) fileInp.value = '';
@@ -1384,41 +1385,70 @@ class AppController {
     handleSuppliersCSVFile(event) {
         const file = event.target.files[0];
         if (!file) return;
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.xlsm');
+
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const txt = e.target.result;
-            const txtArea = document.getElementById('import-suppliers-textarea');
-            if (txtArea) txtArea.value = txt;
-        };
-        reader.readAsText(file);
+        if (isExcel && window.XLSX) {
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = window.XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    this.importedSupplierRows = rows;
+                    const txtArea = document.getElementById('import-suppliers-textarea');
+                    if (txtArea) {
+                        txtArea.value = rows.map(r => r.join(', ')).join('\n');
+                    }
+                    this.showToast(`Archivo Excel "${file.name}" cargado (${rows.length - 1} filas detectadas).`, 'success');
+                } catch (err) {
+                    this.showToast('Error al leer el archivo Excel: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.onload = (e) => {
+                const txt = e.target.result;
+                this.importedSupplierRows = null;
+                const txtArea = document.getElementById('import-suppliers-textarea');
+                if (txtArea) txtArea.value = txt;
+            };
+            reader.readAsText(file);
+        }
     }
 
     submitImportSuppliers() {
         const txtArea = document.getElementById('import-suppliers-textarea');
         const csvText = txtArea ? txtArea.value.trim() : '';
-        if (!csvText) {
-            this.showToast('Por favor selecciona un archivo o pega los datos CSV.', 'warning');
+        if (!csvText && !this.importedSupplierRows) {
+            this.showToast('Por favor selecciona un archivo Excel (.xlsx / .xls) o pega los datos.', 'warning');
             return;
         }
 
         try {
-            const count = window.db.importSuppliersFromCSV(csvText);
+            let count = 0;
+            if (this.importedSupplierRows && this.importedSupplierRows.length > 1) {
+                count = window.db.importSuppliersFromRows(this.importedSupplierRows);
+            } else {
+                count = window.db.importSuppliersFromCSV(csvText);
+            }
             this.renderSuppliers();
             this.renderSuppliersDataList();
             this.renderCategoriesDataLists();
             this.closeModal('modal-import-suppliers');
-            this.showToast(`¡Se importaron ${count} proveedores exitosamente!`, 'success');
+            this.showToast(`¡Se importaron ${count} proveedores exitosamente desde Excel!`, 'success');
         } catch (err) {
-            this.showToast(err.message || 'Error al procesar el archivo CSV.', 'error');
+            this.showToast(err.message || 'Error al procesar el archivo Excel.', 'error');
         }
     }
 
     downloadSuppliersTemplate() {
-        window.db.downloadSuppliersTemplateCSV();
-        this.showToast('Descargando plantilla de proveedores...', 'info');
+        window.db.downloadSuppliersTemplateXLS();
+        this.showToast('Descargando plantilla Excel de proveedores (.xlsx)...', 'info');
     }
 
     openImportProductsModal() {
+        this.importedProductRows = null;
         const fileInp = document.getElementById('import-products-file-input');
         const txtArea = document.getElementById('import-products-textarea');
         if (fileInp) fileInp.value = '';
@@ -1429,37 +1459,65 @@ class AppController {
     handleProductsCSVFile(event) {
         const file = event.target.files[0];
         if (!file) return;
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.xlsm');
+
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const txt = e.target.result;
-            const txtArea = document.getElementById('import-products-textarea');
-            if (txtArea) txtArea.value = txt;
-        };
-        reader.readAsText(file);
+        if (isExcel && window.XLSX) {
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = window.XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    this.importedProductRows = rows;
+                    const txtArea = document.getElementById('import-products-textarea');
+                    if (txtArea) {
+                        txtArea.value = rows.map(r => r.join(', ')).join('\n');
+                    }
+                    this.showToast(`Archivo Excel "${file.name}" cargado (${rows.length - 1} filas detectadas).`, 'success');
+                } catch (err) {
+                    this.showToast('Error al leer el archivo Excel: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.onload = (e) => {
+                const txt = e.target.result;
+                this.importedProductRows = null;
+                const txtArea = document.getElementById('import-products-textarea');
+                if (txtArea) txtArea.value = txt;
+            };
+            reader.readAsText(file);
+        }
     }
 
     submitImportProducts() {
         const txtArea = document.getElementById('import-products-textarea');
         const csvText = txtArea ? txtArea.value.trim() : '';
-        if (!csvText) {
-            this.showToast('Por favor selecciona un archivo o pega los datos CSV.', 'warning');
+        if (!csvText && !this.importedProductRows) {
+            this.showToast('Por favor selecciona un archivo Excel (.xlsx / .xls) o pega los datos.', 'warning');
             return;
         }
 
         try {
-            const count = window.db.importProductsFromCSV(csvText);
+            let count = 0;
+            if (this.importedProductRows && this.importedProductRows.length > 1) {
+                count = window.db.importProductsFromRows(this.importedProductRows);
+            } else {
+                count = window.db.importProductsFromCSV(csvText);
+            }
             this.renderProducts();
             this.renderCategoriesDataLists();
             this.closeModal('modal-import-products');
-            this.showToast(`¡Se importaron ${count} productos exitosamente!`, 'success');
+            this.showToast(`¡Se importaron ${count} productos exitosamente desde Excel!`, 'success');
         } catch (err) {
-            this.showToast(err.message || 'Error al procesar el archivo CSV.', 'error');
+            this.showToast(err.message || 'Error al procesar el archivo Excel.', 'error');
         }
     }
 
     downloadProductsTemplate() {
-        window.db.downloadProductsTemplateCSV();
-        this.showToast('Descargando plantilla de productos...', 'info');
+        window.db.downloadProductsTemplateXLS();
+        this.showToast('Descargando plantilla Excel de productos (.xlsx)...', 'info');
     }
 
     // Modal Crear/Editar Proveedor (Con RUT)
