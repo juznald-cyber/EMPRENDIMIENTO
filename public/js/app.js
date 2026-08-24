@@ -25,9 +25,10 @@ class AppController {
         this.renderHistory();
         this.renderProducts();
         this.renderSuppliers();
+        this.renderUsersList();
         this.bindEvents();
 
-        console.log('Cotizador Pro App Inicializada Exitosamente con Autenticación y Escalas.');
+        console.log('Cotizador Pro App Inicializada Exitosamente (v2.3).');
     }
 
     // ==========================================
@@ -46,23 +47,19 @@ class AppController {
         }
     }
 
-    switchAuthTab(tab) {
-        const formLogin = document.getElementById('form-login');
-        const formRegister = document.getElementById('form-register');
-        const tabLogin = document.getElementById('auth-tab-login');
-        const tabRegister = document.getElementById('auth-tab-register');
+    togglePasswordVisibility(inputId, iconWrapId) {
+        const input = document.getElementById(inputId);
+        const wrap = document.getElementById(iconWrapId);
+        if (!input) return;
 
-        if (tab === 'login') {
-            formLogin.classList.remove('hidden');
-            formRegister.classList.add('hidden');
-            tabLogin.className = 'flex-1 py-3 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 transition-all';
-            tabRegister.className = 'flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-700 transition-all';
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (wrap) wrap.innerHTML = `<i data-lucide="eye-off" class="w-4 h-4 text-slate-500"></i>`;
         } else {
-            formLogin.classList.add('hidden');
-            formRegister.classList.remove('hidden');
-            tabRegister.className = 'flex-1 py-3 text-xs font-bold text-emerald-600 border-b-2 border-emerald-600 transition-all';
-            tabLogin.className = 'flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-700 transition-all';
+            input.type = 'password';
+            if (wrap) wrap.innerHTML = `<i data-lucide="eye" class="w-4 h-4 text-slate-400"></i>`;
         }
+        if (window.lucide) window.lucide.createIcons();
     }
 
     handleLoginSubmit(e) {
@@ -73,25 +70,8 @@ class AppController {
         const res = window.db.login(id, pass);
         if (res.success) {
             this.checkAuthState();
-            this.showToast(`¡Bienvenido de nuevo, ${res.user.name}!`, 'success');
+            this.showToast(`¡Bienvenido, ${res.user.name}!`, 'success');
             if (window.confetti) window.confetti({ particleCount: 30, spread: 60 });
-        } else {
-            this.showToast(res.message, 'error');
-        }
-    }
-
-    handleRegisterSubmit(e) {
-        e.preventDefault();
-        const name = document.getElementById('register-name').value;
-        const username = document.getElementById('register-username').value;
-        const email = document.getElementById('register-email').value;
-        const pass = document.getElementById('register-password').value;
-
-        const res = window.db.register(name, email, username, pass);
-        if (res.success) {
-            this.checkAuthState();
-            this.showToast(`¡Cuenta creada exitosamente! Bienvenido, ${res.user.name}`, 'success');
-            if (window.confetti) window.confetti({ particleCount: 40, spread: 70 });
         } else {
             this.showToast(res.message, 'error');
         }
@@ -102,6 +82,81 @@ class AppController {
             window.db.logout();
             this.checkAuthState();
             this.showToast('Sesión cerrada correctamente.', 'info');
+        }
+    }
+
+    // ==========================================
+    // GESTIÓN DE USUARIOS (DESDE CONFIGURACIÓN)
+    // ==========================================
+    renderUsersList() {
+        const users = window.db.getUsers();
+        const current = window.db.getCurrentUser();
+        const container = document.getElementById('settings-users-list');
+        if (!container) return;
+
+        container.innerHTML = users.map(u => {
+            const isSelf = current && current.id === u.id;
+            return `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <div class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                            ${(u.name || u.username || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800">${this.escapeHTML(u.name)} ${isSelf ? '<span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">(Tú)</span>' : ''}</div>
+                            <div class="text-[11px] text-slate-500 font-mono">Usuario: ${this.escapeHTML(u.username)} | ${this.escapeHTML(u.email)}</div>
+                        </div>
+                    </div>
+                    ${!isSelf ? `
+                        <button onclick="app.deleteUser('${u.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar usuario">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    openCreateUserModal() {
+        document.getElementById('new-user-name').value = '';
+        document.getElementById('new-user-username').value = '';
+        document.getElementById('new-user-email').value = '';
+        document.getElementById('new-user-password').value = '';
+        this.openModal('modal-create-user');
+    }
+
+    submitNewUserFromSettings() {
+        const name = document.getElementById('new-user-name').value.trim();
+        const username = document.getElementById('new-user-username').value.trim();
+        const email = document.getElementById('new-user-email').value.trim();
+        const password = document.getElementById('new-user-password').value;
+
+        if (!name || !username || !password) {
+            this.showToast('Por favor completa todos los campos obligatorios.', 'warning');
+            return;
+        }
+
+        const res = window.db.register(name, email, username, password, 'usuario');
+        if (res.success) {
+            this.renderUsersList();
+            this.closeModal('modal-create-user');
+            this.showToast(`Usuario "${name}" creado exitosamente.`, 'success');
+        } else {
+            this.showToast(res.message, 'error');
+        }
+    }
+
+    deleteUser(id) {
+        if (confirm('¿Estás seguro de eliminar este usuario? Ya no podrá acceder al sistema.')) {
+            const res = window.db.deleteUser(id);
+            if (res.success) {
+                this.renderUsersList();
+                this.showToast('Usuario eliminado.', 'info');
+            } else {
+                this.showToast(res.message, 'warning');
+            }
         }
     }
 
@@ -136,6 +191,7 @@ class AppController {
             });
         }
 
+        // Toggle de IVA con recálculo instantáneo
         const taxToggle = document.getElementById('quote-tax-toggle');
         if (taxToggle) {
             taxToggle.addEventListener('change', (e) => {
@@ -233,13 +289,11 @@ class AppController {
     renderCategoriesDataLists() {
         const categories = window.db.getCategories();
         
-        // Datalist para inputs
         const dl = document.getElementById('categories-datalist');
         if (dl) {
             dl.innerHTML = categories.map(c => `<option value="${this.escapeHTML(c)}"></option>`).join('');
         }
 
-        // Filtro de categorías en productos
         const catFilter = document.getElementById('products-category-filter');
         if (catFilter) {
             const curVal = catFilter.value;
@@ -248,7 +302,6 @@ class AppController {
             if (curVal) catFilter.value = curVal;
         }
 
-        // Lista en el modal de gestión
         const listContainer = document.getElementById('categories-list-container');
         if (listContainer) {
             listContainer.innerHTML = categories.map(c => `
@@ -538,6 +591,7 @@ class AppController {
         const q = window.cotizador.currentQuote;
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
+        const taxRateVal = profile.taxRate !== undefined ? profile.taxRate : 19;
 
         document.getElementById('quote-client-name').value = q.client?.name || '';
         document.getElementById('quote-client-rut').value = q.client?.rut || '';
@@ -553,8 +607,8 @@ class AppController {
         document.getElementById('quote-discount-input').value = q.discountPercentage || 0;
 
         document.getElementById('quote-currency-badge').innerText = `${currency} ${profile.currencyCode || 'USD'}`;
-        document.getElementById('quote-tax-badge').innerText = `${profile.taxRate || 16}%`;
-        document.getElementById('quote-tax-rate-label').innerText = `(${profile.taxRate || 16}%)`;
+        document.getElementById('quote-tax-badge').innerText = `${taxRateVal}%`;
+        document.getElementById('quote-tax-rate-label').innerText = `(${taxRateVal}%)`;
         document.getElementById('quote-tax-toggle').checked = profile.enableTax;
 
         const tbody = document.getElementById('quote-items-tbody');
@@ -617,6 +671,7 @@ class AppController {
             `).join('');
         }
 
+        window.cotizador.recalculateTotals();
         this.updateQuoteTotalsDisplay();
         if (window.lucide) window.lucide.createIcons();
     }
@@ -701,7 +756,7 @@ class AppController {
     }
 
     // ==========================================
-    // VISTA PREVIA Y EXPORTACIÓN PDF / EMAIL / WA (CON ADJUNTO)
+    // VISTA PREVIA Y EXPORTACIÓN PDF / EMAIL / WA
     // ==========================================
     previewCurrentPDF() {
         this.syncQuoteHeaderFromUI();
@@ -1087,7 +1142,7 @@ class AppController {
         this.showToast('Ítem libre agregado a la cotización.', 'success');
     }
 
-    // Modal Crear/Editar Producto (Con Typeahead y Escalas de Costo)
+    // Modal Crear/Editar Producto
     openProductModal(id = null) {
         this.renderCategoriesDataLists();
         this.renderSuppliersDataList();
@@ -1175,12 +1230,10 @@ class AppController {
             return;
         }
 
-        // Buscar proveedor por nombre o crear referencia
         const suppliers = window.db.getSuppliers();
         const matchedSup = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
         const supplierId = matchedSup ? matchedSup.id : (supplierName || 'sup_1');
 
-        // Leer escalas de costo por cantidad
         const costTiers = [];
         document.querySelectorAll('.cost-tier-row').forEach(row => {
             const min = parseInt(row.querySelector('.tier-min')?.value, 10) || 1;
@@ -1193,7 +1246,6 @@ class AppController {
         });
         costTiers.sort((a, b) => a.min - b.min);
 
-        // Guardar categoría si es nueva
         window.db.saveCategory(category);
 
         const product = {
@@ -1314,7 +1366,7 @@ class AppController {
         document.getElementById('settings-address').value = p.address || '';
         document.getElementById('settings-currency').value = p.currency || '$';
         document.getElementById('settings-currency-code').value = p.currencyCode || 'USD';
-        document.getElementById('settings-tax-rate').value = p.taxRate !== undefined ? p.taxRate : 16;
+        document.getElementById('settings-tax-rate').value = p.taxRate !== undefined ? p.taxRate : 19;
         document.getElementById('settings-bank-details').value = p.bankDetails || '';
         document.getElementById('settings-terms').value = p.terms || '';
 
@@ -1457,6 +1509,7 @@ class AppController {
                 this.renderSuppliers();
                 this.renderHistory();
                 this.renderQuoteDraft();
+                this.renderUsersList();
                 this.checkAuthState();
                 this.showToast('¡Respaldo restaurado con éxito!', 'success');
             } catch (err) {
@@ -1478,6 +1531,7 @@ class AppController {
             this.renderSuppliers();
             this.renderHistory();
             this.renderQuoteDraft();
+            this.renderUsersList();
             this.checkAuthState();
             this.showToast('Datos de fábrica restaurados.', 'info');
         }

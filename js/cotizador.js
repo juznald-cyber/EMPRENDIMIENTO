@@ -9,6 +9,7 @@ class CotizadorManager {
         const profile = window.db.getProfile();
         const today = new Date().toISOString().split('T')[0];
         const validDate = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+        const defaultTax = (profile.taxRate !== undefined && profile.taxRate !== null) ? parseFloat(profile.taxRate) : 19;
 
         return {
             id: null,
@@ -27,7 +28,7 @@ class CotizadorManager {
             subtotal: 0,
             discountPercentage: 0,
             discountAmount: 0,
-            taxRate: profile.enableTax ? (profile.taxRate || 16) : 0,
+            taxRate: defaultTax,
             taxAmount: 0,
             total: 0,
             status: 'Borrador',
@@ -75,10 +76,7 @@ class CotizadorManager {
         if (!product) return false;
 
         const qty = parseInt(quantity, 10) || 1;
-        // Obtener costo según escala de cantidad del proveedor
         const costPrice = window.db.getCostForQuantity(product, qty);
-
-        // Calcular margen dinámico según volumen si no se forzó uno personalizado
         const margin = customMargin !== null && !isNaN(customMargin) 
             ? parseFloat(customMargin) 
             : window.db.getMarginForQuantity(product, qty);
@@ -144,7 +142,6 @@ class CotizadorManager {
         const qty = Math.max(1, parseInt(newQty, 10) || 1);
         item.quantity = qty;
 
-        // Si proviene de un producto del catálogo, recalcular costo por escala y margen por volumen
         if (item.productId) {
             const product = window.db.getProductById(item.productId);
             if (product) {
@@ -175,7 +172,6 @@ class CotizadorManager {
 
         const price = parseFloat(newUnitPrice) || 0;
         item.unitPrice = price;
-        // Recalcular margen hacia atrás si hay costo base
         if (item.costPrice > 0) {
             item.margin = Number((((price - item.costPrice) / item.costPrice) * 100).toFixed(1));
         }
@@ -211,13 +207,12 @@ class CotizadorManager {
 
         // Impuestos (IVA)
         if (profile.enableTax) {
-            const taxRate = parseFloat(this.currentQuote.taxRate !== undefined ? this.currentQuote.taxRate : profile.taxRate) || 0;
+            const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
             const taxAmount = Number(((taxableBase * taxRate) / 100).toFixed(2));
             this.currentQuote.taxRate = taxRate;
             this.currentQuote.taxAmount = taxAmount;
             this.currentQuote.total = Number((taxableBase + taxAmount).toFixed(2));
         } else {
-            this.currentQuote.taxRate = 0;
             this.currentQuote.taxAmount = 0;
             this.currentQuote.total = Number(taxableBase.toFixed(2));
         }

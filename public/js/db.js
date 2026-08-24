@@ -372,7 +372,7 @@ class Database {
         return { success: false, message: 'Usuario o contraseña incorrectos.' };
     }
 
-    register(name, email, username, password) {
+    register(name, email, username, password, role = 'usuario') {
         const users = this.getUsers();
         const cleanEmail = (email || '').trim().toLowerCase();
         const cleanUsername = (username || '').trim().toLowerCase();
@@ -390,14 +390,26 @@ class Database {
             email: cleanEmail,
             username: cleanUsername,
             password: password,
-            role: 'usuario',
+            role: role,
             createdAt: new Date().toISOString()
         };
 
         users.push(newUser);
         this.set(DB_KEYS.USERS, users);
-        this.setCurrentUser(newUser);
         return { success: true, user: newUser };
+    }
+
+    deleteUser(id) {
+        const currentUser = this.getCurrentUser();
+        if (currentUser && currentUser.id === id) {
+            return { success: false, message: 'No puedes eliminar el usuario con el que estás conectado actualmente.' };
+        }
+        const users = this.getUsers().filter(u => u.id !== id);
+        if (users.length === 0) {
+            return { success: false, message: 'Debe existir al menos un usuario en el sistema.' };
+        }
+        this.set(DB_KEYS.USERS, users);
+        return { success: true };
     }
 
     logout() {
