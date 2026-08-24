@@ -1,9 +1,10 @@
-// js/app.js - Controlador Principal de la Aplicación con Firebase Authentication
+// js/app.js - Controlador Principal de la Aplicación y Eventos de UI
 class AppController {
     constructor() {
         this.currentTab = 'tab-cotizador';
         this.catalogSubTab = 'products';
         this.currentUser = null;
+        this.lastVinylCalcResult = null;
     }
 
     init() {
@@ -28,7 +29,7 @@ class AppController {
         this.renderSuppliers();
         this.bindEvents();
 
-        console.log('Cotizador Pro App Inicializada con Firebase Authentication.');
+        console.log('Cotizador Pro App Inicializada Correctamente.');
     }
 
     // ==========================================
@@ -42,18 +43,13 @@ class AppController {
             firebase.auth().onAuthStateChanged((user) => {
                 this.currentUser = user;
                 if (user) {
-                    // Usuario autenticado en Firebase
                     if (authScreen) authScreen.classList.add('hidden');
                     if (sidebarUserName) sidebarUserName.innerText = user.email || 'Usuario';
-                    console.log('Usuario autenticado en Firebase:', user.email);
                 } else {
-                    // Sin sesión activa
                     if (authScreen) authScreen.classList.remove('hidden');
                     if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
                 }
             });
-        } else {
-            console.warn('Firebase Auth SDK no disponible de momento.');
         }
     }
 
@@ -270,7 +266,7 @@ class AppController {
             listContainer.innerHTML = categories.map(c => `
                 <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                     <span class="font-bold text-slate-700">${this.escapeHTML(c)}</span>
-                    <button onclick="app.deleteCategory('${this.escapeHTML(c)}')" class="p-1 text-slate-400 hover:text-rose-600 rounded">
+                    <button type="button" onclick="app.deleteCategory('${this.escapeHTML(c)}')" class="p-1 text-slate-400 hover:text-rose-600 rounded">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
@@ -280,14 +276,15 @@ class AppController {
 
     openCategoryManagerModal() {
         this.renderCategoriesDataLists();
-        document.getElementById('new-category-input').value = '';
+        const input = document.getElementById('new-category-input');
+        if (input) input.value = '';
         this.openModal('modal-category-manager');
         if (window.lucide) window.lucide.createIcons();
     }
 
     addNewCategoryFromModal() {
         const input = document.getElementById('new-category-input');
-        const name = input.value.trim();
+        const name = input ? input.value.trim() : '';
         if (!name) {
             this.showToast('Escribe el nombre de la categoría.', 'warning');
             return;
@@ -295,7 +292,7 @@ class AppController {
         window.db.saveCategory(name);
         this.renderCategoriesDataLists();
         this.renderProducts();
-        input.value = '';
+        if (input) input.value = '';
         this.showToast(`Categoría "${name}" agregada.`, 'success');
         if (window.lucide) window.lucide.createIcons();
     }
@@ -338,7 +335,7 @@ class AppController {
                             <p class="text-[10px] text-indigo-600 font-semibold mt-0.5">Base: $${(parseFloat(p.costPerM2) || 0).toFixed(2)}/m² | M.O: $${(parseFloat(p.laborCostPerM2) || 0).toFixed(2)}</p>
                         </button>
                         <div class="flex items-center gap-1 shrink-0 ml-2">
-                            <button onclick="app.openVinylPresetModal('${p.id}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors" title="Editar este tipo">
+                            <button type="button" onclick="app.openVinylPresetModal('${p.id}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors" title="Editar este tipo">
                                 <i data-lucide="edit" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -365,10 +362,15 @@ class AppController {
 
         this.renderVinylTypeSelectors();
 
-        document.getElementById('vinyl-cost-m2-input').value = preset.costPerM2;
-        document.getElementById('vinyl-labor-m2-input').value = preset.laborCostPerM2;
-        document.getElementById('vinyl-waste-input').value = preset.wasteRate;
-        document.getElementById('vinyl-margin-input').value = preset.defaultMargin;
+        const costInp = document.getElementById('vinyl-cost-m2-input');
+        const laborInp = document.getElementById('vinyl-labor-m2-input');
+        const wasteInp = document.getElementById('vinyl-waste-input');
+        const marginInp = document.getElementById('vinyl-margin-input');
+
+        if (costInp) costInp.value = preset.costPerM2;
+        if (laborInp) laborInp.value = preset.laborCostPerM2;
+        if (wasteInp) wasteInp.value = preset.wasteRate;
+        if (marginInp) marginInp.value = preset.defaultMargin;
 
         if (triggerCalc) {
             this.calculateVinylLive();
@@ -382,7 +384,7 @@ class AppController {
         if (id) {
             const p = window.db.getVinylPresetById(id);
             if (!p) return;
-            title.innerText = 'Editar Tipo de Vinilo';
+            if (title) title.innerText = 'Editar Tipo de Vinilo';
             document.getElementById('vinyl-preset-form-id').value = p.id;
             document.getElementById('vinyl-preset-form-name').value = p.name || '';
             document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
@@ -390,9 +392,9 @@ class AppController {
             document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
             document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
             document.getElementById('vinyl-preset-form-desc').value = p.description || '';
-            deleteBtn.classList.remove('hidden');
+            if (deleteBtn) deleteBtn.classList.remove('hidden');
         } else {
-            title.innerText = 'Nuevo Tipo de Vinilo / Trabajo';
+            if (title) title.innerText = 'Nuevo Tipo de Vinilo / Trabajo';
             document.getElementById('vinyl-preset-form-id').value = '';
             document.getElementById('vinyl-preset-form-name').value = '';
             document.getElementById('vinyl-preset-form-cost').value = '7.50';
@@ -400,7 +402,7 @@ class AppController {
             document.getElementById('vinyl-preset-form-waste').value = '12';
             document.getElementById('vinyl-preset-form-margin').value = '50';
             document.getElementById('vinyl-preset-form-desc').value = '';
-            deleteBtn.classList.add('hidden');
+            if (deleteBtn) deleteBtn.classList.add('hidden');
         }
 
         this.openModal('modal-edit-vinyl-preset');
@@ -458,12 +460,12 @@ class AppController {
         const labels = document.querySelectorAll('.unit-label-span');
 
         if (mode === 'cm') {
-            btnCm.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all';
-            btnM.className = 'px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+            if (btnCm) btnCm.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all';
+            if (btnM) btnM.className = 'px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all';
             labels.forEach(l => l.innerText = 'cm');
         } else {
-            btnM.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all';
-            btnCm.className = 'px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+            if (btnM) btnM.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all';
+            if (btnCm) btnCm.className = 'px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all';
             labels.forEach(l => l.innerText = 'm');
         }
         this.calculateVinylLive();
@@ -494,16 +496,27 @@ class AppController {
 
         const currency = window.db.getProfile().currency || '$';
 
-        document.getElementById('vinyl-m2-badge').innerText = `${res.totalNetAreaM2} m²`;
-        document.getElementById('calc-net-area-display').innerText = `${res.totalNetAreaM2} m² (${qty} unds de ${res.unitAreaM2} m²)`;
-        document.getElementById('calc-waste-rate-display').innerText = res.wasteRate;
-        document.getElementById('calc-gross-area-display').innerText = `${res.totalGrossAreaM2} m²`;
-        document.getElementById('calc-material-cost-display').innerText = `${currency} ${res.materialCostTotal.toFixed(2)}`;
-        document.getElementById('calc-labor-cost-display').innerText = `${currency} ${res.laborCostTotal.toFixed(2)}`;
-        document.getElementById('calc-total-cost-display').innerText = `${currency} ${res.totalBaseCost.toFixed(2)}`;
-        document.getElementById('calc-profit-display').innerText = `+${currency} ${res.profitAmount.toFixed(2)} (${res.margin}%)`;
-        document.getElementById('calc-unit-price-display').innerText = `${currency} ${res.unitPrice.toFixed(2)}`;
-        document.getElementById('calc-total-sale-display').innerText = `${currency} ${res.totalSalePrice.toFixed(2)}`;
+        const elBadge = document.getElementById('vinyl-m2-badge');
+        const elNet = document.getElementById('calc-net-area-display');
+        const elWaste = document.getElementById('calc-waste-rate-display');
+        const elGross = document.getElementById('calc-gross-area-display');
+        const elMat = document.getElementById('calc-material-cost-display');
+        const elLab = document.getElementById('calc-labor-cost-display');
+        const elCost = document.getElementById('calc-total-cost-display');
+        const elProf = document.getElementById('calc-profit-display');
+        const elUnit = document.getElementById('calc-unit-price-display');
+        const elSale = document.getElementById('calc-total-sale-display');
+
+        if (elBadge) elBadge.innerText = `${res.totalNetAreaM2} m²`;
+        if (elNet) elNet.innerText = `${res.totalNetAreaM2} m² (${qty} unds de ${res.unitAreaM2} m²)`;
+        if (elWaste) elWaste.innerText = res.wasteRate;
+        if (elGross) elGross.innerText = `${res.totalGrossAreaM2} m²`;
+        if (elMat) elMat.innerText = `${currency} ${res.materialCostTotal.toFixed(2)}`;
+        if (elLab) elLab.innerText = `${currency} ${res.laborCostTotal.toFixed(2)}`;
+        if (elCost) elCost.innerText = `${currency} ${res.totalBaseCost.toFixed(2)}`;
+        if (elProf) elProf.innerText = `+${currency} ${res.profitAmount.toFixed(2)} (${res.margin}%)`;
+        if (elUnit) elUnit.innerText = `${currency} ${res.unitPrice.toFixed(2)}`;
+        if (elSale) elSale.innerText = `${currency} ${res.totalSalePrice.toFixed(2)}`;
 
         const visualRect = document.getElementById('vinyl-visual-rect');
         const visualDimLabel = document.getElementById('visual-dim-label');
@@ -556,82 +569,104 @@ class AppController {
         const currency = profile.currency || '$';
         const taxRateVal = profile.taxRate !== undefined ? profile.taxRate : 19;
 
-        document.getElementById('quote-client-name').value = q.client?.name || '';
-        document.getElementById('quote-client-rut').value = q.client?.rut || '';
-        document.getElementById('quote-client-contact').value = q.client?.contact || '';
-        document.getElementById('quote-client-phone').value = q.client?.phone || '';
-        document.getElementById('quote-client-email').value = q.client?.email || '';
-        document.getElementById('quote-client-address').value = q.client?.address || '';
-        document.getElementById('quote-number-input').value = q.quoteNumber || '';
-        document.getElementById('quote-date-input').value = q.date || '';
-        document.getElementById('quote-valid-until-input').value = q.validUntil || '';
-        document.getElementById('quote-status-select').value = q.status || 'Borrador';
-        document.getElementById('quote-notes-input').value = q.notes || '';
-        document.getElementById('quote-discount-input').value = q.discountPercentage || 0;
+        const elName = document.getElementById('quote-client-name');
+        const elRut = document.getElementById('quote-client-rut');
+        const elContact = document.getElementById('quote-client-contact');
+        const elPhone = document.getElementById('quote-client-phone');
+        const elEmail = document.getElementById('quote-client-email');
+        const elAddress = document.getElementById('quote-client-address');
+        const elNum = document.getElementById('quote-number-input');
+        const elDate = document.getElementById('quote-date-input');
+        const elValid = document.getElementById('quote-valid-until-input');
+        const elStatus = document.getElementById('quote-status-select');
+        const elNotes = document.getElementById('quote-notes-input');
+        const elDisc = document.getElementById('quote-discount-input');
 
-        document.getElementById('quote-currency-badge').innerText = `${currency} ${profile.currencyCode || 'USD'}`;
-        document.getElementById('quote-tax-badge').innerText = `${taxRateVal}%`;
-        document.getElementById('quote-tax-rate-label').innerText = `(${taxRateVal}%)`;
-        document.getElementById('quote-tax-toggle').checked = profile.enableTax;
+        if (elName) elName.value = q.client?.name || '';
+        if (elRut) elRut.value = q.client?.rut || '';
+        if (elContact) elContact.value = q.client?.contact || '';
+        if (elPhone) elPhone.value = q.client?.phone || '';
+        if (elEmail) elEmail.value = q.client?.email || '';
+        if (elAddress) elAddress.value = q.client?.address || '';
+        if (elNum) elNum.value = q.quoteNumber || '';
+        if (elDate) elDate.value = q.date || '';
+        if (elValid) elValid.value = q.validUntil || '';
+        if (elStatus) elStatus.value = q.status || 'Borrador';
+        if (elNotes) elNotes.value = q.notes || '';
+        if (elDisc) elDisc.value = q.discountPercentage || 0;
+
+        const curBadge = document.getElementById('quote-currency-badge');
+        const taxBadge = document.getElementById('quote-tax-badge');
+        const taxLabel = document.getElementById('quote-tax-rate-label');
+        const taxTog = document.getElementById('quote-tax-toggle');
+
+        if (curBadge) curBadge.innerText = `${currency} ${profile.currencyCode || 'USD'}`;
+        if (taxBadge) taxBadge.innerText = `${taxRateVal}%`;
+        if (taxLabel) taxLabel.innerText = `(${taxRateVal}%)`;
+        if (taxTog) taxTog.checked = profile.enableTax;
 
         const tbody = document.getElementById('quote-items-tbody');
         const emptyState = document.getElementById('quote-empty-state');
         const badgeCount = document.getElementById('draft-item-count-badge');
 
-        if (q.items.length === 0) {
-            tbody.innerHTML = '';
-            emptyState.classList.remove('hidden');
-            badgeCount.classList.add('hidden');
-        } else {
-            emptyState.classList.add('hidden');
-            badgeCount.classList.remove('hidden');
-            badgeCount.innerText = q.items.length;
+        if (tbody) {
+            if (q.items.length === 0) {
+                tbody.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (badgeCount) badgeCount.classList.add('hidden');
+            } else {
+                if (emptyState) emptyState.classList.add('hidden');
+                if (badgeCount) {
+                    badgeCount.classList.remove('hidden');
+                    badgeCount.innerText = q.items.length;
+                }
 
-            tbody.innerHTML = q.items.map((item, idx) => `
-                <tr class="hover:bg-slate-50/70 transition-colors">
-                    <td class="py-3 px-3 text-center font-bold text-slate-400 text-xs">${idx + 1}</td>
-                    <td class="py-3 px-3">
-                        <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            ${item.isVinyl ? '<span class="text-cyan-600 text-xs font-bold">📐 [Vinilo]</span>' : ''}
-                            ${this.escapeHTML(item.name)}
-                        </div>
-                        ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
-                    </td>
-                    <td class="py-3 px-3 text-center text-xs font-mono text-slate-600 font-medium">
-                        ${currency} ${(parseFloat(item.costPrice) || 0).toFixed(2)}
-                    </td>
-                    <td class="py-3 px-3 text-center">
-                        <div class="inline-flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
-                            <input type="number" step="1" value="${item.margin}" onchange="app.changeItemMargin(${idx}, this.value)" 
-                                class="w-10 text-xs text-center font-black text-indigo-700 bg-transparent outline-none" />
-                            <span class="text-[10px] font-bold text-indigo-400">%</span>
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-center">
-                        <div class="inline-flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
-                            <button type="button" onclick="app.adjustItemQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded-lg transition-colors font-bold text-sm">-</button>
-                            <input type="number" min="1" value="${item.quantity}" onchange="app.changeItemQty(${idx}, this.value)" 
-                                class="w-12 text-xs text-center font-black text-slate-800 bg-transparent outline-none" />
-                            <button type="button" onclick="app.adjustItemQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded-lg transition-colors font-bold text-sm">+</button>
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-right">
-                        <div class="text-xs font-bold font-mono text-slate-700">
-                            ${currency} ${(parseFloat(item.unitPrice) || 0).toFixed(2)}
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-right">
-                        <div class="text-sm font-black font-mono text-indigo-700">
-                            ${currency} ${(parseFloat(item.total) || 0).toFixed(2)}
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-center">
-                        <button onclick="app.removeQuoteItem(${idx})" class="p-1 text-slate-300 hover:text-rose-600 rounded-lg transition-colors" title="Eliminar ítem">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+                tbody.innerHTML = q.items.map((item, idx) => `
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="py-3 px-3 text-center font-bold text-slate-400 text-xs">${idx + 1}</td>
+                        <td class="py-3 px-3">
+                            <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                ${item.isVinyl ? '<span class="text-cyan-600 text-xs font-bold">📐 [Vinilo]</span>' : ''}
+                                ${this.escapeHTML(item.name)}
+                            </div>
+                            ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
+                        </td>
+                        <td class="py-3 px-3 text-center text-xs font-mono text-slate-600 font-medium">
+                            ${currency} ${(parseFloat(item.costPrice) || 0).toFixed(2)}
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <div class="inline-flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
+                                <input type="number" step="1" value="${item.margin}" onchange="app.changeItemMargin(${idx}, this.value)" 
+                                    class="w-10 text-xs text-center font-black text-indigo-700 bg-transparent outline-none" />
+                                <span class="text-[10px] font-bold text-indigo-400">%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <div class="inline-flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
+                                <button type="button" onclick="app.adjustItemQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded-lg transition-colors font-bold text-sm">-</button>
+                                <input type="number" min="1" value="${item.quantity}" onchange="app.changeItemQty(${idx}, this.value)" 
+                                    class="w-12 text-xs text-center font-black text-slate-800 bg-transparent outline-none" />
+                                <button type="button" onclick="app.adjustItemQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded-lg transition-colors font-bold text-sm">+</button>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="text-xs font-bold font-mono text-slate-700">
+                                ${currency} ${(parseFloat(item.unitPrice) || 0).toFixed(2)}
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="text-sm font-black font-mono text-indigo-700">
+                                ${currency} ${(parseFloat(item.total) || 0).toFixed(2)}
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <button type="button" onclick="app.removeQuoteItem(${idx})" class="p-1 text-slate-300 hover:text-rose-600 rounded-lg transition-colors" title="Eliminar ítem">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
         }
 
         window.cotizador.recalculateTotals();
@@ -660,10 +695,15 @@ class AppController {
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
-        document.getElementById('quote-subtotal-display').innerText = `${currency} ${q.subtotal.toFixed(2)}`;
-        document.getElementById('quote-discount-display').innerText = `-${currency} ${q.discountAmount.toFixed(2)}`;
-        document.getElementById('quote-tax-display').innerText = `${currency} ${q.taxAmount.toFixed(2)}`;
-        document.getElementById('quote-total-display').innerText = `${currency} ${q.total.toFixed(2)}`;
+        const elSub = document.getElementById('quote-subtotal-display');
+        const elDisc = document.getElementById('quote-discount-display');
+        const elTax = document.getElementById('quote-tax-display');
+        const elTot = document.getElementById('quote-total-display');
+
+        if (elSub) elSub.innerText = `${currency} ${q.subtotal.toFixed(2)}`;
+        if (elDisc) elDisc.innerText = `-${currency} ${q.discountAmount.toFixed(2)}`;
+        if (elTax) elTax.innerText = `${currency} ${q.taxAmount.toFixed(2)}`;
+        if (elTot) elTot.innerText = `${currency} ${q.total.toFixed(2)}`;
     }
 
     adjustItemQty(index, delta) {
@@ -728,7 +768,8 @@ class AppController {
         const profile = window.db.getProfile();
 
         const html = window.pdfGenerator.generateHTML(quote, profile);
-        document.getElementById('pdf-preview-render-area').innerHTML = html;
+        const area = document.getElementById('pdf-preview-render-area');
+        if (area) area.innerHTML = html;
         this.openModal('modal-pdf-preview');
         if (window.lucide) window.lucide.createIcons();
     }
@@ -774,10 +815,15 @@ class AppController {
         const sentQuotes = quotes.filter(q => q.status === 'Enviada');
         const approvedTotalAmount = approvedQuotes.reduce((acc, q) => acc + (parseFloat(q.total) || 0), 0);
 
-        document.getElementById('metric-total-quotes').innerText = totalCount;
-        document.getElementById('metric-approved-quotes').innerText = approvedQuotes.length;
-        document.getElementById('metric-sent-quotes').innerText = sentQuotes.length;
-        document.getElementById('metric-approved-amount').innerText = `${currency} ${approvedTotalAmount.toFixed(2)}`;
+        const elTot = document.getElementById('metric-total-quotes');
+        const elApp = document.getElementById('metric-approved-quotes');
+        const elSent = document.getElementById('metric-sent-quotes');
+        const elAmt = document.getElementById('metric-approved-amount');
+
+        if (elTot) elTot.innerText = totalCount;
+        if (elApp) elApp.innerText = approvedQuotes.length;
+        if (elSent) elSent.innerText = sentQuotes.length;
+        if (elAmt) elAmt.innerText = `${currency} ${approvedTotalAmount.toFixed(2)}`;
 
         const query = (document.getElementById('history-search-input')?.value || '').toLowerCase();
         const statusFilter = document.getElementById('history-status-filter')?.value || 'todos';
@@ -834,16 +880,16 @@ class AppController {
                 <td class="py-3 px-3 text-right font-mono font-bold text-sm text-slate-900">${currency} ${(parseFloat(q.total) || 0).toFixed(2)}</td>
                 <td class="py-3 px-3 text-center">
                     <div class="flex items-center justify-center gap-1">
-                        <button onclick="app.loadQuoteToEditor('${q.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar / Abrir">
+                        <button type="button" onclick="app.loadQuoteToEditor('${q.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar / Abrir">
                             <i data-lucide="edit-3" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="app.previewQuoteById('${q.id}')" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors" title="Ver / Descargar PDF">
+                        <button type="button" onclick="app.previewQuoteById('${q.id}')" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors" title="Ver / Descargar PDF">
                             <i data-lucide="file-text" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="app.duplicateQuoteById('${q.id}')" class="p-1.5 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" title="Duplicar como Nueva">
+                        <button type="button" onclick="app.duplicateQuoteById('${q.id}')" class="p-1.5 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" title="Duplicar como Nueva">
                             <i data-lucide="copy" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="app.deleteQuoteById('${q.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar">
+                        <button type="button" onclick="app.deleteQuoteById('${q.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Eliminar">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -877,7 +923,8 @@ class AppController {
         if (q) {
             const profile = window.db.getProfile();
             const html = window.pdfGenerator.generateHTML(q, profile);
-            document.getElementById('pdf-preview-render-area').innerHTML = html;
+            const area = document.getElementById('pdf-preview-render-area');
+            if (area) area.innerHTML = html;
             this.openModal('modal-pdf-preview');
             if (window.lucide) window.lucide.createIcons();
         }
@@ -956,13 +1003,13 @@ class AppController {
                     <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700">${currency} ${salePrice.toFixed(2)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
+                            <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="app.openProductModal('${p.id}')" class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg" title="Editar">
+                            <button type="button" onclick="app.openProductModal('${p.id}')" class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg" title="Editar">
                                 <i data-lucide="edit" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="app.deleteProduct('${p.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg" title="Eliminar">
+                            <button type="button" onclick="app.deleteProduct('${p.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg" title="Eliminar">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1007,8 +1054,8 @@ class AppController {
                     </div>
 
                     <div class="flex justify-end gap-1 pt-2 border-t border-slate-200">
-                        <button onclick="app.openSupplierModal('${s.id}')" class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg">Editar</button>
-                        <button onclick="app.deleteSupplier('${s.id}')" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg">Eliminar</button>
+                        <button type="button" onclick="app.openSupplierModal('${s.id}')" class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg">Editar</button>
+                        <button type="button" onclick="app.deleteSupplier('${s.id}')" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg">Eliminar</button>
                     </div>
                 </div>
             `;
@@ -1061,7 +1108,7 @@ class AppController {
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
                         <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency}${cost1u.toFixed(2)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency}${salePrice.toFixed(2)}</span></p>
                     </div>
-                    <button onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
+                    <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar
                     </button>
                 </div>
@@ -1111,12 +1158,14 @@ class AppController {
         this.renderSuppliersDataList();
         const suppliers = window.db.getSuppliers();
         const container = document.getElementById('cost-tiers-rows-container');
-        container.innerHTML = '';
+        if (container) container.innerHTML = '';
 
         if (id) {
             const p = window.db.getProductById(id);
             if (!p) return;
-            document.getElementById('product-modal-title').innerText = 'Editar Producto / Insumo';
+            const titleEl = document.getElementById('product-modal-title');
+            if (titleEl) titleEl.innerText = 'Editar Producto / Insumo';
+            
             document.getElementById('prod-form-id').value = p.id;
             document.getElementById('prod-form-sku').value = p.sku || '';
             document.getElementById('prod-form-name').value = p.name || '';
@@ -1133,7 +1182,9 @@ class AppController {
                 p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
             }
         } else {
-            document.getElementById('product-modal-title').innerText = 'Nuevo Producto / Insumo';
+            const titleEl = document.getElementById('product-modal-title');
+            if (titleEl) titleEl.innerText = 'Nuevo Producto / Insumo';
+            
             document.getElementById('prod-form-id').value = '';
             document.getElementById('prod-form-sku').value = 'PROD-' + Math.floor(Math.random() * 900 + 100);
             document.getElementById('prod-form-name').value = '';
@@ -1246,7 +1297,8 @@ class AppController {
         if (id) {
             const s = window.db.getSupplierById(id);
             if (!s) return;
-            document.getElementById('supplier-modal-title').innerText = 'Editar Proveedor';
+            const titleEl = document.getElementById('supplier-modal-title');
+            if (titleEl) titleEl.innerText = 'Editar Proveedor';
             document.getElementById('sup-form-id').value = s.id;
             document.getElementById('sup-form-name').value = s.name || '';
             document.getElementById('sup-form-rut').value = s.rut || '';
@@ -1256,7 +1308,8 @@ class AppController {
             document.getElementById('sup-form-category').value = s.category || '';
             document.getElementById('sup-form-notes').value = s.notes || '';
         } else {
-            document.getElementById('supplier-modal-title').innerText = 'Nuevo Proveedor';
+            const titleEl = document.getElementById('supplier-modal-title');
+            if (titleEl) titleEl.innerText = 'Nuevo Proveedor';
             document.getElementById('sup-form-id').value = '';
             document.getElementById('sup-form-name').value = '';
             document.getElementById('sup-form-rut').value = '';
@@ -1319,19 +1372,32 @@ class AppController {
     loadProfileIntoUI() {
         const p = window.db.getProfile();
 
-        document.getElementById('sidebar-company-name').innerText = p.companyName || 'Mi Empresa';
-        document.getElementById('mobile-header-title').innerText = p.companyName || 'Cotizador Pro';
+        const sideComp = document.getElementById('sidebar-company-name');
+        const mobTitle = document.getElementById('mobile-header-title');
+        if (sideComp) sideComp.innerText = p.companyName || 'Mi Empresa';
+        if (mobTitle) mobTitle.innerText = p.companyName || 'Cotizador Pro';
 
-        document.getElementById('settings-company-name').value = p.companyName || '';
-        document.getElementById('settings-tax-id').value = p.taxId || '';
-        document.getElementById('settings-phone').value = p.phone || '';
-        document.getElementById('settings-email').value = p.email || '';
-        document.getElementById('settings-address').value = p.address || '';
-        document.getElementById('settings-currency').value = p.currency || '$';
-        document.getElementById('settings-currency-code').value = p.currencyCode || 'USD';
-        document.getElementById('settings-tax-rate').value = p.taxRate !== undefined ? p.taxRate : 19;
-        document.getElementById('settings-bank-details').value = p.bankDetails || '';
-        document.getElementById('settings-terms').value = p.terms || '';
+        const elComp = document.getElementById('settings-company-name');
+        const elTaxId = document.getElementById('settings-tax-id');
+        const elPhone = document.getElementById('settings-phone');
+        const elEmail = document.getElementById('settings-email');
+        const elAddr = document.getElementById('settings-address');
+        const elCur = document.getElementById('settings-currency');
+        const elCurCode = document.getElementById('settings-currency-code');
+        const elTax = document.getElementById('settings-tax-rate');
+        const elBank = document.getElementById('settings-bank-details');
+        const elTerms = document.getElementById('settings-terms');
+
+        if (elComp) elComp.value = p.companyName || '';
+        if (elTaxId) elTaxId.value = p.taxId || '';
+        if (elPhone) elPhone.value = p.phone || '';
+        if (elEmail) elEmail.value = p.email || '';
+        if (elAddr) elAddr.value = p.address || '';
+        if (elCur) elCur.value = p.currency || '$';
+        if (elCurCode) elCurCode.value = p.currencyCode || 'USD';
+        if (elTax) elTax.value = p.taxRate !== undefined ? p.taxRate : 19;
+        if (elBank) elBank.value = p.bankDetails || '';
+        if (elTerms) elTerms.value = p.terms || '';
 
         this.renderLogoPreview(p.logo);
     }
@@ -1435,7 +1501,7 @@ class AppController {
 
         this.loadProfileIntoUI();
         this.renderQuoteDraft();
-        this.showToast('Configuración del perfil y escalas guardadas exitosamente.', 'success');
+        this.showToast('Configuración guardada exitosamente.', 'success');
     }
 
     exportFullBackupJSON() {

@@ -1288,18 +1288,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=2.6"></script>
-    <script src="js/db.js?v=2.6"></script>
-    <script src="js/vinilos.js?v=2.6"></script>
-    <script src="js/pdf-generator.js?v=2.6"></script>
-    <script src="js/cotizador.js?v=2.6"></script>
-    <script src="js/app.js?v=2.6"></script>
+    <script src="js/firebase-config.js?v=2.7"></script>
+    <script src="js/db.js?v=2.7"></script>
+    <script src="js/vinilos.js?v=2.7"></script>
+    <script src="js/pdf-generator.js?v=2.7"></script>
+    <script src="js/cotizador.js?v=2.7"></script>
+    <script src="js/app.js?v=2.7"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.6').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=2.7').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
