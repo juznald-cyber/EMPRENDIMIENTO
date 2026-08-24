@@ -277,9 +277,6 @@ class Database {
     }
 
     init() {
-        if (!localStorage.getItem(DB_KEYS.USERS)) {
-            this.set(DB_KEYS.USERS, DEFAULT_USERS);
-        }
         if (!localStorage.getItem(DB_KEYS.CATEGORIES)) {
             this.set(DB_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
         }
@@ -565,7 +562,6 @@ class Database {
         return {
             version: '2.0',
             exportDate: new Date().toISOString(),
-            users: this.getUsers(),
             categories: this.getCategories(),
             profile: this.getProfile(),
             globalTiers: this.getGlobalTiers(),
@@ -580,7 +576,6 @@ class Database {
         if (!jsonData || typeof jsonData !== 'object') {
             throw new Error('Formato de respaldo no válido.');
         }
-        if (jsonData.users) this.set(DB_KEYS.USERS, jsonData.users);
         if (jsonData.categories) this.set(DB_KEYS.CATEGORIES, jsonData.categories);
         if (jsonData.profile) this.set(DB_KEYS.PROFILE, jsonData.profile);
         if (jsonData.globalTiers) this.set(DB_KEYS.GLOBAL_TIERS, jsonData.globalTiers);
@@ -592,7 +587,6 @@ class Database {
     }
 
     resetToFactory() {
-        this.set(DB_KEYS.USERS, DEFAULT_USERS);
         this.set(DB_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
         this.set(DB_KEYS.PROFILE, DEFAULT_PROFILE);
         this.set(DB_KEYS.GLOBAL_TIERS, DEFAULT_GLOBAL_TIERS);
