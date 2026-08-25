@@ -40,7 +40,7 @@ class AppController {
         const sidebarUserName = document.getElementById('sidebar-user-name');
 
         if (typeof firebase !== 'undefined' && firebase.auth) {
-            firebase.auth().onAuthStateChanged((user) => {
+            firebase.auth().onAuthStateChanged(async (user) => {
                 this.currentUser = user;
                 if (user) {
                     if (authScreen) {
@@ -48,12 +48,26 @@ class AppController {
                         authScreen.classList.add('hidden');
                     }
                     if (sidebarUserName) sidebarUserName.innerText = user.email || 'Usuario';
+
+                    // ☁️ Sincronizar datos desde Firestore al iniciar sesión
+                    if (window.db && typeof window.db.syncFromFirestore === 'function') {
+                        await window.db.syncFromFirestore(user.uid);
+                        // Re-renderizar la app con los datos recién cargados de la nube
+                        if (typeof this.renderAll === 'function') this.renderAll();
+                        else {
+                            if (typeof this.renderProducts === 'function') this.renderProducts();
+                            if (typeof this.renderSuppliers === 'function') this.renderSuppliers();
+                            if (typeof this.renderQuotes === 'function') this.renderQuotes();
+                        }
+                    }
                 } else {
                     if (authScreen) {
                         authScreen.style.setProperty('display', 'flex', 'important');
                         authScreen.classList.remove('hidden');
                     }
                     if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
+                    // Limpiar UID al cerrar sesión
+                    if (window.db) { window.db._uid = null; window.db._firestoreReady = false; }
                 }
             });
         }
