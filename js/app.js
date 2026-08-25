@@ -1275,10 +1275,8 @@ class AppController {
             // Imagen de referencia
             const imgData = p.imageData || '';
             document.getElementById('prod-form-image-data').value = imgData;
-            document.getElementById('prod-form-image-url').value = (imgData && !imgData.startsWith('data:')) ? imgData : '';
-            document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
             document.getElementById('prod-form-image-file').value = '';
-            this._showProductImagePreview(imgData);
+            this._showProductImagePreview(imgData, imgData ? 'Imagen guardada' : '');
 
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
@@ -1299,11 +1297,10 @@ class AppController {
             document.getElementById('prod-form-notes').value = '';
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
-            document.getElementById('prod-form-image-url').value = '';
-            document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
             document.getElementById('prod-form-image-file').value = '';
-            this._showProductImagePreview('');
+            this._showProductImagePreview('', '');
         }
+        this._initProductImagePaste();
         this.openModal('modal-edit-product');
     }
 
@@ -1408,85 +1405,120 @@ class AppController {
     // IMAGEN DE REFERENCIA DEL PRODUCTO
     // ==========================================
 
-    /** Llamado al escribir en el campo de URL de imagen: muestra previsualización */
-    previewProductImage() {
-        const url = (document.getElementById('prod-form-image-url')?.value || '').trim();
-        if (url) {
-            document.getElementById('prod-form-image-data').value = url;
-            document.getElementById('prod-form-image-filename').textContent = 'URL de imagen';
-            this._showProductImagePreview(url);
-        } else {
-            // Si borraron la URL, limpiar sólo si no hay base64 cargada
-            const current = document.getElementById('prod-form-image-data').value;
-            if (!current || !current.startsWith('data:')) {
-                document.getElementById('prod-form-image-data').value = '';
-                document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
-                this._showProductImagePreview('');
-            }
+    /** Inicializa el listener de paste (Ctrl+V) cuando se abre el modal de producto */
+    _initProductImagePaste() {
+        // Remover listener previo si existe
+        if (this._productPasteHandler) {
+            document.removeEventListener('paste', this._productPasteHandler);
         }
+        this._productPasteHandler = (e) => {
+            // Solo actuar si el modal de producto está abierto
+            const modal = document.getElementById('modal-edit-product');
+            if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden-modal')) return;
+
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) this._processProductImageFile(file, 'Captura pegada');
+                    break;
+                }
+            }
+        };
+        document.addEventListener('paste', this._productPasteHandler);
     }
 
-    /** Llamado al seleccionar archivo local: convierte a base64 y muestra preview */
-    loadProductImageFile(event) {
-        const file = event.target.files?.[0];
-        if (!file) return;
+    /** Maneja el drop de imagen sobre la zona */
+    handleProductImageDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const zone = document.getElementById('prod-form-image-dropzone');
+        if (zone) zone.classList.remove('border-indigo-400', 'bg-indigo-50');
 
+        const file = event.dataTransfer?.files?.[0];
+        if (!file) return;
         if (!file.type.startsWith('image/')) {
             this.showToast('Solo se aceptan archivos de imagen.', 'warning');
             return;
         }
+        this._processProductImageFile(file, file.name);
+    }
 
+    /** Llamado al seleccionar archivo con el input file */
+    loadProductImageFile(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            this.showToast('Solo se aceptan archivos de imagen.', 'warning');
+            return;
+        }
+        this._processProductImageFile(file, file.name);
+    }
+
+    /** Procesa un archivo de imagen y lo convierte a base64 */
+    _processProductImageFile(file, label = '') {
         const maxMB = 5;
         if (file.size > maxMB * 1024 * 1024) {
             this.showToast(`La imagen supera los ${maxMB} MB. Usa una imagen más pequeña.`, 'warning');
             return;
         }
-
         const reader = new FileReader();
         reader.onload = (e) => {
             const base64 = e.target.result;
             document.getElementById('prod-form-image-data').value = base64;
-            document.getElementById('prod-form-image-url').value = '';
-            document.getElementById('prod-form-image-filename').textContent = file.name;
-            this._showProductImagePreview(base64);
+            document.getElementById('prod-form-image-file').value = '';
+            this._showProductImagePreview(base64, label || file.name || 'Imagen cargada');
+            this.showToast('Imagen cargada correctamente ✓', 'success');
         };
+        reader.onerror = () => this.showToast('Error leyendo el archivo.', 'error');
         reader.readAsDataURL(file);
     }
 
     /** Limpia la imagen de referencia */
     clearProductImage() {
         document.getElementById('prod-form-image-data').value = '';
-        document.getElementById('prod-form-image-url').value = '';
-        document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
         document.getElementById('prod-form-image-file').value = '';
-        this._showProductImagePreview('');
+        this._showProductImagePreview('', '');
     }
 
-    /** Muestra u oculta el contenedor de previsualización */
-    _showProductImagePreview(src) {
-        const container = document.getElementById('prod-form-image-preview-container');
-        const img = document.getElementById('prod-form-image-preview');
-        const clearBtn = document.getElementById('prod-form-image-clear');
+    /** Muestra u oculta la previsualización dentro de la dropzone */
+    _showProductImagePreview(src, label = '') {
+        const emptyState  = document.getElementById('prod-form-image-empty');
+        const container   = document.getElementById('prod-form-image-preview-container');
+        const img         = document.getElementById('prod-form-image-preview');
+        const filename    = document.getElementById('prod-form-image-filename');
+        const clearBtn    = document.getElementById('prod-form-image-clear');
+
         if (src) {
-            img.src = src;
-            container.classList.remove('hidden');
-            if (clearBtn) clearBtn.classList.remove('hidden');
+            if (img) img.src = src;
+            if (filename) filename.textContent = label || 'Imagen de referencia';
+            if (emptyState)  emptyState.classList.add('hidden');
+            if (container)   container.classList.remove('hidden');
+            if (clearBtn)    clearBtn.classList.remove('hidden');
         } else {
-            img.src = '';
-            container.classList.add('hidden');
-            if (clearBtn) clearBtn.classList.add('hidden');
+            if (img) img.src = '#';   // '#' evita request al servidor, no dispara onerror real
+            if (filename) filename.textContent = '';
+            if (emptyState)  emptyState.classList.remove('hidden');
+            if (container)   container.classList.add('hidden');
+            if (clearBtn)    clearBtn.classList.add('hidden');
         }
     }
 
-    /** Llamado cuando la imagen de la URL no carga */
+    // Función legacy — ya no muestra toast, solo limpia silenciosamente
     onProductImageError() {
-        this.showToast('No se pudo cargar la imagen desde esa URL. Verifica que sea un enlace directo a una imagen.', 'warning');
-        this._showProductImagePreview('');
+        this._showProductImagePreview('', '');
         document.getElementById('prod-form-image-data').value = '';
     }
 
+    // Función legacy — ya no se usa (se eliminó el campo URL de imagen)
+    previewProductImage() {}
+
     // ==========================================
     // CONTROLADORES DE IMPORTACIÓN MASIVA (EXCEL XLS/XLSX & CSV)
+
     // ==========================================
     openImportSuppliersModal() {
         this.importedSupplierRows = null;
