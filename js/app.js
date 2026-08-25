@@ -432,7 +432,11 @@ class AppController {
 
         if (rollWInp) rollWInp.value = preset.rollWidthCm || 58;
         if (rollLInp) rollLInp.value = preset.rollLengthCm || 100;
-        if (rollCostInp) rollCostInp.value = preset.rollCost || (preset.costPerM2 ? ((preset.costPerM2 * (preset.rollWidthCm || 58) * (preset.rollLengthCm || 100)) / 10000).toFixed(2) : 4.50);
+        // Solo rellenar el precio pagado si está vacío o en 0, para no pisar lo que escribe el usuario
+        const currentRollCost = parseFloat(rollCostInp?.value);
+        if (rollCostInp && (!currentRollCost || currentRollCost === 0)) {
+            rollCostInp.value = preset.rollCost || (preset.costPerM2 ? ((preset.costPerM2 * (preset.rollWidthCm || 58) * (preset.rollLengthCm || 100)) / 10000).toFixed(2) : '');
+        }
 
         if (costInp) costInp.value = preset.costPerM2 || 7.76;
         if (laborInp) laborInp.value = preset.laborCostPerM2;
@@ -1039,7 +1043,7 @@ class AppController {
         const catFilter = document.getElementById('products-category-filter')?.value || 'todas';
 
         const filtered = products.filter(p => {
-            const matchQ = !query || 
+            const matchQ = !query ||
                 (p.name || '').toLowerCase().includes(query) ||
                 (p.sku || '').toLowerCase().includes(query) ||
                 (p.category || '').toLowerCase().includes(query);
@@ -1050,10 +1054,13 @@ class AppController {
         const tbody = document.getElementById('products-tbody');
         if (!tbody) return;
 
+        // Limpiar barra de selección masiva
+        this.clearProductSelection();
+
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="py-8 text-center text-xs text-slate-400">
+                    <td colspan="9" class="py-8 text-center text-xs text-slate-400">
                         No hay productos registrados con este criterio.
                     </td>
                 </tr>
@@ -1068,18 +1075,33 @@ class AppController {
             const salePrice = window.db.calculateSalePrice(cost1u, margin);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
+            // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
+            let imgs = [];
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                imgs = p.images.slice(0, 3);
+            } else if (p.imageData) {
+                imgs = [p.imageData];
+            }
+
+            const imgThumbsHtml = imgs.length > 0
+                ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openLightbox(${JSON.stringify(imgs)}, ${i}, '${this.escapeHTML(p.name)}')" onerror="this.style.display='none'" />`).join('')
+                : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
+
             return `
                 <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="py-3 px-3">
+                        <input type="checkbox" class="product-row-check w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" data-id="${p.id}" onchange="app.onProductRowCheck()" />
+                    </td>
                     <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
                     <td class="py-3 px-3">
                         <div class="flex items-start gap-2.5">
-                            ${p.imageData ? `<img src="${this.escapeHTML(p.imageData)}" alt="Ref." class="w-10 h-10 object-cover rounded-lg border border-slate-200 bg-white shrink-0" onerror="this.style.display='none'" />` : `<div class="w-10 h-10 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`}
+                            <div class="flex gap-1 shrink-0">${imgThumbsHtml}</div>
                             <div>
                                 <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
-                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors" title="Ver producto en la web del proveedor"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -1088,13 +1110,13 @@ class AppController {
                         ${sup ? `<span class="font-semibold text-slate-800">${this.escapeHTML(sup.name)}</span> ${sup.rut ? `<span class="block text-[10px] text-slate-400">RUT: ${this.escapeHTML(sup.rut)}</span>` : ''}` : '<span class="text-slate-400">Sin Asignar</span>'}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
-                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700">
+                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700 price-col">
                         ${currency} ${(parseFloat(cost1u) || 0).toFixed(2)}
                     </td>
-                    <td class="py-3 px-3 text-center">
+                    <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700">${currency} ${salePrice.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${salePrice.toFixed(2)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
@@ -1114,6 +1136,7 @@ class AppController {
 
         if (window.lucide) window.lucide.createIcons();
     }
+
 
     renderSuppliers() {
         const suppliers = window.db.getSuppliers();
@@ -1345,7 +1368,10 @@ class AppController {
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
-        const imageData = (document.getElementById('prod-form-image-data')?.value || '').trim();
+        // Leer imágenes como array (hasta 3)
+        const images = this._getProductImagesArray();
+        // Compatibilidad retroactiva: imageData = primera imagen si existe
+        const imageData = images.length > 0 ? images[0] : '';
 
         if (!name) {
             this.showToast('Por favor escribe el nombre del producto.', 'warning');
@@ -1382,7 +1408,8 @@ class AppController {
             defaultMargin,
             url,
             notes,
-            imageData,
+            images,     // Array de hasta 3 imágenes base64
+            imageData,  // Compatibilidad retroactiva (primera imagen)
             useGlobalTiers: true
         };
 
@@ -1402,7 +1429,117 @@ class AppController {
     }
 
     // ==========================================
-    // IMAGEN DE REFERENCIA DEL PRODUCTO
+    // SELECCIÓN MASIVA Y ELIMINACIÓN MASIVA
+    // ==========================================
+    toggleSelectAllProducts(checked) {
+        const checkboxes = document.querySelectorAll('.product-row-check');
+        checkboxes.forEach(cb => { cb.checked = checked; });
+        this._updateBulkBar();
+    }
+
+    onProductRowCheck() {
+        this._updateBulkBar();
+        // Sincronizar el "select all"
+        const all = document.querySelectorAll('.product-row-check');
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        const selectAll = document.getElementById('products-select-all');
+        if (selectAll) selectAll.checked = all.length > 0 && all.length === checked.length;
+    }
+
+    _updateBulkBar() {
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        const bar = document.getElementById('products-bulk-bar');
+        const count = document.getElementById('products-bulk-count');
+        if (!bar) return;
+        if (checked.length > 0) {
+            bar.classList.remove('hidden');
+            bar.classList.add('flex');
+            if (count) count.textContent = `${checked.length} producto${checked.length > 1 ? 's' : ''} seleccionado${checked.length > 1 ? 's' : ''}`;
+        } else {
+            bar.classList.add('hidden');
+            bar.classList.remove('flex');
+        }
+    }
+
+    deleteSelectedProducts() {
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        if (checked.length === 0) return;
+        if (!confirm(`¿Eliminar ${checked.length} producto${checked.length > 1 ? 's' : ''} del catálogo? Esta acción no se puede deshacer.`)) return;
+        checked.forEach(cb => window.db.deleteProduct(cb.dataset.id));
+        this.renderProducts();
+        this.showToast(`${checked.length} producto${checked.length > 1 ? 's eliminados' : ' eliminado'}.`, 'info');
+    }
+
+    clearProductSelection() {
+        document.querySelectorAll('.product-row-check').forEach(cb => { cb.checked = false; });
+        const sel = document.getElementById('products-select-all');
+        if (sel) sel.checked = false;
+        this._updateBulkBar();
+    }
+
+    // ==========================================
+    // TOGGLE OCULTAR / MOSTRAR PRECIOS
+    // ==========================================
+    toggleProductPrices() {
+        this._pricesHidden = !this._pricesHidden;
+        const table = document.querySelector('#products-tbody')?.closest('table');
+        const btn = document.getElementById('btn-toggle-prices');
+        if (table) table.classList.toggle('prices-hidden', this._pricesHidden);
+        if (btn) {
+            if (this._pricesHidden) {
+                btn.innerHTML = `<i data-lucide="eye" class="w-4 h-4"></i> Mostrar Precios`;
+                btn.classList.remove('bg-slate-100', 'text-slate-700');
+                btn.classList.add('bg-amber-100', 'text-amber-800');
+            } else {
+                btn.innerHTML = `<i data-lucide="eye-off" class="w-4 h-4"></i> Ocultar Precios`;
+                btn.classList.remove('bg-amber-100', 'text-amber-800');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    // ==========================================
+    // LIGHTBOX DE IMÁGENES
+    // ==========================================
+    _lightboxImages = [];
+    _lightboxIndex  = 0;
+
+    openLightbox(images, startIndex = 0, label = '') {
+        this._lightboxImages = Array.isArray(images) ? images : [images];
+        this._lightboxIndex  = startIndex;
+        this._renderLightbox(label);
+        const lb = document.getElementById('modal-image-lightbox');
+        if (lb) { lb.classList.remove('hidden'); lb.classList.add('flex'); }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    closeLightbox() {
+        const lb = document.getElementById('modal-image-lightbox');
+        if (lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+    }
+
+    lightboxNav(dir) {
+        this._lightboxIndex = (this._lightboxIndex + dir + this._lightboxImages.length) % this._lightboxImages.length;
+        this._renderLightbox();
+    }
+
+    _renderLightbox(label = '') {
+        const img     = document.getElementById('lightbox-img');
+        const counter = document.getElementById('lightbox-counter');
+        const lbl     = document.getElementById('lightbox-label');
+        const prev    = document.getElementById('lightbox-prev');
+        const next    = document.getElementById('lightbox-next');
+        const total   = this._lightboxImages.length;
+        const src     = this._lightboxImages[this._lightboxIndex];
+        if (img) img.src = src;
+        if (counter) counter.textContent = total > 1 ? `${this._lightboxIndex + 1} / ${total}` : '1 imagen';
+        if (lbl) lbl.textContent = label;
+        if (prev) prev.style.visibility = total > 1 ? 'visible' : 'hidden';
+        if (next) next.style.visibility = total > 1 ? 'visible' : 'hidden';
+    }
+
+
     // ==========================================
 
     /** Inicializa el listener de paste (Ctrl+V) cuando se abre el modal de producto */
@@ -1458,62 +1595,130 @@ class AppController {
         this._processProductImageFile(file, file.name);
     }
 
-    /** Procesa un archivo de imagen y lo convierte a base64 */
+    /** Procesa un archivo de imagen y lo agrega al array (máx 3) */
     _processProductImageFile(file, label = '') {
         const maxMB = 5;
         if (file.size > maxMB * 1024 * 1024) {
-            this.showToast(`La imagen supera los ${maxMB} MB. Usa una imagen más pequeña.`, 'warning');
+            this.showToast(`La imagen supera los ${maxMB} MB.`, 'warning');
+            return;
+        }
+        // Leer array actual
+        let imgs = this._getProductImagesArray();
+        if (imgs.length >= 3) {
+            this.showToast('Máximo 3 imágenes por producto. Elimina una para agregar otra.', 'warning');
             return;
         }
         const reader = new FileReader();
         reader.onload = (e) => {
-            const base64 = e.target.result;
-            document.getElementById('prod-form-image-data').value = base64;
+            imgs.push(e.target.result);
+            document.getElementById('prod-form-image-data').value = JSON.stringify(imgs);
             document.getElementById('prod-form-image-file').value = '';
-            this._showProductImagePreview(base64, label || file.name || 'Imagen cargada');
-            this.showToast('Imagen cargada correctamente ✓', 'success');
+            this._renderProductImageThumbs(imgs);
+            this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success');
         };
         reader.onerror = () => this.showToast('Error leyendo el archivo.', 'error');
         reader.readAsDataURL(file);
     }
 
-    /** Limpia la imagen de referencia */
-    clearProductImage() {
-        document.getElementById('prod-form-image-data').value = '';
-        document.getElementById('prod-form-image-file').value = '';
-        this._showProductImagePreview('', '');
-    }
-
-    /** Muestra u oculta la previsualización dentro de la dropzone */
-    _showProductImagePreview(src, label = '') {
-        const emptyState  = document.getElementById('prod-form-image-empty');
-        const container   = document.getElementById('prod-form-image-preview-container');
-        const img         = document.getElementById('prod-form-image-preview');
-        const filename    = document.getElementById('prod-form-image-filename');
-        const clearBtn    = document.getElementById('prod-form-image-clear');
-
-        if (src) {
-            if (img) img.src = src;
-            if (filename) filename.textContent = label || 'Imagen de referencia';
-            if (emptyState)  emptyState.classList.add('hidden');
-            if (container)   container.classList.remove('hidden');
-            if (clearBtn)    clearBtn.classList.remove('hidden');
-        } else {
-            if (img) img.src = '#';   // '#' evita request al servidor, no dispara onerror real
-            if (filename) filename.textContent = '';
-            if (emptyState)  emptyState.classList.remove('hidden');
-            if (container)   container.classList.add('hidden');
-            if (clearBtn)    clearBtn.classList.add('hidden');
+    /** Obtiene el array de imágenes del campo oculto */
+    _getProductImagesArray() {
+        try {
+            const raw = document.getElementById('prod-form-image-data')?.value || '';
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+            if (typeof parsed === 'string' && parsed.startsWith('data:')) return [parsed];
+            return [];
+        } catch {
+            const raw = document.getElementById('prod-form-image-data')?.value || '';
+            return raw ? [raw] : [];
         }
     }
 
-    // Función legacy — ya no muestra toast, solo limpia silenciosamente
-    onProductImageError() {
-        this._showProductImagePreview('', '');
+    /** Limpia TODAS las imágenes */
+    clearProductImage() {
         document.getElementById('prod-form-image-data').value = '';
+        document.getElementById('prod-form-image-file').value = '';
+        this._renderProductImageThumbs([]);
     }
 
-    // Función legacy — ya no se usa (se eliminó el campo URL de imagen)
+    /** Elimina una imagen del array por índice */
+    removeProductImage(index) {
+        let imgs = this._getProductImagesArray();
+        imgs.splice(index, 1);
+        document.getElementById('prod-form-image-data').value = imgs.length ? JSON.stringify(imgs) : '';
+        this._renderProductImageThumbs(imgs);
+    }
+
+
+
+    /**
+     * Renderiza las miniaturas de imágenes en el modal de edición.
+     * También gestiona la visibilidad del dropzone y el botón "Quitar todo".
+     */
+    _renderProductImageThumbs(imgs) {
+        const thumbsContainer = document.getElementById('prod-form-images-thumbnails');
+        const emptyState      = document.getElementById('prod-form-image-empty');
+        const singlePreview   = document.getElementById('prod-form-image-preview-container');
+        const clearBtn        = document.getElementById('prod-form-image-clear');
+        const counter         = document.getElementById('prod-form-images-counter');
+
+        if (!thumbsContainer) return;
+
+        if (!imgs || imgs.length === 0) {
+            thumbsContainer.innerHTML = '';
+            thumbsContainer.classList.add('hidden');
+            if (emptyState)    emptyState.classList.remove('hidden');
+            if (singlePreview) singlePreview.classList.add('hidden');
+            if (clearBtn)      clearBtn.classList.add('hidden');
+            if (counter)       counter.classList.add('hidden');
+            return;
+        }
+
+        // Mostrar miniaturas
+        thumbsContainer.innerHTML = imgs.map((src, i) => `
+            <div class="img-thumb-modal">
+                <img src="${src}" alt="Imagen ${i+1}" onclick="app.openLightbox(${JSON.stringify(imgs)}, ${i}, 'Imagen ${i+1}')" onerror="this.parentElement.remove()" />
+                <button type="button" class="remove-img-btn" onclick="app.removeProductImage(${i})" title="Eliminar imagen">✕</button>
+            </div>
+        `).join('');
+        thumbsContainer.classList.remove('hidden');
+
+        if (emptyState) {
+            // Si hay menos de 3, mostrar la dropzone para agregar más
+            emptyState.classList.toggle('hidden', imgs.length >= 3);
+        }
+        if (singlePreview) singlePreview.classList.add('hidden'); // Ya no usamos el preview único
+        if (clearBtn)  clearBtn.classList.remove('hidden');
+        if (counter) {
+            counter.textContent = `${imgs.length}/3 imagen${imgs.length > 1 ? 'es' : ''} — ${imgs.length < 3 ? 'puedes agregar ' + (3 - imgs.length) + ' más' : 'máximo alcanzado'}`;
+            counter.classList.remove('hidden');
+        }
+    }
+
+    /** Muestra u oculta la previsualización (compatibilidad). Ahora delega a _renderProductImageThumbs */
+    _showProductImagePreview(src, label = '') {
+        let imgs = [];
+        if (src && src !== '#') {
+            // Si viene de edición: puede ser JSON array o base64 directo
+            try {
+                const parsed = JSON.parse(src);
+                imgs = Array.isArray(parsed) ? parsed : [src];
+            } catch {
+                imgs = [src];
+            }
+        }
+        this._renderProductImageThumbs(imgs);
+    }
+
+    // Función legacy — limpia silenciosamente
+    onProductImageError() {
+        document.getElementById('prod-form-image-data').value = '';
+        this._renderProductImageThumbs([]);
+    }
+
+    // Función legacy — ya no se usa
+
     previewProductImage() {}
 
     // ==========================================
