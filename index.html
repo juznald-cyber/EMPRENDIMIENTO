@@ -1295,6 +1295,44 @@
                     </div>
                 </div>
 
+                <!-- Imagen de Referencia del Producto -->
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <label class="block text-xs font-bold text-slate-700">📷 Imagen de Referencia del Producto</label>
+                    <p class="text-[11px] text-slate-500">Pega una URL de imagen o sube una foto desde tu dispositivo. Solo se usa como referencia visual interna.</p>
+
+                    <!-- Opción 1: URL de imagen directa -->
+                    <div class="relative">
+                        <input type="url" id="prod-form-image-url" placeholder="https://... (URL directa de la imagen del producto)"
+                            oninput="app.previewProductImage()"
+                            class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none" />
+                        <i data-lucide="image" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
+                    </div>
+
+                    <!-- Opción 2: Subir imagen desde dispositivo -->
+                    <div class="flex items-center gap-2">
+                        <label for="prod-form-image-file" class="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                            Subir desde dispositivo
+                        </label>
+                        <input type="file" id="prod-form-image-file" accept="image/*" onchange="app.loadProductImageFile(event)" class="hidden" />
+                        <span id="prod-form-image-filename" class="text-[11px] text-slate-400 truncate max-w-[160px]">Ningún archivo seleccionado</span>
+                        <button type="button" id="prod-form-image-clear" onclick="app.clearProductImage()" class="hidden ml-auto p-1 text-rose-400 hover:text-rose-600" title="Quitar imagen">
+                            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Previsualización -->
+                    <div id="prod-form-image-preview-container" class="hidden">
+                        <img id="prod-form-image-preview" src="" alt="Previsualización"
+                            class="w-full max-h-40 object-contain rounded-xl border border-slate-200 bg-white p-1"
+                            onerror="app.onProductImageError()" />
+                        <p class="text-[10px] text-slate-400 mt-1 text-center">Imagen de referencia interna — no se muestra en la cotización</p>
+                    </div>
+
+                    <!-- Campo oculto que guarda la imagen en base64 o URL directa -->
+                    <input type="hidden" id="prod-form-image-data" />
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Especificaciones</label>
                     <textarea id="prod-form-notes" rows="2" placeholder="Opcional..." 
