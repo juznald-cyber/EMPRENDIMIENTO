@@ -1058,11 +1058,16 @@ class AppController {
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
                     <td class="py-3 px-3">
-                        <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
-                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
-                            ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
-                            ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors" title="Ver producto en la web del proveedor"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                        <div class="flex items-start gap-2.5">
+                            ${p.imageData ? `<img src="${this.escapeHTML(p.imageData)}" alt="Ref." class="w-10 h-10 object-cover rounded-lg border border-slate-200 bg-white shrink-0" onerror="this.style.display='none'" />` : `<div class="w-10 h-10 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`}
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
+                                    ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
+                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors" title="Ver producto en la web del proveedor"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td class="py-3 px-3 text-xs text-slate-600">
@@ -1253,6 +1258,13 @@ class AppController {
             document.getElementById('prod-form-margin').value = p.defaultMargin || 50;
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
+            // Imagen de referencia
+            const imgData = p.imageData || '';
+            document.getElementById('prod-form-image-data').value = imgData;
+            document.getElementById('prod-form-image-url').value = (imgData && !imgData.startsWith('data:')) ? imgData : '';
+            document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
+            document.getElementById('prod-form-image-file').value = '';
+            this._showProductImagePreview(imgData);
 
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
@@ -1271,6 +1283,12 @@ class AppController {
             document.getElementById('prod-form-margin').value = '50';
             document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
+            // Imagen de referencia - limpiar
+            document.getElementById('prod-form-image-data').value = '';
+            document.getElementById('prod-form-image-url').value = '';
+            document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
+            document.getElementById('prod-form-image-file').value = '';
+            this._showProductImagePreview('');
         }
         this.openModal('modal-edit-product');
     }
@@ -1316,6 +1334,7 @@ class AppController {
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
+        const imageData = (document.getElementById('prod-form-image-data')?.value || '').trim();
 
         if (!name) {
             this.showToast('Por favor escribe el nombre del producto.', 'warning');
@@ -1352,6 +1371,7 @@ class AppController {
             defaultMargin,
             url,
             notes,
+            imageData,
             useGlobalTiers: true
         };
 
@@ -1368,6 +1388,87 @@ class AppController {
             this.renderProducts();
             this.showToast('Producto eliminado.', 'info');
         }
+    }
+
+    // ==========================================
+    // IMAGEN DE REFERENCIA DEL PRODUCTO
+    // ==========================================
+
+    /** Llamado al escribir en el campo de URL de imagen: muestra previsualización */
+    previewProductImage() {
+        const url = (document.getElementById('prod-form-image-url')?.value || '').trim();
+        if (url) {
+            document.getElementById('prod-form-image-data').value = url;
+            document.getElementById('prod-form-image-filename').textContent = 'URL de imagen';
+            this._showProductImagePreview(url);
+        } else {
+            // Si borraron la URL, limpiar sólo si no hay base64 cargada
+            const current = document.getElementById('prod-form-image-data').value;
+            if (!current || !current.startsWith('data:')) {
+                document.getElementById('prod-form-image-data').value = '';
+                document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
+                this._showProductImagePreview('');
+            }
+        }
+    }
+
+    /** Llamado al seleccionar archivo local: convierte a base64 y muestra preview */
+    loadProductImageFile(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            this.showToast('Solo se aceptan archivos de imagen.', 'warning');
+            return;
+        }
+
+        const maxMB = 5;
+        if (file.size > maxMB * 1024 * 1024) {
+            this.showToast(`La imagen supera los ${maxMB} MB. Usa una imagen más pequeña.`, 'warning');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64 = e.target.result;
+            document.getElementById('prod-form-image-data').value = base64;
+            document.getElementById('prod-form-image-url').value = '';
+            document.getElementById('prod-form-image-filename').textContent = file.name;
+            this._showProductImagePreview(base64);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /** Limpia la imagen de referencia */
+    clearProductImage() {
+        document.getElementById('prod-form-image-data').value = '';
+        document.getElementById('prod-form-image-url').value = '';
+        document.getElementById('prod-form-image-filename').textContent = 'Ningún archivo seleccionado';
+        document.getElementById('prod-form-image-file').value = '';
+        this._showProductImagePreview('');
+    }
+
+    /** Muestra u oculta el contenedor de previsualización */
+    _showProductImagePreview(src) {
+        const container = document.getElementById('prod-form-image-preview-container');
+        const img = document.getElementById('prod-form-image-preview');
+        const clearBtn = document.getElementById('prod-form-image-clear');
+        if (src) {
+            img.src = src;
+            container.classList.remove('hidden');
+            if (clearBtn) clearBtn.classList.remove('hidden');
+        } else {
+            img.src = '';
+            container.classList.add('hidden');
+            if (clearBtn) clearBtn.classList.add('hidden');
+        }
+    }
+
+    /** Llamado cuando la imagen de la URL no carga */
+    onProductImageError() {
+        this.showToast('No se pudo cargar la imagen desde esa URL. Verifica que sea un enlace directo a una imagen.', 'warning');
+        this._showProductImagePreview('');
+        document.getElementById('prod-form-image-data').value = '';
     }
 
     // ==========================================
