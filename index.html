@@ -798,6 +798,10 @@
                                     <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
                                     Carga Masiva (Excel / XLS)
                                 </button>
+                                <button onclick="app.toggleProductPrices()" id="btn-toggle-prices" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-sm transition-all shrink-0" title="Ocultar/mostrar precios">
+                                    <i data-lucide="eye-off" class="w-4 h-4"></i>
+                                    Ocultar Precios
+                                </button>
                                 <button onclick="app.openProductModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all shrink-0">
                                     <i data-lucide="plus" class="w-4 h-4"></i>
                                     Nuevo Producto
@@ -805,18 +809,32 @@
                             </div>
                         </div>
 
+                        <!-- Toolbar masiva: aparece cuando hay checkboxes seleccionados -->
+                        <div id="products-bulk-bar" class="hidden items-center gap-2 px-1 py-2 bg-rose-50 border border-rose-200 rounded-xl mb-2">
+                            <span id="products-bulk-count" class="text-xs font-bold text-rose-700"></span>
+                            <button onclick="app.deleteSelectedProducts()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar seleccionados
+                            </button>
+                            <button onclick="app.clearProductSelection()" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
+                                Cancelar
+                            </button>
+                        </div>
+
                         <!-- Tabla de Productos -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
                                     <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                        <th class="py-3 px-3 w-8">
+                                            <input type="checkbox" id="products-select-all" onchange="app.toggleSelectAllProducts(this.checked)" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" title="Seleccionar todos">
+                                        </th>
                                         <th class="py-3 px-3 w-28">Código</th>
                                         <th class="py-3 px-3">Producto / Insumo</th>
                                         <th class="py-3 px-3 w-36">Proveedor</th>
                                         <th class="py-3 px-3 w-24 text-center">Unidad</th>
-                                        <th class="py-3 px-3 w-32 text-right">Costo Prov.</th>
-                                        <th class="py-3 px-3 w-24 text-center">Margen</th>
-                                        <th class="py-3 px-3 w-32 text-right">Precio Venta (1u)</th>
+                                        <th class="py-3 px-3 w-32 text-right price-col">Costo Prov.</th>
+                                        <th class="py-3 px-3 w-24 text-center price-col">Margen</th>
+                                        <th class="py-3 px-3 w-32 text-right price-col">Precio Venta (1u)</th>
                                         <th class="py-3 px-3 w-28 text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -1331,7 +1349,13 @@
                     <input type="file" id="prod-form-image-file" accept="image/*" onchange="app.loadProductImageFile(event)" class="hidden" />
                     <p class="text-[10px] text-slate-400 text-center">Solo de referencia interna — no aparece en la cotización del cliente</p>
 
-                    <!-- Campo oculto que guarda la imagen en base64 -->
+                    <!-- Miniaturas de imágenes ya cargadas (hasta 3) -->
+                    <div id="prod-form-images-thumbnails" class="hidden flex gap-2 flex-wrap mt-1"></div>
+
+                    <!-- Contador -->
+                    <p id="prod-form-images-counter" class="text-[10px] text-indigo-500 font-bold text-center hidden">Puedes agregar hasta 3 imágenes</p>
+
+                    <!-- Campo oculto que guarda las imágenes en JSON (array de base64) -->
                     <input type="hidden" id="prod-form-image-data" />
                 </div>
 
@@ -1512,19 +1536,41 @@
         </div>
     </div>
 
+    <!-- Modal Lightbox: Ver imagen en grande -->
+    <div id="modal-image-lightbox" class="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4" onclick="app.closeLightbox()">
+        <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <!-- Navegación entre imágenes -->
+            <div class="flex items-center gap-3 mb-3">
+                <button id="lightbox-prev" onclick="app.lightboxNav(-1)" class="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white transition-all">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <span id="lightbox-counter" class="text-white text-xs font-bold bg-black/40 px-3 py-1 rounded-full"></span>
+                <button id="lightbox-next" onclick="app.lightboxNav(1)" class="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white transition-all">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+                <button onclick="app.closeLightbox()" class="p-2 bg-white/20 hover:bg-rose-500 rounded-full text-white transition-all ml-4">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <img id="lightbox-img" src="#" alt="Imagen del producto"
+                class="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/10" />
+            <p id="lightbox-label" class="text-white/60 text-xs mt-2"></p>
+        </div>
+    </div>
+
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=3.5"></script>
-    <script src="js/db.js?v=3.5"></script>
-    <script src="js/vinilos.js?v=3.5"></script>
-    <script src="js/pdf-generator.js?v=3.5"></script>
-    <script src="js/cotizador.js?v=3.5"></script>
-    <script src="js/app.js?v=3.5"></script>
+    <script src="js/firebase-config.js?v=3.6"></script>
+    <script src="js/db.js?v=3.6"></script>
+    <script src="js/vinilos.js?v=3.6"></script>
+    <script src="js/pdf-generator.js?v=3.6"></script>
+    <script src="js/cotizador.js?v=3.6"></script>
+    <script src="js/app.js?v=3.6"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=3.4').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=3.6').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
