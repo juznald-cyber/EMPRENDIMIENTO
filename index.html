@@ -1283,12 +1283,21 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Costo Base 1u ($)</label>
                         <input type="number" id="prod-form-cost" step="0.01" value="5.00" 
+                            oninput="app.onProductCostChange()"
                             class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Margen Base (%)</label>
                         <input type="number" id="prod-form-margin" step="1" value="50" 
+                            oninput="app.onProductMarginChange()"
                             class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-700 mb-1">Precio Venta 1u ($) <span class="font-normal text-slate-400">(o escribe el precio y se calcula el margen)</span></label>
+                        <input type="number" id="prod-form-sale-price" step="0.01" value=""
+                            oninput="app.onProductSalePriceChange()"
+                            placeholder="Auto"
+                            class="w-full px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                 </div>
 
