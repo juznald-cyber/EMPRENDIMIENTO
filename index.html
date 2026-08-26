@@ -468,169 +468,194 @@
             </div>
 
             <!-- ============================================================== -->
-            <!-- TAB 2: CALCULADORA DE VINILOS (CRUD PRESETS)                    -->
+            <!-- TAB 2: CALCULADORA DE VINILOS -->
             <!-- ============================================================== -->
-            <div id="tab-vinilos" class="tab-content space-y-6 max-w-6xl mx-auto">
-                
-                <!-- Encabezado de la Calculadora -->
-                <div class="bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 p-6 rounded-3xl text-white shadow-lg space-y-2">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                                <i data-lucide="scissors" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h2 class="text-xl font-black">Calculadora de Vinilos por Metro Cuadrado (m²)</h2>
-                                <p class="text-xs text-cyan-100">Calcula costos de material, mano de obra de corte, merma y precio de venta en segundos</p>
-                            </div>
+            <div id="tab-vinilos" class="tab-content space-y-5 max-w-6xl mx-auto">
+
+                <!-- Encabezado -->
+                <div class="bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 p-5 rounded-3xl text-white shadow-lg flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-white/10 rounded-2xl">
+                            <i data-lucide="scissors" class="w-6 h-6"></i>
                         </div>
-                        <button onclick="app.openVinylPresetModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-50 shadow-md transition-all">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            + Agregar Nuevo Tipo de Vinilo
-                        </button>
+                        <div>
+                            <h2 class="text-lg font-black">Calculadora de Vinilos / m²</h2>
+                            <p class="text-xs text-cyan-100">Selecciona el tipo de vinilo, ingresa la medida del pliego y calcula tu precio de venta</p>
+                        </div>
                     </div>
+                    <button onclick="app.openVinylPresetModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 hover:bg-indigo-50 shadow-md transition-all shrink-0">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Nuevo Tipo de Vinilo
+                    </button>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
-                    <!-- Panel de Entrada de Parámetros -->
-                    <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
-                        
-                        <!-- Selección de Tipo de Vinilo con Botones de Editar/Eliminar -->
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="block text-xs font-bold text-slate-600">Tipos de Vinilo / Trabajo Disponibles</label>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+                    <!-- Panel Izquierdo: Entradas -->
+                    <div class="lg:col-span-7 space-y-4">
+
+                        <!-- PASO 1: Tipos de Vinilo -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-5 h-5 bg-indigo-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">1</span>
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Tipo de Vinilo / Material</label>
+                                </div>
                                 <button onclick="app.openVinylPresetModal()" class="text-xs text-indigo-600 font-bold hover:underline">+ Crear Otro</button>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="vinyl-type-selector-cards">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="vinyl-type-selector-cards">
                                 <!-- Inyectado dinámicamente -->
                             </div>
                         </div>
 
-                        <!-- Dimensiones y Cantidad -->
-                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dimensiones del Trabajo a Cotizar</h4>
-                                <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
-                                    <button type="button" onclick="app.setVinylUnitMode('cm')" id="unit-btn-cm" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all">cm</button>
-                                    <button type="button" onclick="app.setVinylUnitMode('m')" id="unit-btn-m" class="px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all">metros</button>
+                        <!-- PASO 2: Datos del pliego/bobina comprado -->
+                        <div class="bg-white p-5 rounded-2xl border border-indigo-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-5 h-5 bg-indigo-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">2</span>
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Medida y Precio del Pliego/Bobina Comprada</label>
                                 </div>
+                                <!-- Badge resultado -->
+                                <span id="vinyl-roll-calc-equivalent" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">Costo: $0 / m²</span>
                             </div>
-
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-600 mb-1">Ancho (<span class="unit-label-span">cm</span>)</label>
-                                    <input type="number" id="vinyl-width-input" step="0.1" min="0" value="50" 
-                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center" />
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho del Pliego (cm)</label>
+                                    <input type="number" id="vinyl-roll-width-input" step="1" value="58" min="1"
+                                        oninput="app.onVinylRollChange()"
+                                        class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-600 mb-1">Alto (<span class="unit-label-span">cm</span>)</label>
-                                    <input type="number" id="vinyl-height-input" step="0.1" min="0" value="30" 
-                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center" />
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo del Pliego (cm)</label>
+                                    <input type="number" id="vinyl-roll-length-input" step="1" value="100" min="1"
+                                        oninput="app.onVinylRollChange()"
+                                        class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad (Pzas)</label>
-                                    <input type="number" id="vinyl-quantity-input" min="1" value="10" 
-                                        class="w-full px-3.5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-center text-indigo-600" />
+                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Precio Pagado por el Pliego ($)</label>
+                                    <div class="relative">
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                                        <input type="text" id="vinyl-roll-cost-input" value="" placeholder="Ej: 14000"
+                                            oninput="app.onVinylRollChange()"
+                                            class="w-full pl-6 pr-2 py-2.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-center" />
+                                    </div>
                                 </div>
                             </div>
+                            <!-- Resultado costo m² calculado (grande y visible) -->
+                            <div class="mt-3 p-3 bg-indigo-600 rounded-xl text-white flex items-center justify-between">
+                                <span class="text-xs font-bold opacity-80">Costo de Material por m² (calculado automáticamente):</span>
+                                <span id="vinyl-cost-m2-display" class="text-xl font-black font-mono">$0.00</span>
+                            </div>
+                            <!-- Campo oculto que guarda el costo/m² calculado -->
+                            <input type="hidden" id="vinyl-cost-m2-input" />
                         </div>
 
-                        <!-- Medidas del Material / Bobina Comprada (ej. 58 cm x 100 cm) -->
-                        <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                    <i data-lucide="ruler" class="w-4 h-4 text-indigo-600"></i>
-                                    <h4 class="text-xs font-bold text-indigo-950 uppercase tracking-wider">Medida de Compra del Vinilo / Bobina</h4>
-                                </div>
-                                <span id="vinyl-roll-calc-equivalent" class="text-[11px] font-bold text-indigo-700 bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200 shadow-sm">
-                                    Equivale a $7.76 / m²
-                                </span>
+                        <!-- PASO 3: Precio de Venta + Margen (bidireccional) -->
+                        <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-5 h-5 bg-emerald-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
+                                <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Precio de Venta / Ganancia</label>
+                                <span class="text-[10px] text-slate-400">(edita el % o el precio, se calculan solos)</span>
                             </div>
-
-                            <div class="grid grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho Comprado (cm)</label>
-                                    <input type="number" id="vinyl-roll-width-input" step="1" value="58" placeholder="58"
-                                        class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo Comprado (cm)</label>
-                                    <input type="number" id="vinyl-roll-length-input" step="1" value="100" placeholder="100"
-                                        class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Precio Pagado ($)</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Mano Obra / m²</label>
                                     <div class="relative">
-                                        <input type="number" id="vinyl-roll-cost-input" step="0.01" value="4.50" placeholder="4.50"
-                                            class="w-full pl-5 pr-2 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none text-center" />
-                                        <span class="absolute left-2 top-2 text-xs font-bold text-slate-400">$</span>
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                                        <input type="number" id="vinyl-labor-m2-input" step="0.1" value="0"
+                                            oninput="app.calculateVinylLive()"
+                                            class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">% Merma / Desp.</label>
+                                    <div class="relative">
+                                        <input type="number" id="vinyl-waste-input" step="1" value="10"
+                                            oninput="app.calculateVinylLive()"
+                                            class="w-full pl-2 pr-6 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                                        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-emerald-700 mb-1">% Ganancia</label>
+                                    <div class="relative">
+                                        <input type="number" id="vinyl-margin-input" step="1" value="50"
+                                            oninput="app.onVinylMarginChange()"
+                                            class="w-full pl-2 pr-6 py-2 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-xl focus:bg-white outline-none text-center" />
+                                        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-emerald-700 mb-1">Precio Venta / m²</label>
+                                    <div class="relative">
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">$</span>
+                                        <input type="number" id="vinyl-sale-price-m2-input" step="1" value=""
+                                            oninput="app.onVinylSalePriceM2Change()"
+                                            placeholder="Auto"
+                                            class="w-full pl-6 pr-2 py-2 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-xl focus:bg-white outline-none text-center" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Configuración de Costos y Margen -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Costo Mat. / m²</label>
-                                <div class="relative">
-                                    <input type="number" id="vinyl-cost-m2-input" step="0.1" 
-                                        class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
-                                    <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">$</span>
+                        <!-- PASO 4: Dimensiones del trabajo -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-5 h-5 bg-slate-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">4</span>
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Dimensiones del Trabajo a Cotizar</label>
+                                </div>
+                                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                                    <button type="button" onclick="app.setVinylUnitMode('cm')" id="unit-btn-cm" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition-all">cm</button>
+                                    <button type="button" onclick="app.setVinylUnitMode('m')" id="unit-btn-m" class="px-2.5 py-1 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all">metros</button>
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m²</label>
-                                <div class="relative">
-                                    <input type="number" id="vinyl-labor-m2-input" step="0.1" 
-                                        class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
-                                    <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">$</span>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Ancho (<span class="unit-label-span">cm</span>)</label>
+                                    <input type="number" id="vinyl-width-input" step="0.1" min="0" value="50"
+                                        oninput="app.calculateVinylLive()"
+                                        class="w-full px-3 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-center" />
                                 </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">% Merma / Desp.</label>
-                                <div class="relative">
-                                    <input type="number" id="vinyl-waste-input" step="1" 
-                                        class="w-full pl-2 pr-6 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
-                                    <span class="absolute right-2.5 top-2 text-xs font-bold text-slate-400">%</span>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Alto (<span class="unit-label-span">cm</span>)</label>
+                                    <input type="number" id="vinyl-height-input" step="0.1" min="0" value="30"
+                                        oninput="app.calculateVinylLive()"
+                                        class="w-full px-3 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-center" />
                                 </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-indigo-600 mb-1">% Margen Ganancia</label>
-                                <div class="relative">
-                                    <input type="number" id="vinyl-margin-input" step="1" 
-                                        class="w-full pl-2 pr-6 py-2 text-xs font-black text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
-                                    <span class="absolute right-2.5 top-2 text-xs font-bold text-indigo-400">%</span>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad (Pzas)</label>
+                                    <input type="number" id="vinyl-quantity-input" min="1" value="1"
+                                        oninput="app.calculateVinylLive()"
+                                        class="w-full px-3 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-center text-indigo-600" />
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Título Opcional para la Cotización -->
+                        <!-- Nombre / Detalle para cotización -->
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Nombre / Detalle para la Cotización</label>
-                            <input type="text" id="vinyl-custom-title-input" placeholder="Ej. Vinilo Adhesivo para Rotulación de Vidrieras (Logo Empresa)" 
-                                class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                            <input type="text" id="vinyl-custom-title-input" placeholder="Ej. Vinilo Adhesivo para Rotulación de Vidrieras (Logo Empresa)"
+                                class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
                         </div>
                     </div>
 
-                    <!-- Panel de Resultados y Visualizador en Vivo -->
-                    <div class="lg:col-span-5 flex flex-col justify-between gap-5">
-                        
-                        <!-- Tarjeta de Resultados Financieros -->
-                        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <!-- Panel Derecho: Resultados -->
+                    <div class="lg:col-span-5 flex flex-col gap-4">
+
+                        <!-- Resumen del Cálculo -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-4">
                             <h3 class="font-extrabold text-sm text-slate-800 border-b border-slate-100 pb-3 flex items-center justify-between">
                                 <span>Resumen del Cálculo</span>
                                 <span id="vinyl-m2-badge" class="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">0.00 m²</span>
                             </h3>
 
-                            <div class="space-y-2.5 text-xs">
+                            <div class="space-y-2 text-xs">
                                 <div class="flex justify-between text-slate-500">
                                     <span>Área Neta Total:</span>
                                     <span id="calc-net-area-display" class="font-bold text-slate-700">0.00 m²</span>
                                 </div>
                                 <div class="flex justify-between text-slate-500">
-                                    <span>Área con Merma (<span id="calc-waste-rate-display">15</span>%):</span>
+                                    <span>Área con Merma (<span id="calc-waste-rate-display">10</span>%):</span>
                                     <span id="calc-gross-area-display" class="font-bold text-slate-700">0.00 m²</span>
                                 </div>
                                 <div class="flex justify-between text-slate-500">
@@ -638,7 +663,7 @@
                                     <span id="calc-material-cost-display" class="font-bold text-slate-700">$ 0.00</span>
                                 </div>
                                 <div class="flex justify-between text-slate-500">
-                                    <span>Costo Mano de Obra / Corte:</span>
+                                    <span>Mano de Obra / Corte:</span>
                                     <span id="calc-labor-cost-display" class="font-bold text-slate-700">$ 0.00</span>
                                 </div>
                                 <div class="flex justify-between text-slate-600 pt-2 border-t border-slate-100">
@@ -651,32 +676,31 @@
                                 </div>
                             </div>
 
-                            <!-- Gran Cuadro de Precio Final -->
+                            <!-- Precio Final -->
                             <div class="bg-gradient-to-br from-indigo-50 to-cyan-50 p-4 rounded-2xl border border-indigo-100 space-y-2">
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs font-bold text-slate-600 uppercase">Precio por Unidad:</span>
                                     <span id="calc-unit-price-display" class="text-lg font-black text-indigo-600 font-mono">$ 0.00</span>
                                 </div>
                                 <div class="flex justify-between items-baseline border-t border-indigo-200/60 pt-2">
-                                    <span class="text-sm font-black text-slate-900 uppercase">PRECIO TOTAL VENTA:</span>
+                                    <span class="text-sm font-black text-slate-900 uppercase">Precio Total Venta:</span>
                                     <span id="calc-total-sale-display" class="text-2xl font-black text-indigo-700 font-mono">$ 0.00</span>
                                 </div>
                             </div>
 
-                            <!-- Botón Principal: Pasar a Cotización -->
-                            <button onclick="app.addVinylToCurrentQuote()" class="w-full py-3.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-95">
+                            <button onclick="app.addVinylToCurrentQuote()" class="w-full py-3.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
                                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
                                 Agregar a Cotización Actual
                             </button>
                         </div>
 
-                        <!-- Previsualizador Visual de la Pieza -->
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2 text-center">
+                        <!-- Proporción Visual -->
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
                             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Proporción Visual Aproximada</span>
-                            <div class="vinyl-preview-box h-36 w-full">
+                            <div class="vinyl-preview-box h-32 w-full mt-2">
                                 <div id="vinyl-visual-rect" class="vinyl-piece-rect" style="width: 140px; height: 80px;">
                                     <span id="visual-dim-label" class="text-[11px] font-black text-indigo-700 font-mono">50 x 30 cm</span>
-                                    <span id="visual-qty-label" class="text-[10px] font-bold text-indigo-500">10 piezas</span>
+                                    <span id="visual-qty-label" class="text-[10px] font-bold text-indigo-500">1 pieza</span>
                                 </div>
                             </div>
                         </div>
