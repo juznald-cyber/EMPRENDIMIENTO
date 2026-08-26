@@ -384,10 +384,31 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
+    /**
+     * Parsea un número en formato local chileno/español donde:
+     *   el punto (.) es separador de miles → 14.000 = 14000
+     *   la coma (,) es separador decimal → 14.000,50 = 14000.50
+     */
+    parseChileanFloat(str) {
+        if (str === '' || str === null || str === undefined) return 0;
+        const s = String(str).trim();
+        // Si tiene coma: punto = miles, coma = decimal
+        if (s.includes(',')) {
+            return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+        // Si tiene solo puntos: puede ser miles (14.000) o decimal (14.5)
+        // Heurística: si la parte después del punto tiene 3 dígitos = miles
+        const parts = s.split('.');
+        if (parts.length === 2 && parts[1].length === 3) {
+            return parseFloat(s.replace('.', '')) || 0; // miles
+        }
+        return parseFloat(s) || 0;
+    }
+
     syncRollToCostM2() {
-        const rollW = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
-        const rollL = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value) || 0;
+        const rollW    = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
+        const rollL    = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
+        const rollCost = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
 
         const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
         const costInput = document.getElementById('vinyl-cost-m2-input');
@@ -432,10 +453,10 @@ class AppController {
 
         if (rollWInp) rollWInp.value = preset.rollWidthCm || 58;
         if (rollLInp) rollLInp.value = preset.rollLengthCm || 100;
-        // Solo rellenar el precio pagado si está vacío o en 0, para no pisar lo que escribe el usuario
-        const currentRollCost = parseFloat(rollCostInp?.value);
-        if (rollCostInp && (!currentRollCost || currentRollCost === 0)) {
-            rollCostInp.value = preset.rollCost || (preset.costPerM2 ? ((preset.costPerM2 * (preset.rollWidthCm || 58) * (preset.rollLengthCm || 100)) / 10000).toFixed(2) : '');
+        // El precio pagado NUNCA se sobreescribe: el usuario siempre lo controla.
+        // Solo se rellena si el campo está completamente vacío (carga inicial).
+        if (rollCostInp && (rollCostInp.value === '' || rollCostInp.value === null)) {
+            rollCostInp.value = preset.rollCost > 0 ? preset.rollCost : '';
         }
 
         if (costInp) costInp.value = preset.costPerM2 || 7.76;
@@ -558,17 +579,18 @@ class AppController {
     }
 
     calculateVinylLive() {
-        const width = parseFloat(document.getElementById('vinyl-width-input')?.value) || 0;
-        const height = parseFloat(document.getElementById('vinyl-height-input')?.value) || 0;
-        const qty = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
-        const rollWidthCm = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
+        const width       = parseFloat(document.getElementById('vinyl-width-input')?.value) || 0;
+        const height      = parseFloat(document.getElementById('vinyl-height-input')?.value) || 0;
+        const qty         = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
+        const rollWidthCm  = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value);
-        const customCost = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value);
+        // Usar parseChileanFloat para soportar "14.000" → 14000 (separador de miles)
+        const rollCost    = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const customCost  = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value);
         const customLabor = parseFloat(document.getElementById('vinyl-labor-m2-input')?.value);
         const customWaste = parseFloat(document.getElementById('vinyl-waste-input')?.value);
         const customMargin = parseFloat(document.getElementById('vinyl-margin-input')?.value);
-        const customTitle = document.getElementById('vinyl-custom-title-input')?.value || '';
+        const customTitle  = document.getElementById('vinyl-custom-title-input')?.value || '';
 
         const res = window.vinylCalc.calculate({
             presetId: window.vinylCalc.currentPresetId,
@@ -1083,8 +1105,12 @@ class AppController {
                 imgs = [p.imageData];
             }
 
+            // Guardar imágenes en cache por ID (no se pasan en el onclick para evitar romper comillas)
+            if (!this._productImgCache) this._productImgCache = {};
+            this._productImgCache[p.id] = imgs;
+
             const imgThumbsHtml = imgs.length > 0
-                ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openLightbox(${JSON.stringify(imgs)}, ${i}, '${this.escapeHTML(p.name)}')" onerror="this.style.display='none'" />`).join('')
+                ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openProductLightbox('${p.id}',${i})" onerror="this.style.display='none'" />`).join('')
                 : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
 
             return `
@@ -1282,11 +1308,11 @@ class AppController {
             if (!p) return;
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Editar Producto / Insumo';
-            
+
             document.getElementById('prod-form-id').value = p.id;
             document.getElementById('prod-form-sku').value = p.sku || '';
             document.getElementById('prod-form-name').value = p.name || '';
-            
+
             const matchedSup = suppliers.find(s => s.id === p.supplierId);
             document.getElementById('prod-form-supplier-input').value = matchedSup ? matchedSup.name : (p.supplierId || '');
             document.getElementById('prod-form-category-input').value = p.category || 'Vinilos';
@@ -1295,11 +1321,23 @@ class AppController {
             document.getElementById('prod-form-margin').value = p.defaultMargin || 50;
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
-            // Imagen de referencia
-            const imgData = p.imageData || '';
-            document.getElementById('prod-form-image-data').value = imgData;
+
+            // Precio de venta calculado
+            const cost1u = parseFloat(p.costPrice) || 0;
+            const margin1u = parseFloat(p.defaultMargin) || 50;
+            const spEl = document.getElementById('prod-form-sale-price');
+            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100)).toFixed(2) : '';
+
+            // Imágenes: soporta array (nuevo) o string (viejo)
+            let loadImgs = [];
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                loadImgs = p.images;
+            } else if (p.imageData) {
+                loadImgs = [p.imageData];
+            }
+            document.getElementById('prod-form-image-data').value = loadImgs.length ? JSON.stringify(loadImgs) : '';
             document.getElementById('prod-form-image-file').value = '';
-            this._showProductImagePreview(imgData, imgData ? 'Imagen guardada' : '');
+            this._renderProductImageThumbs(loadImgs);
 
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
@@ -1307,7 +1345,7 @@ class AppController {
         } else {
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Nuevo Producto / Insumo';
-            
+
             document.getElementById('prod-form-id').value = '';
             document.getElementById('prod-form-sku').value = 'PROD-' + Math.floor(Math.random() * 900 + 100);
             document.getElementById('prod-form-name').value = '';
@@ -1316,12 +1354,15 @@ class AppController {
             document.getElementById('prod-form-unit').value = 'Unidad';
             document.getElementById('prod-form-cost').value = '5.00';
             document.getElementById('prod-form-margin').value = '50';
+            // Precio venta inicial para nuevo producto (5 * 1.5 = 7.50)
+            const spElNew = document.getElementById('prod-form-sale-price');
+            if (spElNew) spElNew.value = '7.50';
             document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
-            this._showProductImagePreview('', '');
+            this._renderProductImageThumbs([]);
         }
         this._initProductImagePaste();
         this.openModal('modal-edit-product');
@@ -1429,6 +1470,41 @@ class AppController {
     }
 
     // ==========================================
+    // PRECIO DE VENTA ↔ MARGEN (BIDIRECCIONAL)
+    // ==========================================
+
+    /** Recalcula precio de venta cuando cambia el costo */
+    onProductCostChange() {
+        const margin = parseFloat(document.getElementById('prod-form-margin')?.value);
+        if (!isNaN(margin)) this._recalcSalePrice();
+    }
+
+    /** Cuando el usuario cambia el % margen → actualiza el precio de venta */
+    onProductMarginChange() {
+        this._recalcSalePrice();
+    }
+
+    /** Cuando el usuario escribe el precio de venta → calcula el margen automáticamente */
+    onProductSalePriceChange() {
+        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
+        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value);
+        const marginInp = document.getElementById('prod-form-margin');
+        if (!marginInp || !salePrice || cost <= 0) return;
+        const margin = ((salePrice / cost) - 1) * 100;
+        marginInp.value = Math.round(margin * 10) / 10; // 1 decimal
+    }
+
+    /** Calcula el precio de venta desde costo y margen */
+    _recalcSalePrice() {
+        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
+        const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
+        const salePriceInp = document.getElementById('prod-form-sale-price');
+        if (!salePriceInp || cost <= 0) return;
+        const salePrice = cost * (1 + margin / 100);
+        salePriceInp.value = salePrice.toFixed(2);
+    }
+
+    // ==========================================
     // SELECCIÓN MASIVA Y ELIMINACIÓN MASIVA
     // ==========================================
     toggleSelectAllProducts(checked) {
@@ -1504,6 +1580,13 @@ class AppController {
     // ==========================================
     _lightboxImages = [];
     _lightboxIndex  = 0;
+
+    /** Abre el lightbox leyendo desde el cache de imágenes por ID de producto */
+    openProductLightbox(productId, startIndex = 0) {
+        const imgs = (this._productImgCache && this._productImgCache[productId]) || [];
+        if (imgs.length === 0) return;
+        this.openLightbox(imgs, startIndex, '');
+    }
 
     openLightbox(images, startIndex = 0, label = '') {
         this._lightboxImages = Array.isArray(images) ? images : [images];
