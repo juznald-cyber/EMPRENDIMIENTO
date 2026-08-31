@@ -8,6 +8,9 @@ class AppController {
     }
 
     init() {
+        // Inicializar Tema (Claro / Oscuro)
+        this.initTheme();
+
         // Inicializar Iconos Lucide
         if (window.lucide) {
             window.lucide.createIcons();
@@ -2100,19 +2103,11 @@ class AppController {
         const sidebarLogo = document.getElementById('sidebar-logo-container');
         if (!box) return;
 
-        if (logoBase64) {
-            box.innerHTML = `<img src="${logoBase64}" alt="Logo" class="max-h-full max-w-full object-contain" />`;
-            if (sidebarLogo) {
-                sidebarLogo.innerHTML = `<img src="${logoBase64}" alt="Logo" class="h-full w-full object-cover rounded-xl" />`;
-            }
-        } else {
-            box.innerHTML = `
-                <i data-lucide="image" class="w-8 h-8 text-indigo-400 mb-1"></i>
-                <span class="text-[10px] text-slate-400 font-medium">Sin Logo</span>
-            `;
-            if (sidebarLogo) {
-                sidebarLogo.innerHTML = `<i data-lucide="calculator" class="w-5 h-5"></i>`;
-            }
+        const effectiveLogo = logoBase64 || 'assets/logo.jpg';
+
+        box.innerHTML = `<img src="${effectiveLogo}" alt="Logo" class="max-h-full max-w-full object-contain rounded-xl" />`;
+        if (sidebarLogo) {
+            sidebarLogo.innerHTML = `<img src="${effectiveLogo}" alt="Logo" class="h-full w-full object-cover rounded-xl shadow-sm" />`;
         }
         if (window.lucide) window.lucide.createIcons();
     }
@@ -2137,9 +2132,64 @@ class AppController {
     }
 
     removeLogo() {
-        window.db.saveProfile({ logo: '' });
-        this.renderLogoPreview('');
-        this.showToast('Logotipo eliminado.', 'info');
+        window.db.saveProfile({ logo: 'assets/logo.jpg' });
+        this.renderLogoPreview('assets/logo.jpg');
+        this.showToast('Restaurado logotipo predeterminado.', 'info');
+    }
+
+    // ==========================================
+    // TEMA CLARO / OSCURO (APPLE THEME SYSTEM)
+    // ==========================================
+    initTheme() {
+        const savedTheme = localStorage.getItem('app_theme') || 'light';
+        this.setTheme(savedTheme, false);
+    }
+
+    setTheme(mode, save = true) {
+        const isDark = mode === 'dark';
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.body.classList.remove('dark');
+        }
+
+        if (save) {
+            localStorage.setItem('app_theme', mode);
+        }
+
+        this.updateThemeToggleButtons(isDark);
+    }
+
+    toggleTheme() {
+        const isCurrentlyDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+        const newTheme = isCurrentlyDark ? 'light' : 'dark';
+        this.setTheme(newTheme, true);
+        this.showToast(newTheme === 'dark' ? 'Modo Oscuro activado 🌙' : 'Modo Claro activado ☀️', 'info');
+    }
+
+    updateThemeToggleButtons(isDark) {
+        const iconHeader = document.getElementById('theme-toggle-icon');
+        const labelHeader = document.getElementById('theme-toggle-label');
+        const mobileBtn = document.getElementById('mobile-theme-toggle-btn');
+
+        if (iconHeader) {
+            iconHeader.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        }
+        if (labelHeader) {
+            labelHeader.innerText = isDark ? 'Modo Claro' : 'Modo Oscuro';
+        }
+        if (mobileBtn) {
+            mobileBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-5 h-5"></i>`;
+        }
+
+        const settingsThemeSelect = document.getElementById('settings-theme-select');
+        if (settingsThemeSelect) {
+            settingsThemeSelect.value = isDark ? 'dark' : 'light';
+        }
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     renderGlobalTiersSettings() {

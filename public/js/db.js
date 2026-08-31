@@ -33,7 +33,7 @@ const DEFAULT_PROFILE = {
     currencyCode: 'USD',
     taxRate: 16, // IVA 16% por defecto (configurable)
     enableTax: true,
-    logo: '', // Base64
+    logo: 'assets/logo.jpg', // Logo oficial de la aplicación
     bankDetails: 'Banco Nacional - Cta Corriente #0102-0000-00-0000000000\nPago Móvil / Zelle: pagos@miempresa.com',
     terms: '1. Cotización válida por 15 días continuos.\n2. Para iniciar el trabajo se requiere 50% de anticipo y 50% contra entrega.\n3. Los tiempos de producción inician tras la aprobación formal del diseño.'
 };

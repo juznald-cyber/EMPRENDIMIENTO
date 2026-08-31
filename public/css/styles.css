@@ -1,4 +1,4 @@
-/* css/styles.css - Rediseño Total Estilo Apple (Human Interface Design) */
+/* css/styles.css - Rediseño Total Estilo Apple (Human Interface Design) con Modo Claro y Oscuro */
 
 /* 1. Reset básico y Tipografía Apple */
 * {
@@ -24,11 +24,37 @@
     --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, monospace;
 }
 
-/* 2. Fondo y Color de Texto (Modo Claro de Apple) */
+/* Modo Oscuro de Apple */
+html.dark, body.dark {
+    --apple-bg: #000000;
+    --apple-text: #f5f5f7;
+    --apple-secondary: #86868b;
+    --apple-blue: #2997ff;
+    --apple-blue-hover: #0077ed;
+    --apple-link: #2997ff;
+    --apple-green: #30d158;
+    --apple-red: #ff453a;
+    --apple-orange: #ff9f0a;
+    --apple-card-bg: rgba(28, 28, 30, 0.88);
+    --apple-card-border: rgba(255, 255, 255, 0.09);
+    --apple-card-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* 2. Fondo y Color de Texto */
 body {
     background-color: var(--apple-bg) !important;
     color: var(--apple-text) !important;
     line-height: 1.5;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body, body.dark {
+    background-color: #000000 !important;
+    color: #f5f5f7 !important;
+}
+
+html.dark main {
+    background-color: #0c0c0e !important;
 }
 
 .font-mono {
@@ -36,19 +62,16 @@ body {
 }
 
 /* 3. Encabezados Grandes y Delgados estilo Apple */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--apple-text);
+}
+
 h1 {
     letter-spacing: -0.015em;
-    color: var(--apple-text);
 }
 
 h2 {
     letter-spacing: -0.01em;
-    color: var(--apple-text);
-}
-
-h3, h4, h5, h6 {
-    letter-spacing: -0.005em;
-    color: var(--apple-text);
 }
 
 /* 4. Texto Secundario / Bajadas */
@@ -64,11 +87,17 @@ p.subtitle, .text-slate-500, .text-slate-400 {
     border-radius: 18px !important;
     border: 1px solid var(--apple-card-border) !important;
     box-shadow: var(--apple-card-shadow) !important;
+    color: var(--apple-text) !important;
 }
 
 .bg-slate-50, .bg-slate-100 {
     background: rgba(0, 0, 0, 0.025) !important;
     border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.dark .bg-slate-50, html.dark .bg-slate-100 {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .bg-slate-900, aside {
@@ -77,6 +106,11 @@ p.subtitle, .text-slate-500, .text-slate-400 {
     -webkit-backdrop-filter: blur(25px) !important;
     border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
     color: var(--apple-text) !important;
+}
+
+html.dark aside {
+    background: rgba(20, 20, 22, 0.92) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 aside * {
@@ -93,7 +127,7 @@ aside p {
 }
 
 aside nav .nav-btn {
-    color: #48484a !important;
+    color: var(--apple-secondary) !important;
     border-radius: 980px !important;
     transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
     font-size: 13.5px;
@@ -102,6 +136,11 @@ aside nav .nav-btn {
 aside nav .nav-btn:hover {
     background: rgba(0, 0, 0, 0.04) !important;
     color: var(--apple-text) !important;
+}
+
+html.dark aside nav .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #ffffff !important;
 }
 
 aside nav .nav-btn.bg-slate-800,
@@ -163,8 +202,18 @@ button:not(.no-pill),
     border: 1px solid rgba(0, 0, 0, 0.04) !important;
 }
 
+html.dark .bg-slate-100 {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #f5f5f7 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
 .bg-slate-100:hover {
     background-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+html.dark .bg-slate-100:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* Enlaces estilo Apple "Learn more" */
@@ -188,11 +237,23 @@ input, select, textarea {
     transition: all 0.2s ease !important;
 }
 
+html.dark input, html.dark select, html.dark textarea {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f5f5f7 !important;
+}
+
 input:focus, select:focus, textarea:focus {
     background: #ffffff !important;
     border-color: var(--apple-blue) !important;
     box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.15) !important;
     outline: none !important;
+}
+
+html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 3.5px rgba(41, 151, 255, 0.25) !important;
 }
 
 /* 8. Modales y Overlays estilo Apple */
@@ -201,7 +262,7 @@ input:focus, select:focus, textarea:focus {
     position: fixed;
     inset: 0;
     z-index: 50;
-    background-color: rgba(0, 0, 0, 0.35) !important;
+    background-color: rgba(0, 0, 0, 0.45) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
     align-items: center;
@@ -220,11 +281,19 @@ input:focus, select:focus, textarea:focus {
     -webkit-backdrop-filter: blur(30px) !important;
     border-radius: 22px !important;
     border: 1px solid rgba(255, 255, 255, 0.7) !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+    color: var(--apple-text) !important;
+}
+
+html.dark .modal-overlay > div {
+    background: rgba(28, 28, 30, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+    color: #f5f5f7 !important;
 }
 
 #auth-screen {
-    background: #f5f5f7 !important;
+    background: var(--apple-bg) !important;
     backdrop-filter: blur(20px) !important;
 }
 
@@ -232,8 +301,14 @@ input:focus, select:focus, textarea:focus {
     background: rgba(255, 255, 255, 0.92) !important;
     backdrop-filter: blur(30px) !important;
     border-radius: 24px !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid var(--apple-card-border) !important;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.dark #auth-screen > div {
+    background: rgba(28, 28, 30, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
 }
 
 #auth-screen.hidden {
@@ -241,11 +316,16 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* 9. Header Superior Apple */
-header {
-    background: rgba(245, 245, 247, 0.8) !important;
+header, .glass-header {
+    background: rgba(245, 245, 247, 0.82) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html.dark header, html.dark .glass-header {
+    background: rgba(20, 20, 22, 0.85) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 /* 10. Tablas Limpias */
@@ -265,16 +345,30 @@ thead th {
     border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
+html.dark thead th {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: var(--apple-secondary) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
 tbody tr {
     transition: background 0.15s ease;
 }
 
 tbody tr:hover {
-    background: rgba(0, 113, 227, 0.025) !important;
+    background: rgba(0, 113, 227, 0.03) !important;
+}
+
+html.dark tbody tr:hover {
+    background: rgba(41, 151, 255, 0.08) !important;
 }
 
 tbody td {
     border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+html.dark tbody td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Badges estilo Apple */
@@ -294,8 +388,14 @@ tbody td {
     background: rgba(0, 0, 0, 0.15);
     border-radius: 980px;
 }
+html.dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.3);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
 }
 
 /* Animación sutil de tabs */
@@ -319,11 +419,22 @@ tbody td {
     border-radius: 16px !important;
 }
 
+html.dark .vinyl-preview-box {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1.5px dashed rgba(255, 255, 255, 0.2) !important;
+}
+
 .vinyl-piece-rect {
     background: rgba(0, 113, 227, 0.12) !important;
     border: 2px solid var(--apple-blue) !important;
     border-radius: 10px !important;
     box-shadow: 0 4px 15px rgba(0, 113, 227, 0.15) !important;
+}
+
+html.dark .vinyl-piece-rect {
+    background: rgba(41, 151, 255, 0.2) !important;
+    border-color: #2997ff !important;
+    box-shadow: 0 4px 20px rgba(41, 151, 255, 0.3) !important;
 }
 
 /* Miniaturas */
@@ -335,6 +446,10 @@ tbody td {
     border: 1px solid rgba(0, 0, 0, 0.08);
     cursor: pointer;
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .product-img-thumb {
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .product-img-thumb:hover {
@@ -395,6 +510,9 @@ tbody td {
     border: 1px solid rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.2s ease;
+}
+html.dark .img-thumb-modal img {
+    border-color: rgba(255, 255, 255, 0.15);
 }
 .img-thumb-modal img:hover {
     border-color: var(--apple-blue);
