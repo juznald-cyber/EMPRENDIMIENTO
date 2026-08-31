@@ -273,8 +273,100 @@ const DEFAULT_QUOTES = [
 // Motor de Persistencia y Métodos de Base de Datos
 class Database {
     constructor() {
+        this._firestoreReady = false;
+        this._uid = null;
         this.init();
     }
+
+    // ==========================================
+    // FIRESTORE — CONFIGURACIÓN Y SINCRONIZACIÓN
+    // ==========================================
+
+    /** Devuelve la referencia al documento del usuario en Firestore */
+    _userDoc() {
+        if (!this._uid || !this._firestoreReady) return null;
+        try {
+            return firebase.firestore().collection('usuarios').doc(this._uid);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Llamado desde app.js cuando el usuario inicia sesión.
+     * Carga todos los datos desde Firestore y los vuelca al localStorage.
+     */
+    async syncFromFirestore(uid) {
+        this._uid = uid;
+        this._firestoreReady = true;
+        const docRef = this._userDoc();
+        if (!docRef) return;
+
+        try {
+            const snap = await docRef.get();
+            if (snap.exists) {
+                const data = snap.data();
+                // Volcar cada colección al localStorage si existe en Firestore
+                const keys = [
+                    { fs: 'categories',  ls: DB_KEYS.CATEGORIES },
+                    { fs: 'profile',     ls: DB_KEYS.PROFILE },
+                    { fs: 'globalTiers', ls: DB_KEYS.GLOBAL_TIERS },
+                    { fs: 'suppliers',   ls: DB_KEYS.SUPPLIERS },
+                    { fs: 'products',    ls: DB_KEYS.PRODUCTS },
+                    { fs: 'vinyls',      ls: DB_KEYS.VINYLS },
+                    { fs: 'quotes',      ls: DB_KEYS.QUOTES },
+                ];
+                keys.forEach(({ fs, ls }) => {
+                    if (data[fs] !== undefined) {
+                        localStorage.setItem(ls, JSON.stringify(data[fs]));
+                    }
+                });
+                console.log('✅ Datos cargados desde Firestore.');
+            } else {
+                // Primera vez: subir lo que hay en localStorage a Firestore
+                await this._pushAllToFirestore();
+                console.log('☁️ Datos locales subidos a Firestore por primera vez.');
+            }
+        } catch (e) {
+            console.warn('No se pudo sincronizar con Firestore (modo offline):', e.message);
+        }
+    }
+
+    /** Sube toda la data local a Firestore (primer uso o backup forzado) */
+    async _pushAllToFirestore() {
+        const docRef = this._userDoc();
+        if (!docRef) return;
+        try {
+            await docRef.set({
+                categories:  this.getCategories(),
+                profile:     this.getProfile(),
+                globalTiers: this.getGlobalTiers(),
+                suppliers:   this.getSuppliers(),
+                products:    this.getProducts(),
+                vinyls:      this.getVinylPresets(),
+                quotes:      this.getQuotes(),
+                updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+        } catch (e) {
+            console.warn('Error subiendo a Firestore:', e.message);
+        }
+    }
+
+    /**
+     * Guarda UNA colección específica en Firestore en segundo plano.
+     * @param {string} firestoreKey  - nombre del campo en Firestore
+     * @param {*}      value         - valor a guardar
+     */
+    _syncFieldToFirestore(firestoreKey, value) {
+        const docRef = this._userDoc();
+        if (!docRef) return;
+        docRef.set({ [firestoreKey]: value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+            .catch(e => console.warn(`Error sync Firestore [${firestoreKey}]:`, e.message));
+    }
+
+    // ==========================================
+    // MOTOR LOCAL (localStorage + Firestore en 2do plano)
+    // ==========================================
 
     init() {
         if (!localStorage.getItem(DB_KEYS.CATEGORIES)) {
@@ -310,14 +402,39 @@ class Database {
         }
     }
 
-    set(key, value) {
+    /**
+     * Guarda en localStorage Y sincroniza con Firestore.
+     * @param {string} key            - clave de DB_KEYS (localStorage)
+     * @param {*}      value          - valor a guardar
+     * @param {string} [firestoreKey] - campo Firestore (si difiere del key local)
+     */
+    set(key, value, firestoreKey = null) {
         try {
             localStorage.setItem(key, JSON.stringify(value));
+            // Sincronizar a Firestore si está autenticado
+            if (this._firestoreReady && this._uid) {
+                const fsKey = firestoreKey || this._localKeyToFirestoreKey(key);
+                if (fsKey) this._syncFieldToFirestore(fsKey, value);
+            }
             return true;
         } catch (e) {
             console.error(`Error guardando ${key} en localStorage:`, e);
             return false;
         }
+    }
+
+    /** Mapea las claves de localStorage a los campos de Firestore */
+    _localKeyToFirestoreKey(localKey) {
+        const map = {
+            [DB_KEYS.CATEGORIES]:   'categories',
+            [DB_KEYS.PROFILE]:      'profile',
+            [DB_KEYS.GLOBAL_TIERS]: 'globalTiers',
+            [DB_KEYS.SUPPLIERS]:    'suppliers',
+            [DB_KEYS.PRODUCTS]:     'products',
+            [DB_KEYS.VINYLS]:       'vinyls',
+            [DB_KEYS.QUOTES]:       'quotes',
+        };
+        return map[localKey] || null;
     }
 
     // ==========================================

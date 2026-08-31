@@ -40,7 +40,7 @@ class AppController {
         const sidebarUserName = document.getElementById('sidebar-user-name');
 
         if (typeof firebase !== 'undefined' && firebase.auth) {
-            firebase.auth().onAuthStateChanged((user) => {
+            firebase.auth().onAuthStateChanged(async (user) => {
                 this.currentUser = user;
                 if (user) {
                     if (authScreen) {
@@ -48,12 +48,26 @@ class AppController {
                         authScreen.classList.add('hidden');
                     }
                     if (sidebarUserName) sidebarUserName.innerText = user.email || 'Usuario';
+
+                    // ☁️ Sincronizar datos desde Firestore al iniciar sesión
+                    if (window.db && typeof window.db.syncFromFirestore === 'function') {
+                        await window.db.syncFromFirestore(user.uid);
+                        // Re-renderizar la app con los datos recién cargados de la nube
+                        if (typeof this.renderAll === 'function') this.renderAll();
+                        else {
+                            if (typeof this.renderProducts === 'function') this.renderProducts();
+                            if (typeof this.renderSuppliers === 'function') this.renderSuppliers();
+                            if (typeof this.renderQuotes === 'function') this.renderQuotes();
+                        }
+                    }
                 } else {
                     if (authScreen) {
                         authScreen.style.setProperty('display', 'flex', 'important');
                         authScreen.classList.remove('hidden');
                     }
                     if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
+                    // Limpiar UID al cerrar sesión
+                    if (window.db) { window.db._uid = null; window.db._firestoreReady = false; }
                 }
             });
         }
@@ -370,36 +384,99 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    syncRollToCostM2() {
-        const rollW = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
-        const rollL = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value) || 0;
-
-        const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
-        const costInput = document.getElementById('vinyl-cost-m2-input');
-        const badge = document.getElementById('vinyl-roll-calc-equivalent');
-
-        if (costInput && costM2 > 0) {
-            costInput.value = costM2.toFixed(2);
+    /**
+     * Parsea un número en formato local chileno/español donde:
+     *   el punto (.) es separador de miles → 14.000 = 14000
+     *   la coma (,) es separador decimal → 14.000,50 = 14000.50
+     */
+    parseChileanFloat(str) {
+        if (str === '' || str === null || str === undefined) return 0;
+        const s = String(str).trim();
+        // Si tiene coma: punto = miles, coma = decimal
+        if (s.includes(',')) {
+            return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
         }
-        if (badge) {
-            badge.innerText = `Equivale a $${costM2.toFixed(2)} / m²`;
+        // Si tiene solo puntos: puede ser miles (14.000) o decimal (14.5)
+        // Heurística: si la parte después del punto tiene 3 dígitos = miles
+        const parts = s.split('.');
+        if (parts.length === 2 && parts[1].length === 3) {
+            return parseFloat(s.replace('.', '')) || 0; // miles
         }
+        return parseFloat(s) || 0;
+    }
+
+    /** Llamado al cambiar ancho, largo o precio pagado del pliego */
+    onVinylRollChange() {
+        const rollW    = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
+        const rollL    = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
+        const rollCost = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+
+        // Calcular costo por m²
+        const areaM2  = (rollW * rollL) / 10000;
+        const costM2  = areaM2 > 0 && rollCost > 0 ? rollCost / areaM2 : 0;
+
+        // Actualizar campo oculto y display
+        const hiddenInput = document.getElementById('vinyl-cost-m2-input');
+        const display     = document.getElementById('vinyl-cost-m2-display');
+        const badge       = document.getElementById('vinyl-roll-calc-equivalent');
+
+        if (hiddenInput) hiddenInput.value = costM2.toFixed(4);
+        if (display)     display.textContent = `$${this._fmt(costM2)}`;
+        if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2)} / m²`;
+
+        // Recalcular precio venta/m² a partir del margen
+        this._recalcVinylSalePriceM2(costM2);
         this.calculateVinylLive();
     }
+
+    /** Cuando el usuario cambia el % ganancia → recalcula precio venta/m² */
+    onVinylMarginChange() {
+        const costM2 = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value) || 0;
+        this._recalcVinylSalePriceM2(costM2);
+        this.calculateVinylLive();
+    }
+
+    /** Cuando el usuario escribe el precio venta/m² → calcula el % ganancia automáticamente */
+    onVinylSalePriceM2Change() {
+        const costM2      = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value) || 0;
+        const salePriceM2 = parseFloat(document.getElementById('vinyl-sale-price-m2-input')?.value) || 0;
+        const marginInp   = document.getElementById('vinyl-margin-input');
+        if (!marginInp || costM2 <= 0 || salePriceM2 <= 0) return;
+        const margin = ((salePriceM2 / costM2) - 1) * 100;
+        marginInp.value = Math.round(margin * 10) / 10;
+        this.calculateVinylLive();
+    }
+
+    /** Recalcula el campo Precio Venta/m² a partir de costM2 y margin */
+    _recalcVinylSalePriceM2(costM2) {
+        const margin         = parseFloat(document.getElementById('vinyl-margin-input')?.value) || 0;
+        const salePriceInp   = document.getElementById('vinyl-sale-price-m2-input');
+        if (!salePriceInp || costM2 <= 0) return;
+        salePriceInp.value = (costM2 * (1 + margin / 100)).toFixed(2);
+    }
+
+    /** Formatea número con puntos de miles y 2 decimales */
+    _fmt(n) {
+        if (!n || isNaN(n)) return '0';
+        return n.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    /** @deprecated — usar onVinylRollChange */
+    syncRollToCostM2() { this.onVinylRollChange(); }
 
     syncPresetCostFromRoll() {
         const rollW = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
         const rollL = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
         const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
-
         const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
         const costInput = document.getElementById('vinyl-preset-form-cost');
-        if (costInput && costM2 > 0) {
-            costInput.value = costM2.toFixed(2);
-        }
+        if (costInput && costM2 > 0) costInput.value = costM2.toFixed(2);
     }
 
+    /**
+     * Selecciona un preset de vinilo y carga TODOS sus valores en el formulario.
+     * Al cambiar de vinilo, los campos se actualizan con los datos guardados de ese vinilo.
+     */
     selectVinylPreset(presetId, triggerCalc = true) {
         window.vinylCalc.currentPresetId = presetId;
         const preset = window.vinylCalc.getPreset(presetId);
@@ -407,30 +484,20 @@ class AppController {
 
         this.renderVinylTypeSelectors();
 
-        const rollWInp = document.getElementById('vinyl-roll-width-input');
-        const rollLInp = document.getElementById('vinyl-roll-length-input');
-        const rollCostInp = document.getElementById('vinyl-roll-cost-input');
+        // Cargar valores del preset en el formulario
+        const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
 
-        const costInp = document.getElementById('vinyl-cost-m2-input');
-        const laborInp = document.getElementById('vinyl-labor-m2-input');
-        const wasteInp = document.getElementById('vinyl-waste-input');
-        const marginInp = document.getElementById('vinyl-margin-input');
+        set('vinyl-roll-width-input',  preset.rollWidthCm  || 58);
+        set('vinyl-roll-length-input', preset.rollLengthCm || 100);
+        set('vinyl-roll-cost-input',   preset.rollCost > 0 ? preset.rollCost : '');
+        set('vinyl-labor-m2-input',    preset.laborCostPerM2 || 0);
+        set('vinyl-waste-input',       preset.wasteRate     || 10);
+        set('vinyl-margin-input',      preset.defaultMargin || 50);
 
-        if (rollWInp) rollWInp.value = preset.rollWidthCm || 58;
-        if (rollLInp) rollLInp.value = preset.rollLengthCm || 100;
-        if (rollCostInp) rollCostInp.value = preset.rollCost || (preset.costPerM2 ? ((preset.costPerM2 * (preset.rollWidthCm || 58) * (preset.rollLengthCm || 100)) / 10000).toFixed(2) : 4.50);
+        // Recalcular costo/m² desde los valores cargados
+        this.onVinylRollChange();
 
-        if (costInp) costInp.value = preset.costPerM2 || 7.76;
-        if (laborInp) laborInp.value = preset.laborCostPerM2;
-        if (wasteInp) wasteInp.value = preset.wasteRate;
-        if (marginInp) marginInp.value = preset.defaultMargin;
-
-        const badge = document.getElementById('vinyl-roll-calc-equivalent');
-        if (badge) badge.innerText = `Equivale a $${(preset.costPerM2 || 7.76).toFixed(2)} / m²`;
-
-        if (triggerCalc) {
-            this.calculateVinylLive();
-        }
+        if (triggerCalc) this.calculateVinylLive();
     }
 
     openVinylPresetModal(id = null) {
@@ -540,17 +607,18 @@ class AppController {
     }
 
     calculateVinylLive() {
-        const width = parseFloat(document.getElementById('vinyl-width-input')?.value) || 0;
-        const height = parseFloat(document.getElementById('vinyl-height-input')?.value) || 0;
-        const qty = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
-        const rollWidthCm = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
+        const width       = parseFloat(document.getElementById('vinyl-width-input')?.value) || 0;
+        const height      = parseFloat(document.getElementById('vinyl-height-input')?.value) || 0;
+        const qty         = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
+        const rollWidthCm  = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-roll-cost-input')?.value);
-        const customCost = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value);
+        const rollCost    = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        // Usar el costM2 ya calculado por onVinylRollChange (campo oculto)
+        const customCost  = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value) || undefined;
         const customLabor = parseFloat(document.getElementById('vinyl-labor-m2-input')?.value);
         const customWaste = parseFloat(document.getElementById('vinyl-waste-input')?.value);
         const customMargin = parseFloat(document.getElementById('vinyl-margin-input')?.value);
-        const customTitle = document.getElementById('vinyl-custom-title-input')?.value || '';
+        const customTitle  = document.getElementById('vinyl-custom-title-input')?.value || '';
 
         const res = window.vinylCalc.calculate({
             presetId: window.vinylCalc.currentPresetId,
@@ -567,6 +635,7 @@ class AppController {
             customMargin: customMargin,
             notes: customTitle
         });
+
 
         const currency = window.db.getProfile().currency || '$';
 
@@ -1025,7 +1094,7 @@ class AppController {
         const catFilter = document.getElementById('products-category-filter')?.value || 'todas';
 
         const filtered = products.filter(p => {
-            const matchQ = !query || 
+            const matchQ = !query ||
                 (p.name || '').toLowerCase().includes(query) ||
                 (p.sku || '').toLowerCase().includes(query) ||
                 (p.category || '').toLowerCase().includes(query);
@@ -1036,10 +1105,13 @@ class AppController {
         const tbody = document.getElementById('products-tbody');
         if (!tbody) return;
 
+        // Limpiar barra de selección masiva
+        this.clearProductSelection();
+
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="py-8 text-center text-xs text-slate-400">
+                    <td colspan="9" class="py-8 text-center text-xs text-slate-400">
                         No hay productos registrados con este criterio.
                     </td>
                 </tr>
@@ -1054,28 +1126,52 @@ class AppController {
             const salePrice = window.db.calculateSalePrice(cost1u, margin);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
+            // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
+            let imgs = [];
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                imgs = p.images.slice(0, 3);
+            } else if (p.imageData) {
+                imgs = [p.imageData];
+            }
+
+            // Guardar imágenes en cache por ID (no se pasan en el onclick para evitar romper comillas)
+            if (!this._productImgCache) this._productImgCache = {};
+            this._productImgCache[p.id] = imgs;
+
+            const imgThumbsHtml = imgs.length > 0
+                ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openProductLightbox('${p.id}',${i})" onerror="this.style.display='none'" />`).join('')
+                : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
+
             return `
                 <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="py-3 px-3">
+                        <input type="checkbox" class="product-row-check w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" data-id="${p.id}" onchange="app.onProductRowCheck()" />
+                    </td>
                     <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
                     <td class="py-3 px-3">
-                        <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
-                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
-                            ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
-                            ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors" title="Ver producto en la web del proveedor"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                        <div class="flex items-start gap-2.5">
+                            <div class="flex gap-1 shrink-0">${imgThumbsHtml}</div>
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
+                                    ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
+                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td class="py-3 px-3 text-xs text-slate-600">
                         ${sup ? `<span class="font-semibold text-slate-800">${this.escapeHTML(sup.name)}</span> ${sup.rut ? `<span class="block text-[10px] text-slate-400">RUT: ${this.escapeHTML(sup.rut)}</span>` : ''}` : '<span class="text-slate-400">Sin Asignar</span>'}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
-                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700">
+                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700 price-col">
                         ${currency} ${(parseFloat(cost1u) || 0).toFixed(2)}
                     </td>
-                    <td class="py-3 px-3 text-center">
+                    <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700">${currency} ${salePrice.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${salePrice.toFixed(2)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
@@ -1095,6 +1191,7 @@ class AppController {
 
         if (window.lucide) window.lucide.createIcons();
     }
+
 
     renderSuppliers() {
         const suppliers = window.db.getSuppliers();
@@ -1240,11 +1337,11 @@ class AppController {
             if (!p) return;
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Editar Producto / Insumo';
-            
+
             document.getElementById('prod-form-id').value = p.id;
             document.getElementById('prod-form-sku').value = p.sku || '';
             document.getElementById('prod-form-name').value = p.name || '';
-            
+
             const matchedSup = suppliers.find(s => s.id === p.supplierId);
             document.getElementById('prod-form-supplier-input').value = matchedSup ? matchedSup.name : (p.supplierId || '');
             document.getElementById('prod-form-category-input').value = p.category || 'Vinilos';
@@ -1254,13 +1351,30 @@ class AppController {
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
 
+            // Precio de venta calculado
+            const cost1u = parseFloat(p.costPrice) || 0;
+            const margin1u = parseFloat(p.defaultMargin) || 50;
+            const spEl = document.getElementById('prod-form-sale-price');
+            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100)).toFixed(2) : '';
+
+            // Imágenes: soporta array (nuevo) o string (viejo)
+            let loadImgs = [];
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                loadImgs = p.images;
+            } else if (p.imageData) {
+                loadImgs = [p.imageData];
+            }
+            document.getElementById('prod-form-image-data').value = loadImgs.length ? JSON.stringify(loadImgs) : '';
+            document.getElementById('prod-form-image-file').value = '';
+            this._renderProductImageThumbs(loadImgs);
+
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
             }
         } else {
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Nuevo Producto / Insumo';
-            
+
             document.getElementById('prod-form-id').value = '';
             document.getElementById('prod-form-sku').value = 'PROD-' + Math.floor(Math.random() * 900 + 100);
             document.getElementById('prod-form-name').value = '';
@@ -1269,9 +1383,17 @@ class AppController {
             document.getElementById('prod-form-unit').value = 'Unidad';
             document.getElementById('prod-form-cost').value = '5.00';
             document.getElementById('prod-form-margin').value = '50';
+            // Precio venta inicial para nuevo producto (5 * 1.5 = 7.50)
+            const spElNew = document.getElementById('prod-form-sale-price');
+            if (spElNew) spElNew.value = '7.50';
             document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
+            // Imagen de referencia - limpiar
+            document.getElementById('prod-form-image-data').value = '';
+            document.getElementById('prod-form-image-file').value = '';
+            this._renderProductImageThumbs([]);
         }
+        this._initProductImagePaste();
         this.openModal('modal-edit-product');
     }
 
@@ -1316,6 +1438,10 @@ class AppController {
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
+        // Leer imágenes como array (hasta 3)
+        const images = this._getProductImagesArray();
+        // Compatibilidad retroactiva: imageData = primera imagen si existe
+        const imageData = images.length > 0 ? images[0] : '';
 
         if (!name) {
             this.showToast('Por favor escribe el nombre del producto.', 'warning');
@@ -1352,6 +1478,8 @@ class AppController {
             defaultMargin,
             url,
             notes,
+            images,     // Array de hasta 3 imágenes base64
+            imageData,  // Compatibilidad retroactiva (primera imagen)
             useGlobalTiers: true
         };
 
@@ -1371,7 +1499,343 @@ class AppController {
     }
 
     // ==========================================
+    // PRECIO DE VENTA ↔ MARGEN (BIDIRECCIONAL)
+    // ==========================================
+
+    /** Recalcula precio de venta cuando cambia el costo */
+    onProductCostChange() {
+        const margin = parseFloat(document.getElementById('prod-form-margin')?.value);
+        if (!isNaN(margin)) this._recalcSalePrice();
+    }
+
+    /** Cuando el usuario cambia el % margen → actualiza el precio de venta */
+    onProductMarginChange() {
+        this._recalcSalePrice();
+    }
+
+    /** Cuando el usuario escribe el precio de venta → calcula el margen automáticamente */
+    onProductSalePriceChange() {
+        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
+        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value);
+        const marginInp = document.getElementById('prod-form-margin');
+        if (!marginInp || !salePrice || cost <= 0) return;
+        const margin = ((salePrice / cost) - 1) * 100;
+        marginInp.value = Math.round(margin * 10) / 10; // 1 decimal
+    }
+
+    /** Calcula el precio de venta desde costo y margen */
+    _recalcSalePrice() {
+        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
+        const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
+        const salePriceInp = document.getElementById('prod-form-sale-price');
+        if (!salePriceInp || cost <= 0) return;
+        const salePrice = cost * (1 + margin / 100);
+        salePriceInp.value = salePrice.toFixed(2);
+    }
+
+    // ==========================================
+    // SELECCIÓN MASIVA Y ELIMINACIÓN MASIVA
+    // ==========================================
+    toggleSelectAllProducts(checked) {
+        const checkboxes = document.querySelectorAll('.product-row-check');
+        checkboxes.forEach(cb => { cb.checked = checked; });
+        this._updateBulkBar();
+    }
+
+    onProductRowCheck() {
+        this._updateBulkBar();
+        // Sincronizar el "select all"
+        const all = document.querySelectorAll('.product-row-check');
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        const selectAll = document.getElementById('products-select-all');
+        if (selectAll) selectAll.checked = all.length > 0 && all.length === checked.length;
+    }
+
+    _updateBulkBar() {
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        const bar = document.getElementById('products-bulk-bar');
+        const count = document.getElementById('products-bulk-count');
+        if (!bar) return;
+        if (checked.length > 0) {
+            bar.classList.remove('hidden');
+            bar.classList.add('flex');
+            if (count) count.textContent = `${checked.length} producto${checked.length > 1 ? 's' : ''} seleccionado${checked.length > 1 ? 's' : ''}`;
+        } else {
+            bar.classList.add('hidden');
+            bar.classList.remove('flex');
+        }
+    }
+
+    deleteSelectedProducts() {
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        if (checked.length === 0) return;
+        if (!confirm(`¿Eliminar ${checked.length} producto${checked.length > 1 ? 's' : ''} del catálogo? Esta acción no se puede deshacer.`)) return;
+        checked.forEach(cb => window.db.deleteProduct(cb.dataset.id));
+        this.renderProducts();
+        this.showToast(`${checked.length} producto${checked.length > 1 ? 's eliminados' : ' eliminado'}.`, 'info');
+    }
+
+    clearProductSelection() {
+        document.querySelectorAll('.product-row-check').forEach(cb => { cb.checked = false; });
+        const sel = document.getElementById('products-select-all');
+        if (sel) sel.checked = false;
+        this._updateBulkBar();
+    }
+
+    // ==========================================
+    // TOGGLE OCULTAR / MOSTRAR PRECIOS
+    // ==========================================
+    toggleProductPrices() {
+        this._pricesHidden = !this._pricesHidden;
+        const table = document.querySelector('#products-tbody')?.closest('table');
+        const btn = document.getElementById('btn-toggle-prices');
+        if (table) table.classList.toggle('prices-hidden', this._pricesHidden);
+        if (btn) {
+            if (this._pricesHidden) {
+                btn.innerHTML = `<i data-lucide="eye" class="w-4 h-4"></i> Mostrar Precios`;
+                btn.classList.remove('bg-slate-100', 'text-slate-700');
+                btn.classList.add('bg-amber-100', 'text-amber-800');
+            } else {
+                btn.innerHTML = `<i data-lucide="eye-off" class="w-4 h-4"></i> Ocultar Precios`;
+                btn.classList.remove('bg-amber-100', 'text-amber-800');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            }
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    // ==========================================
+    // LIGHTBOX DE IMÁGENES
+    // ==========================================
+    _lightboxImages = [];
+    _lightboxIndex  = 0;
+
+    /** Abre el lightbox leyendo desde el cache de imágenes por ID de producto */
+    openProductLightbox(productId, startIndex = 0) {
+        const imgs = (this._productImgCache && this._productImgCache[productId]) || [];
+        if (imgs.length === 0) return;
+        this.openLightbox(imgs, startIndex, '');
+    }
+
+    openLightbox(images, startIndex = 0, label = '') {
+        this._lightboxImages = Array.isArray(images) ? images : [images];
+        this._lightboxIndex  = startIndex;
+        this._renderLightbox(label);
+        const lb = document.getElementById('modal-image-lightbox');
+        if (lb) { lb.classList.remove('hidden'); lb.classList.add('flex'); }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    closeLightbox() {
+        const lb = document.getElementById('modal-image-lightbox');
+        if (lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+    }
+
+    lightboxNav(dir) {
+        this._lightboxIndex = (this._lightboxIndex + dir + this._lightboxImages.length) % this._lightboxImages.length;
+        this._renderLightbox();
+    }
+
+    _renderLightbox(label = '') {
+        const img     = document.getElementById('lightbox-img');
+        const counter = document.getElementById('lightbox-counter');
+        const lbl     = document.getElementById('lightbox-label');
+        const prev    = document.getElementById('lightbox-prev');
+        const next    = document.getElementById('lightbox-next');
+        const total   = this._lightboxImages.length;
+        const src     = this._lightboxImages[this._lightboxIndex];
+        if (img) img.src = src;
+        if (counter) counter.textContent = total > 1 ? `${this._lightboxIndex + 1} / ${total}` : '1 imagen';
+        if (lbl) lbl.textContent = label;
+        if (prev) prev.style.visibility = total > 1 ? 'visible' : 'hidden';
+        if (next) next.style.visibility = total > 1 ? 'visible' : 'hidden';
+    }
+
+
+    // ==========================================
+
+    /** Inicializa el listener de paste (Ctrl+V) cuando se abre el modal de producto */
+    _initProductImagePaste() {
+        // Remover listener previo si existe
+        if (this._productPasteHandler) {
+            document.removeEventListener('paste', this._productPasteHandler);
+        }
+        this._productPasteHandler = (e) => {
+            // Solo actuar si el modal de producto está abierto
+            const modal = document.getElementById('modal-edit-product');
+            if (!modal || modal.style.display === 'none' || modal.classList.contains('hidden-modal')) return;
+
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) this._processProductImageFile(file, 'Captura pegada');
+                    break;
+                }
+            }
+        };
+        document.addEventListener('paste', this._productPasteHandler);
+    }
+
+    /** Maneja el drop de imagen sobre la zona */
+    handleProductImageDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const zone = document.getElementById('prod-form-image-dropzone');
+        if (zone) zone.classList.remove('border-indigo-400', 'bg-indigo-50');
+
+        const file = event.dataTransfer?.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            this.showToast('Solo se aceptan archivos de imagen.', 'warning');
+            return;
+        }
+        this._processProductImageFile(file, file.name);
+    }
+
+    /** Llamado al seleccionar archivo con el input file */
+    loadProductImageFile(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            this.showToast('Solo se aceptan archivos de imagen.', 'warning');
+            return;
+        }
+        this._processProductImageFile(file, file.name);
+    }
+
+    /** Procesa un archivo de imagen y lo agrega al array (máx 3) */
+    _processProductImageFile(file, label = '') {
+        const maxMB = 5;
+        if (file.size > maxMB * 1024 * 1024) {
+            this.showToast(`La imagen supera los ${maxMB} MB.`, 'warning');
+            return;
+        }
+        // Leer array actual
+        let imgs = this._getProductImagesArray();
+        if (imgs.length >= 3) {
+            this.showToast('Máximo 3 imágenes por producto. Elimina una para agregar otra.', 'warning');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imgs.push(e.target.result);
+            document.getElementById('prod-form-image-data').value = JSON.stringify(imgs);
+            document.getElementById('prod-form-image-file').value = '';
+            this._renderProductImageThumbs(imgs);
+            this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success');
+        };
+        reader.onerror = () => this.showToast('Error leyendo el archivo.', 'error');
+        reader.readAsDataURL(file);
+    }
+
+    /** Obtiene el array de imágenes del campo oculto */
+    _getProductImagesArray() {
+        try {
+            const raw = document.getElementById('prod-form-image-data')?.value || '';
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+            if (typeof parsed === 'string' && parsed.startsWith('data:')) return [parsed];
+            return [];
+        } catch {
+            const raw = document.getElementById('prod-form-image-data')?.value || '';
+            return raw ? [raw] : [];
+        }
+    }
+
+    /** Limpia TODAS las imágenes */
+    clearProductImage() {
+        document.getElementById('prod-form-image-data').value = '';
+        document.getElementById('prod-form-image-file').value = '';
+        this._renderProductImageThumbs([]);
+    }
+
+    /** Elimina una imagen del array por índice */
+    removeProductImage(index) {
+        let imgs = this._getProductImagesArray();
+        imgs.splice(index, 1);
+        document.getElementById('prod-form-image-data').value = imgs.length ? JSON.stringify(imgs) : '';
+        this._renderProductImageThumbs(imgs);
+    }
+
+
+
+    /**
+     * Renderiza las miniaturas de imágenes en el modal de edición.
+     * También gestiona la visibilidad del dropzone y el botón "Quitar todo".
+     */
+    _renderProductImageThumbs(imgs) {
+        const thumbsContainer = document.getElementById('prod-form-images-thumbnails');
+        const emptyState      = document.getElementById('prod-form-image-empty');
+        const singlePreview   = document.getElementById('prod-form-image-preview-container');
+        const clearBtn        = document.getElementById('prod-form-image-clear');
+        const counter         = document.getElementById('prod-form-images-counter');
+
+        if (!thumbsContainer) return;
+
+        if (!imgs || imgs.length === 0) {
+            thumbsContainer.innerHTML = '';
+            thumbsContainer.classList.add('hidden');
+            if (emptyState)    emptyState.classList.remove('hidden');
+            if (singlePreview) singlePreview.classList.add('hidden');
+            if (clearBtn)      clearBtn.classList.add('hidden');
+            if (counter)       counter.classList.add('hidden');
+            return;
+        }
+
+        // Mostrar miniaturas
+        thumbsContainer.innerHTML = imgs.map((src, i) => `
+            <div class="img-thumb-modal">
+                <img src="${src}" alt="Imagen ${i+1}" onclick="app.openLightbox(${JSON.stringify(imgs)}, ${i}, 'Imagen ${i+1}')" onerror="this.parentElement.remove()" />
+                <button type="button" class="remove-img-btn" onclick="app.removeProductImage(${i})" title="Eliminar imagen">✕</button>
+            </div>
+        `).join('');
+        thumbsContainer.classList.remove('hidden');
+
+        if (emptyState) {
+            // Si hay menos de 3, mostrar la dropzone para agregar más
+            emptyState.classList.toggle('hidden', imgs.length >= 3);
+        }
+        if (singlePreview) singlePreview.classList.add('hidden'); // Ya no usamos el preview único
+        if (clearBtn)  clearBtn.classList.remove('hidden');
+        if (counter) {
+            counter.textContent = `${imgs.length}/3 imagen${imgs.length > 1 ? 'es' : ''} — ${imgs.length < 3 ? 'puedes agregar ' + (3 - imgs.length) + ' más' : 'máximo alcanzado'}`;
+            counter.classList.remove('hidden');
+        }
+    }
+
+    /** Muestra u oculta la previsualización (compatibilidad). Ahora delega a _renderProductImageThumbs */
+    _showProductImagePreview(src, label = '') {
+        let imgs = [];
+        if (src && src !== '#') {
+            // Si viene de edición: puede ser JSON array o base64 directo
+            try {
+                const parsed = JSON.parse(src);
+                imgs = Array.isArray(parsed) ? parsed : [src];
+            } catch {
+                imgs = [src];
+            }
+        }
+        this._renderProductImageThumbs(imgs);
+    }
+
+    // Función legacy — limpia silenciosamente
+    onProductImageError() {
+        document.getElementById('prod-form-image-data').value = '';
+        this._renderProductImageThumbs([]);
+    }
+
+    // Función legacy — ya no se usa
+
+    previewProductImage() {}
+
+    // ==========================================
     // CONTROLADORES DE IMPORTACIÓN MASIVA (EXCEL XLS/XLSX & CSV)
+
     // ==========================================
     openImportSuppliersModal() {
         this.importedSupplierRows = null;
