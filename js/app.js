@@ -1353,6 +1353,10 @@ class AppController {
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
 
+            // Costo adicional (estampado, sublimación, etc.)
+            document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
+            document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
+
             // Precio de venta calculado
             const cost1u = parseFloat(p.costPrice) || 0;
             const margin1u = parseFloat(p.defaultMargin) || 50;
@@ -1390,6 +1394,9 @@ class AppController {
             if (spElNew) spElNew.value = '7.50';
             document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
+            // Costo adicional - limpiar
+            document.getElementById('prod-form-extra-cost').value = '0';
+            document.getElementById('prod-form-extra-cost-label').value = '';
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
@@ -1440,6 +1447,9 @@ class AppController {
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
+        // Costo adicional (estampado, sublimación, etc.)
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const extraCostLabel = (document.getElementById('prod-form-extra-cost-label')?.value || '').trim();
         // Leer imágenes como array (hasta 3)
         const images = this._getProductImagesArray();
         // Compatibilidad retroactiva: imageData = primera imagen si existe
@@ -1480,8 +1490,10 @@ class AppController {
             defaultMargin,
             url,
             notes,
-            images,     // Array de hasta 3 imágenes base64
-            imageData,  // Compatibilidad retroactiva (primera imagen)
+            extraCost,           // Costo adicional por unidad (estampado, sublimación...)
+            extraCostLabel,      // Etiqueta del costo adicional (solo interna)
+            images,              // Array de hasta 3 imágenes base64
+            imageData,           // Compatibilidad retroactiva (primera imagen)
             useGlobalTiers: true
         };
 
@@ -2000,6 +2012,7 @@ class AppController {
             document.getElementById('sup-form-contact').value = s.contact || '';
             document.getElementById('sup-form-phone').value = s.phone || '';
             document.getElementById('sup-form-email').value = s.email || '';
+            document.getElementById('sup-form-address').value = s.address || '';
             document.getElementById('sup-form-category').value = s.category || '';
             document.getElementById('sup-form-notes').value = s.notes || '';
         } else {
@@ -2011,6 +2024,7 @@ class AppController {
             document.getElementById('sup-form-contact').value = '';
             document.getElementById('sup-form-phone').value = '';
             document.getElementById('sup-form-email').value = '';
+            document.getElementById('sup-form-address').value = '';
             document.getElementById('sup-form-category').value = '';
             document.getElementById('sup-form-notes').value = '';
         }
@@ -2018,14 +2032,15 @@ class AppController {
     }
 
     submitSupplierForm() {
-        const id = document.getElementById('sup-form-id').value;
-        const name = document.getElementById('sup-form-name').value.trim();
-        const rut = document.getElementById('sup-form-rut').value.trim();
+        const id      = document.getElementById('sup-form-id').value;
+        const name    = document.getElementById('sup-form-name').value.trim();
+        const rut     = document.getElementById('sup-form-rut').value.trim();
         const contact = document.getElementById('sup-form-contact').value.trim();
-        const phone = document.getElementById('sup-form-phone').value.trim();
-        const email = document.getElementById('sup-form-email').value.trim();
+        const phone   = document.getElementById('sup-form-phone').value.trim();
+        const email   = document.getElementById('sup-form-email').value.trim();
+        const address = document.getElementById('sup-form-address').value.trim();
         const category = document.getElementById('sup-form-category').value.trim();
-        const notes = document.getElementById('sup-form-notes').value.trim();
+        const notes   = document.getElementById('sup-form-notes').value.trim();
 
         if (!name) {
             this.showToast('Por favor escribe el nombre de la empresa proveedora.', 'warning');
@@ -2041,6 +2056,7 @@ class AppController {
             contact,
             phone,
             email,
+            address,
             category,
             notes
         };
