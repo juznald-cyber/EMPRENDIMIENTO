@@ -81,7 +81,11 @@ class CotizadorManager {
             ? parseFloat(customMargin) 
             : window.db.getMarginForQuantity(product, qty);
 
-        const unitPrice = window.db.calculateSalePrice(costPrice, margin);
+        // Precio base según margen
+        const baseSalePrice = window.db.calculateSalePrice(costPrice, margin);
+        // Costo adicional (estampado, sublimación, etc.) — se suma al precio total sin detalle
+        const extraCost = parseFloat(product.extraCost) || 0;
+        const unitPrice = Number((baseSalePrice + extraCost).toFixed(2));
         const lineTotal = Number((unitPrice * qty).toFixed(2));
 
         const newItem = {
