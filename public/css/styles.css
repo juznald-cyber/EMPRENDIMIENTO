@@ -1,4 +1,4 @@
-/* css/styles.css - Rediseño Total Estilo Apple (Human Interface Design) con Modo Claro y Oscuro */
+/* css/styles.css - Rediseño Total Estilo Apple (Human Interface Design) con Modo Claro y Oscuro de Alto Contraste */
 
 /* 1. Reset básico y Tipografía Apple */
 * {
@@ -18,34 +18,36 @@
     --apple-green: #34c759;
     --apple-red: #ff3b30;
     --apple-orange: #ff9500;
-    --apple-card-bg: rgba(255, 255, 255, 0.82);
+    --apple-card-bg: rgba(255, 255, 255, 0.85);
     --apple-card-border: rgba(0, 0, 0, 0.06);
     --apple-card-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
     --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, monospace;
 }
 
-/* Modo Oscuro de Apple */
+/* ============================================================== */
+/* 2. MODO OSCURO DE ALTO CONTRASTE (APPLE DARK MODE)              */
+/* ============================================================== */
 html.dark, body.dark {
     --apple-bg: #000000;
     --apple-text: #f5f5f7;
-    --apple-secondary: #86868b;
+    --apple-secondary: #c7c7cc;
     --apple-blue: #2997ff;
-    --apple-blue-hover: #0077ed;
+    --apple-blue-hover: #47a6ff;
     --apple-link: #2997ff;
     --apple-green: #30d158;
     --apple-red: #ff453a;
     --apple-orange: #ff9f0a;
-    --apple-card-bg: rgba(28, 28, 30, 0.88);
-    --apple-card-border: rgba(255, 255, 255, 0.09);
-    --apple-card-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+    --apple-card-bg: rgba(24, 24, 26, 0.92);
+    --apple-card-border: rgba(255, 255, 255, 0.12);
+    --apple-card-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
 }
 
-/* 2. Fondo y Color de Texto */
+/* Fondo y Color de Texto Global */
 body {
     background-color: var(--apple-bg) !important;
     color: var(--apple-text) !important;
     line-height: 1.5;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 html.dark body, body.dark {
@@ -54,32 +56,181 @@ html.dark body, body.dark {
 }
 
 html.dark main {
-    background-color: #0c0c0e !important;
+    background-color: #09090b !important;
 }
 
 .font-mono {
     font-family: var(--font-mono) !important;
 }
 
-/* 3. Encabezados Grandes y Delgados estilo Apple */
+/* Encabezados */
 h1, h2, h3, h4, h5, h6 {
     color: var(--apple-text);
 }
 
-h1 {
-    letter-spacing: -0.015em;
+h1 { letter-spacing: -0.015em; }
+h2 { letter-spacing: -0.01em; }
+
+html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+    color: #ffffff !important;
 }
 
-h2 {
-    letter-spacing: -0.01em;
+/* ============================================================== */
+/* CORRECCIÓN DE TEXTOS OPACOS EN MODO OSCURO                      */
+/* ============================================================== */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-zinc-900,
+html.dark .text-zinc-800,
+html.dark .text-zinc-700 {
+    color: #f5f5f7 !important;
 }
 
-/* 4. Texto Secundario / Bajadas */
-p.subtitle, .text-slate-500, .text-slate-400 {
-    color: var(--apple-secondary) !important;
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .text-zinc-400 {
+    color: #c7c7cc !important;
 }
 
-/* 5. Contenedores y Tarjetas estilo Apple (Glassmorphism + Blur 20px) */
+html.dark .text-indigo-950,
+html.dark .text-indigo-900,
+html.dark .text-indigo-800,
+html.dark .text-indigo-700,
+html.dark .text-indigo-600,
+html.dark .text-indigo-500,
+html.dark .text-blue-700,
+html.dark .text-blue-600,
+html.dark .text-blue-500 {
+    color: #2997ff !important;
+}
+
+html.dark .text-emerald-700,
+html.dark .text-emerald-800,
+html.dark .text-emerald-600,
+html.dark .text-green-600,
+html.dark .text-green-700 {
+    color: #30d158 !important;
+}
+
+html.dark .text-amber-700,
+html.dark .text-amber-800,
+html.dark .text-amber-600,
+html.dark .text-yellow-600 {
+    color: #ff9f0a !important;
+}
+
+html.dark .text-rose-700,
+html.dark .text-rose-600,
+html.dark .text-red-600 {
+    color: #ff453a !important;
+}
+
+html.dark label {
+    color: #e5e5ea !important;
+}
+
+/* ============================================================== */
+/* BADGES, TAGS Y FONDOS SECUNDARIOS EN MODO OSCURO                */
+/* ============================================================== */
+html.dark .bg-slate-100, 
+html.dark .bg-slate-200, 
+html.dark .bg-gray-100, 
+html.dark .bg-gray-200 {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #f5f5f7 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .bg-indigo-50, 
+html.dark .bg-indigo-100, 
+html.dark .bg-blue-50 {
+    background-color: rgba(41, 151, 255, 0.16) !important;
+    color: #47a6ff !important;
+    border-color: rgba(41, 151, 255, 0.35) !important;
+}
+
+html.dark .bg-emerald-50, 
+html.dark .bg-emerald-100, 
+html.dark .bg-green-50 {
+    background-color: rgba(48, 209, 88, 0.16) !important;
+    color: #30d158 !important;
+    border-color: rgba(48, 209, 88, 0.35) !important;
+}
+
+html.dark .bg-amber-50, 
+html.dark .bg-amber-100, 
+html.dark .bg-yellow-50 {
+    background-color: rgba(255, 159, 10, 0.16) !important;
+    color: #ff9f0a !important;
+    border-color: rgba(255, 159, 10, 0.35) !important;
+}
+
+html.dark .bg-rose-50,
+html.dark .bg-red-50 {
+    background-color: rgba(255, 69, 58, 0.16) !important;
+    color: #ff453a !important;
+    border-color: rgba(255, 69, 58, 0.35) !important;
+}
+
+/* ============================================================== */
+/* TABLAS EN MODO OSCURO (ALTO CONTRASTE)                          */
+/* ============================================================== */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+thead th {
+    background: rgba(0, 0, 0, 0.02) !important;
+    color: #86868b !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.dark thead th {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #e5e5ea !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-weight: 700 !important;
+}
+
+tbody tr {
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+tbody tr:hover {
+    background: rgba(0, 113, 227, 0.03) !important;
+}
+
+html.dark tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark tbody tr:hover {
+    background: rgba(41, 151, 255, 0.12) !important;
+}
+
+html.dark tbody td {
+    color: #f5f5f7 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================================== */
+/* CONTENEDORES Y TARJETAS ESTILO APPLE                            */
+/* ============================================================== */
 .bg-white, .card, .container {
     background: var(--apple-card-bg) !important;
     backdrop-filter: blur(20px) !important;
@@ -97,9 +248,10 @@ p.subtitle, .text-slate-500, .text-slate-400 {
 
 html.dark .bg-slate-50, html.dark .bg-slate-100 {
     background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+/* Sidebar */
 .bg-slate-900, aside {
     background: rgba(255, 255, 255, 0.75) !important;
     backdrop-filter: blur(25px) !important;
@@ -109,8 +261,8 @@ html.dark .bg-slate-50, html.dark .bg-slate-100 {
 }
 
 html.dark aside {
-    background: rgba(20, 20, 22, 0.92) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(18, 18, 20, 0.95) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 aside * {
@@ -120,6 +272,10 @@ aside * {
 aside #sidebar-company-name {
     color: var(--apple-text) !important;
     font-weight: 700 !important;
+}
+
+html.dark aside #sidebar-company-name {
+    color: #ffffff !important;
 }
 
 aside p {
@@ -139,7 +295,7 @@ aside nav .nav-btn:hover {
 }
 
 html.dark aside nav .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     color: #ffffff !important;
 }
 
@@ -147,7 +303,7 @@ aside nav .nav-btn.bg-slate-800,
 aside nav .nav-btn.text-white {
     background: var(--apple-blue) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25) !important;
+    box-shadow: 0 4px 14px rgba(0, 113, 227, 0.3) !important;
 }
 
 aside nav .nav-btn.bg-slate-800 *,
@@ -155,7 +311,9 @@ aside nav .nav-btn.text-white * {
     color: #ffffff !important;
 }
 
-/* 6. Botones Interactivos Apple (Pill 980px) */
+/* ============================================================== */
+/* BOTONES INTERACTIVOS APPLE (PILL 980px)                         */
+/* ============================================================== */
 button:not(.no-pill), 
 .btn-primary,
 .bg-indigo-600,
@@ -188,7 +346,7 @@ button:not(.no-pill),
 }
 
 .bg-emerald-600:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.08);
 }
 
 .bg-rose-600 {
@@ -196,27 +354,18 @@ button:not(.no-pill),
     color: #ffffff !important;
 }
 
-.bg-slate-100 {
-    background-color: rgba(0, 0, 0, 0.04) !important;
-    color: var(--apple-text) !important;
-    border: 1px solid rgba(0, 0, 0, 0.04) !important;
+.bg-slate-800 {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: #ffffff !important;
 }
 
-html.dark .bg-slate-100 {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    color: #f5f5f7 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+html.dark .bg-slate-800 {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
-.bg-slate-100:hover {
-    background-color: rgba(0, 0, 0, 0.07) !important;
-}
-
-html.dark .bg-slate-100:hover {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-/* Enlaces estilo Apple "Learn more" */
+/* Enlaces */
 a {
     color: var(--apple-link) !important;
     text-decoration: none !important;
@@ -227,36 +376,65 @@ a:hover {
     text-decoration: underline !important;
 }
 
-/* 7. Inputs, Selects y Formularios Apple */
+/* ============================================================== */
+/* INPUTS, SELECTS Y FORMULARIOS APPLE                            */
+/* ============================================================== */
 input, select, textarea {
     background: rgba(0, 0, 0, 0.035) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
     border-radius: 12px !important;
     color: var(--apple-text) !important;
     font-size: 13px !important;
     transition: all 0.2s ease !important;
 }
 
-html.dark input, html.dark select, html.dark textarea {
-    background: rgba(255, 255, 255, 0.07) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    color: #f5f5f7 !important;
-}
-
 input:focus, select:focus, textarea:focus {
     background: #ffffff !important;
     border-color: var(--apple-blue) !important;
-    box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.15) !important;
+    box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.18) !important;
     outline: none !important;
 }
 
-html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
-    background: rgba(255, 255, 255, 0.12) !important;
-    border-color: var(--apple-blue) !important;
-    box-shadow: 0 0 0 3.5px rgba(41, 151, 255, 0.25) !important;
+html.dark input, html.dark select, html.dark textarea {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
 }
 
-/* 8. Modales y Overlays estilo Apple */
+html.dark input::placeholder, html.dark textarea::placeholder {
+    color: #86868b !important;
+}
+
+html.dark select option {
+    background-color: #1c1c1e !important;
+    color: #ffffff !important;
+}
+
+html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: var(--apple-blue) !important;
+    box-shadow: 0 0 0 3.5px rgba(41, 151, 255, 0.3) !important;
+}
+
+/* ============================================================== */
+/* BORDES Y DIVISORES EN MODO OSCURO                              */
+/* ============================================================== */
+html.dark .border-slate-100, 
+html.dark .border-slate-200, 
+html.dark .border-slate-300,
+html.dark .border-gray-200,
+html.dark .border-gray-100 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================================== */
+/* MODALES Y OVERLAYS ESTILO APPLE                                */
+/* ============================================================== */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -276,7 +454,7 @@ html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
 }
 
 .modal-overlay > div {
-    background: rgba(255, 255, 255, 0.94) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(30px) !important;
     -webkit-backdrop-filter: blur(30px) !important;
     border-radius: 22px !important;
@@ -286,9 +464,9 @@ html.dark input:focus, html.dark select:focus, html.dark textarea:focus {
 }
 
 html.dark .modal-overlay > div {
-    background: rgba(28, 28, 30, 0.96) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+    background: rgba(24, 24, 26, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
     color: #f5f5f7 !important;
 }
 
@@ -298,7 +476,7 @@ html.dark .modal-overlay > div {
 }
 
 #auth-screen > div {
-    background: rgba(255, 255, 255, 0.92) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
     backdrop-filter: blur(30px) !important;
     border-radius: 24px !important;
     border: 1px solid var(--apple-card-border) !important;
@@ -306,16 +484,18 @@ html.dark .modal-overlay > div {
 }
 
 html.dark #auth-screen > div {
-    background: rgba(28, 28, 30, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    background: rgba(24, 24, 26, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
 }
 
 #auth-screen.hidden {
     display: none !important;
 }
 
-/* 9. Header Superior Apple */
+/* ============================================================== */
+/* HEADER SUPERIOR TRASLÚCIDO APPLE                               */
+/* ============================================================== */
 header, .glass-header {
     background: rgba(245, 245, 247, 0.82) !important;
     backdrop-filter: blur(20px) !important;
@@ -324,51 +504,8 @@ header, .glass-header {
 }
 
 html.dark header, html.dark .glass-header {
-    background: rgba(20, 20, 22, 0.85) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-/* 10. Tablas Limpias */
-table {
-    border-collapse: separate;
-    border-spacing: 0;
-    width: 100%;
-}
-
-thead th {
-    background: rgba(0, 0, 0, 0.02) !important;
-    color: var(--apple-secondary) !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.04em !important;
-    text-transform: uppercase !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-html.dark thead th {
-    background: rgba(255, 255, 255, 0.03) !important;
-    color: var(--apple-secondary) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-tbody tr {
-    transition: background 0.15s ease;
-}
-
-tbody tr:hover {
-    background: rgba(0, 113, 227, 0.03) !important;
-}
-
-html.dark tbody tr:hover {
-    background: rgba(41, 151, 255, 0.08) !important;
-}
-
-tbody td {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
-}
-
-html.dark tbody td {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: rgba(18, 18, 20, 0.88) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Badges estilo Apple */
@@ -376,29 +513,29 @@ html.dark tbody td {
     border-radius: 980px !important;
 }
 
-/* Custom Scrollbars Minimalistas Apple */
+/* Scrollbars Minimalistas Apple */
 ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
 }
 ::-webkit-scrollbar-track {
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.18);
     border-radius: 980px;
 }
 html.dark ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.35);
 }
 html.dark ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.45);
 }
 
-/* Animación sutil de tabs */
+/* Animación de Tabs */
 .tab-content {
     display: none;
     opacity: 0;
@@ -420,8 +557,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 html.dark .vinyl-preview-box {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1.5px dashed rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1.5px dashed rgba(255, 255, 255, 0.25) !important;
 }
 
 .vinyl-piece-rect {
@@ -432,12 +569,12 @@ html.dark .vinyl-preview-box {
 }
 
 html.dark .vinyl-piece-rect {
-    background: rgba(41, 151, 255, 0.2) !important;
+    background: rgba(41, 151, 255, 0.22) !important;
     border-color: #2997ff !important;
-    box-shadow: 0 4px 20px rgba(41, 151, 255, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(41, 151, 255, 0.35) !important;
 }
 
-/* Miniaturas */
+/* Miniaturas de Producto */
 .product-img-thumb {
     width: 36px;
     height: 36px;
@@ -449,12 +586,12 @@ html.dark .vinyl-piece-rect {
 }
 
 html.dark .product-img-thumb {
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
 .product-img-thumb:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* Estilos de Impresión */
@@ -478,16 +615,12 @@ html.dark .product-img-thumb {
     }
 }
 
-/* ============================================
-   TOGGLE DE PRECIOS EN TABLA DE PRODUCTOS
-   ============================================ */
+/* Toggle de Precios */
 .prices-hidden .price-col {
     display: none !important;
 }
 
-/* ============================================
-   LIGHTBOX DE IMÁGENES DE PRODUCTOS ESTILO APPLE
-   ============================================ */
+/* Lightbox */
 #modal-image-lightbox {
     animation: fadeIn 0.18s ease;
 }
@@ -512,11 +645,11 @@ html.dark .product-img-thumb {
     transition: all 0.2s ease;
 }
 html.dark .img-thumb-modal img {
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 .img-thumb-modal img:hover {
     border-color: var(--apple-blue);
-    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
 }
 .img-thumb-modal .remove-img-btn {
     position: absolute;
