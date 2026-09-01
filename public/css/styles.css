@@ -670,3 +670,75 @@ html.dark .img-thumb-modal img {
     font-weight: bold;
     box-shadow: 0 2px 5px rgba(0,0,0,0.25);
 }
+
+/* ============================================================== */
+/* REGLAS ESPECÍFICAS PARA CALCULADORA DE VINILOS EN MODO OSCURO  */
+/* ============================================================== */
+html.dark #tab-vinilos .bg-gradient-to-br,
+html.dark #tab-vinilos .from-indigo-50 {
+    background: rgba(41, 151, 255, 0.14) !important;
+    border: 1px solid rgba(41, 151, 255, 0.35) !important;
+}
+
+html.dark #tab-vinilos .bg-gradient-to-br * {
+    color: #f5f5f7 !important;
+}
+
+html.dark #tab-vinilos #calc-unit-price-display,
+html.dark #tab-vinilos #calc-total-sale-display {
+    color: #2997ff !important;
+}
+
+html.dark .vinyl-preset-btn {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .vinyl-preset-btn:hover {
+    background: rgba(255, 255, 255, 0.09) !important;
+}
+
+html.dark .vinyl-preset-btn.border-indigo-500,
+html.dark .vinyl-preset-btn.ring-2 {
+    background: rgba(41, 151, 255, 0.22) !important;
+    border-color: #2997ff !important;
+    box-shadow: 0 0 0 2px rgba(41, 151, 255, 0.45) !important;
+}
+
+html.dark .vinyl-preset-btn h5 {
+    color: #ffffff !important;
+}
+
+html.dark .vinyl-preset-btn p {
+    color: #47a6ff !important;
+}
+
+html.dark .vinyl-preset-btn span {
+    color: #c7c7cc !important;
+}
+
+html.dark #vinyl-roll-calc-equivalent {
+    background: rgba(41, 151, 255, 0.18) !important;
+    color: #2997ff !important;
+    border-color: rgba(41, 151, 255, 0.35) !important;
+}
+
+html.dark #tab-vinilos .bg-white\/80 {
+    background: rgba(24, 24, 26, 0.94) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark #tab-vinilos .bg-white\/80 h2 {
+    color: #ffffff !important;
+}
+
+html.dark #tab-vinilos .bg-white\/80 p {
+    color: #c7c7cc !important;
+}
+
+html.dark #visual-dim-label,
+html.dark #visual-qty-label {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+

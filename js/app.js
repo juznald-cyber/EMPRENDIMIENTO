@@ -364,7 +364,7 @@ class AppController {
                     <div class="flex items-start justify-between mb-2">
                         <button type="button" onclick="app.selectVinylPreset('${p.id}')" class="flex-1 text-left">
                             <h5 class="text-xs font-bold text-slate-900 leading-tight">${this.escapeHTML(p.name)}</h5>
-                            <p class="text-[10px] text-indigo-600 font-semibold mt-0.5">Base: $${(parseFloat(p.costPerM2) || 0).toFixed(2)}/m² | M.O: $${(parseFloat(p.laborCostPerM2) || 0).toFixed(2)}</p>
+                            <p class="text-[10px] text-indigo-600 font-semibold mt-0.5">Base: $${window.formatMoney(p.costPerM2, true)}/m² | M.O: $${window.formatMoney(p.laborCostPerM2, true)}</p>
                         </button>
                         <div class="flex items-center gap-1 shrink-0 ml-2">
                             <button type="button" onclick="app.openVinylPresetModal('${p.id}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors" title="Editar este tipo">
@@ -424,8 +424,8 @@ class AppController {
         const badge       = document.getElementById('vinyl-roll-calc-equivalent');
 
         if (hiddenInput) hiddenInput.value = costM2.toFixed(4);
-        if (display)     display.textContent = `$${this._fmt(costM2)}`;
-        if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2)} / m²`;
+        if (display)     display.textContent = `$${this._fmt(costM2, true)}`;
+        if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2, true)} / m²`;
 
         // Recalcular precio venta/m² a partir del margen
         this._recalcVinylSalePriceM2(costM2);
@@ -458,10 +458,9 @@ class AppController {
         salePriceInp.value = (costM2 * (1 + margin / 100)).toFixed(2);
     }
 
-    /** Formatea número con puntos de miles y 2 decimales */
-    _fmt(n) {
-        if (!n || isNaN(n)) return '0';
-        return n.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    /** Formatea número con puntos de miles y decimales */
+    _fmt(n, forceDecimals = false) {
+        return window.formatMoney(n, forceDecimals);
     }
 
     /** @deprecated — usar onVinylRollChange */
@@ -653,16 +652,16 @@ class AppController {
         const elUnit = document.getElementById('calc-unit-price-display');
         const elSale = document.getElementById('calc-total-sale-display');
 
-        if (elBadge) elBadge.innerText = `${res.totalNetAreaM2} m²`;
-        if (elNet) elNet.innerText = `${res.totalNetAreaM2} m² (${qty} unds de ${res.unitAreaM2} m²)`;
+        if (elBadge) elBadge.innerText = `${window.formatNumber(res.totalNetAreaM2, 2)} m²`;
+        if (elNet) elNet.innerText = `${window.formatNumber(res.totalNetAreaM2, 2)} m² (${qty} unds de ${window.formatNumber(res.unitAreaM2, 2)} m²)`;
         if (elWaste) elWaste.innerText = res.wasteRate;
-        if (elGross) elGross.innerText = `${res.totalGrossAreaM2} m²`;
-        if (elMat) elMat.innerText = `${currency} ${res.materialCostTotal.toFixed(2)}`;
-        if (elLab) elLab.innerText = `${currency} ${res.laborCostTotal.toFixed(2)}`;
-        if (elCost) elCost.innerText = `${currency} ${res.totalBaseCost.toFixed(2)}`;
-        if (elProf) elProf.innerText = `+${currency} ${res.profitAmount.toFixed(2)} (${res.margin}%)`;
-        if (elUnit) elUnit.innerText = `${currency} ${res.unitPrice.toFixed(2)}`;
-        if (elSale) elSale.innerText = `${currency} ${res.totalSalePrice.toFixed(2)}`;
+        if (elGross) elGross.innerText = `${window.formatNumber(res.totalGrossAreaM2, 2)} m²`;
+        if (elMat) elMat.innerText = `${currency} ${window.formatMoney(res.materialCostTotal, true)}`;
+        if (elLab) elLab.innerText = `${currency} ${window.formatMoney(res.laborCostTotal, true)}`;
+        if (elCost) elCost.innerText = `${currency} ${window.formatMoney(res.totalBaseCost, true)}`;
+        if (elProf) elProf.innerText = `+${currency} ${window.formatMoney(res.profitAmount, true)} (${res.margin}%)`;
+        if (elUnit) elUnit.innerText = `${currency} ${window.formatMoney(res.unitPrice, true)}`;
+        if (elSale) elSale.innerText = `${currency} ${window.formatMoney(res.totalSalePrice, true)}`;
 
         const visualRect = document.getElementById('vinyl-visual-rect');
         const visualDimLabel = document.getElementById('visual-dim-label');
@@ -778,7 +777,7 @@ class AppController {
                             ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
                         </td>
                         <td class="py-3 px-3 text-center text-xs font-mono text-slate-600 font-medium">
-                            ${currency} ${(parseFloat(item.costPrice) || 0).toFixed(2)}
+                            ${currency} ${window.formatMoney(item.costPrice, true)}
                         </td>
                         <td class="py-3 px-3 text-center">
                             <div class="inline-flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
@@ -797,12 +796,12 @@ class AppController {
                         </td>
                         <td class="py-3 px-3 text-right">
                             <div class="text-xs font-bold font-mono text-slate-700">
-                                ${currency} ${(parseFloat(item.unitPrice) || 0).toFixed(2)}
+                                ${currency} ${window.formatMoney(item.unitPrice, true)}
                             </div>
                         </td>
                         <td class="py-3 px-3 text-right">
                             <div class="text-sm font-black font-mono text-indigo-700">
-                                ${currency} ${(parseFloat(item.total) || 0).toFixed(2)}
+                                ${currency} ${window.formatMoney(item.total, true)}
                             </div>
                         </td>
                         <td class="py-3 px-3 text-center">
@@ -846,10 +845,10 @@ class AppController {
         const elTax = document.getElementById('quote-tax-display');
         const elTot = document.getElementById('quote-total-display');
 
-        if (elSub) elSub.innerText = `${currency} ${q.subtotal.toFixed(2)}`;
-        if (elDisc) elDisc.innerText = `-${currency} ${q.discountAmount.toFixed(2)}`;
-        if (elTax) elTax.innerText = `${currency} ${q.taxAmount.toFixed(2)}`;
-        if (elTot) elTot.innerText = `${currency} ${q.total.toFixed(2)}`;
+        if (elSub) elSub.innerText = `${currency} ${window.formatMoney(q.subtotal, true)}`;
+        if (elDisc) elDisc.innerText = `-${currency} ${window.formatMoney(q.discountAmount, true)}`;
+        if (elTax) elTax.innerText = `${currency} ${window.formatMoney(q.taxAmount, true)}`;
+        if (elTot) elTot.innerText = `${currency} ${window.formatMoney(q.total, true)}`;
     }
 
     adjustItemQty(index, delta) {
@@ -969,7 +968,7 @@ class AppController {
         if (elTot) elTot.innerText = totalCount;
         if (elApp) elApp.innerText = approvedQuotes.length;
         if (elSent) elSent.innerText = sentQuotes.length;
-        if (elAmt) elAmt.innerText = `${currency} ${approvedTotalAmount.toFixed(2)}`;
+        if (elAmt) elAmt.innerText = `${currency} ${window.formatMoney(approvedTotalAmount, true)}`;
 
         const query = (document.getElementById('history-search-input')?.value || '').toLowerCase();
         const statusFilter = document.getElementById('history-status-filter')?.value || 'todos';
@@ -1023,7 +1022,7 @@ class AppController {
                         ${q.status}
                     </span>
                 </td>
-                <td class="py-3 px-3 text-right font-mono font-bold text-sm text-slate-900">${currency} ${(parseFloat(q.total) || 0).toFixed(2)}</td>
+                <td class="py-3 px-3 text-right font-mono font-bold text-sm text-slate-900">${currency} ${window.formatMoney(q.total, true)}</td>
                 <td class="py-3 px-3 text-center">
                     <div class="flex items-center justify-center gap-1">
                         <button type="button" onclick="app.loadQuoteToEditor('${q.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar / Abrir">
@@ -1169,12 +1168,12 @@ class AppController {
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
                     <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700 price-col">
-                        ${currency} ${(parseFloat(cost1u) || 0).toFixed(2)}
+                        ${currency} ${window.formatMoney(cost1u, true)}
                     </td>
                     <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${salePrice.toFixed(2)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice, true)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
@@ -1281,7 +1280,7 @@ class AppController {
                     <div>
                         <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency}${cost1u.toFixed(2)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency}${salePrice.toFixed(2)}</span></p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(cost1u, true)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice, true)}</span></p>
                     </div>
                     <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar

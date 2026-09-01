@@ -21,8 +21,8 @@ class PDFGenerator {
                 </td>
                 <td class="py-2.5 px-2 text-slate-600 text-center">${item.unit || 'Unid'}</td>
                 <td class="py-2.5 px-2 text-slate-800 text-center font-bold">${item.quantity}</td>
-                <td class="py-2.5 px-2 text-slate-700 text-right font-medium">${currency} ${(parseFloat(item.unitPrice) || 0).toFixed(2)}</td>
-                <td class="py-2.5 px-2 text-indigo-700 text-right font-bold">${currency} ${(parseFloat(item.total) || 0).toFixed(2)}</td>
+                <td class="py-2.5 px-2 text-slate-700 text-right font-medium">${currency} ${window.formatMoney(item.unitPrice, true)}</td>
+                <td class="py-2.5 px-2 text-indigo-700 text-right font-bold">${currency} ${window.formatMoney(item.total, true)}</td>
             </tr>
         `).join('');
 
@@ -124,23 +124,23 @@ class PDFGenerator {
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs">
                         <div class="flex justify-between text-slate-600 font-medium text-[11px]">
                             <span>Subtotal Neto:</span>
-                            <span class="font-bold text-slate-800">${currency} ${(parseFloat(quote.subtotal) || 0).toFixed(2)}</span>
+                            <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.subtotal, true)}</span>
                         </div>
                         ${quote.discountAmount > 0 ? `
                             <div class="flex justify-between text-emerald-600 font-medium text-[11px]">
                                 <span>Descuento (${quote.discountPercentage || 0}%):</span>
-                                <span class="font-bold">-${currency} ${(parseFloat(quote.discountAmount) || 0).toFixed(2)}</span>
+                                <span class="font-bold">-${currency} ${window.formatMoney(quote.discountAmount, true)}</span>
                             </div>
                         ` : ''}
                         ${profile.enableTax ? `
                             <div class="flex justify-between text-slate-600 font-medium text-[11px]">
                                 <span>IVA (${quote.taxRate || profile.taxRate || 0}%):</span>
-                                <span class="font-bold text-slate-800">${currency} ${(parseFloat(quote.taxAmount) || 0).toFixed(2)}</span>
+                                <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.taxAmount, true)}</span>
                             </div>
                         ` : ''}
                         <div class="border-t-2 border-indigo-200 pt-1.5 mt-1.5 flex justify-between items-baseline">
                             <span class="text-xs font-black text-slate-900 uppercase">TOTAL:</span>
-                            <span class="text-lg font-black text-indigo-700 font-mono">${currency} ${(parseFloat(quote.total) || 0).toFixed(2)}</span>
+                            <span class="text-lg font-black text-indigo-700 font-mono">${currency} ${window.formatMoney(quote.total, true)}</span>
                         </div>
                     </div>
 
@@ -172,68 +172,62 @@ class PDFGenerator {
     }
 
     async generatePDFBlob(quote, profile) {
-        const tempContainer = document.createElement('div');
-        tempContainer.id = 'pdf-render-wrapper';
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '0';
-        tempContainer.innerHTML = this.generateHTML(quote, profile);
-        document.body.appendChild(tempContainer);
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.innerHTML = this.generateHTML(quote, profile);
+        document.body.appendChild(container);
 
+        const element = container.querySelector('#pdf-container-doc');
         const opt = {
-            margin: [8, 6, 8, 6],
-            filename: `Cotizacion_${(quote.quoteNumber || 'COT-0000').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
+            margin: [8, 8, 8, 8],
+            filename: `Cotizacion_${quote.quoteNumber || '0001'}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' } // Formato Carta Exacto
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' }
         };
 
         try {
             if (window.html2pdf) {
-                const pdfBlob = await window.html2pdf().set(opt).from(tempContainer.querySelector('#pdf-container-doc')).outputPdf('blob');
+                const pdfBlob = await window.html2pdf().set(opt).from(element).output('blob');
                 return pdfBlob;
             }
             return null;
-        } catch (err) {
-            console.error('Error generando PDF blob:', err);
-            return null;
         } finally {
-            if (tempContainer.parentNode) {
-                tempContainer.parentNode.removeChild(tempContainer);
+            if (container.parentNode) {
+                container.parentNode.removeChild(container);
             }
         }
     }
 
     async downloadPDF(quote, profile) {
         const tempContainer = document.createElement('div');
-        tempContainer.id = 'pdf-render-wrapper';
-        tempContainer.style.position = 'fixed';
+        tempContainer.style.position = 'absolute';
         tempContainer.style.left = '-9999px';
         tempContainer.style.top = '0';
         tempContainer.innerHTML = this.generateHTML(quote, profile);
         document.body.appendChild(tempContainer);
 
-        const safeQuoteNum = (quote.quoteNumber || 'COT-0000').replace(/[^a-zA-Z0-9_-]/g, '_');
-        const safeClientName = (quote.client?.name || 'Cliente').replace(/[^a-zA-Z0-9_-]/g, '_');
-        const filename = `Cotizacion_${safeQuoteNum}_${safeClientName}.pdf`;
+        const element = tempContainer.querySelector('#pdf-container-doc');
+        const filename = `Cotizacion_${(quote.quoteNumber || 'COT-0000').replace(/[^a-zA-Z0-9_-]/g, '_')}_${(quote.client?.name || 'Cliente').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
-        // Configuración exacta para TAMAÑO CARTA (Letter)
         const opt = {
-            margin: [8, 6, 8, 6],
+            margin: [8, 8, 8, 8],
             filename: filename,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
             jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' }
         };
 
         try {
             if (window.html2pdf) {
-                await window.html2pdf().set(opt).from(tempContainer.querySelector('#pdf-container-doc')).save();
+                await window.html2pdf().set(opt).from(element).save();
             } else {
                 window.print();
             }
-        } catch (err) {
-            console.error('Error generando PDF:', err);
+        } catch (e) {
+            console.error('Error al generar PDF con html2pdf, usando print():', e);
             window.print();
         } finally {
             if (tempContainer.parentNode) {
@@ -249,12 +243,12 @@ class PDFGenerator {
         const currency = profile.currency || '$';
 
         let bodyText = `Estimado(a) ${quote.client?.name || 'Cliente'},\n\n`;
-        bodyText += `Le hacemos entrega formal de la cotización N° ${quote.quoteNumber || ''} por un monto total de ${currency} ${quote.total.toFixed(2)}.\n\n`;
+        bodyText += `Le hacemos entrega formal de la cotización N° ${quote.quoteNumber || ''} por un monto total de ${currency} ${window.formatMoney(quote.total, true)}.\n\n`;
         bodyText += `Resumen de ítems cotizados:\n`;
         quote.items.forEach((it) => {
-            bodyText += `- ${it.quantity}x ${it.name} -> ${currency} ${it.total.toFixed(2)}\n`;
+            bodyText += `- ${it.quantity}x ${it.name} -> ${currency} ${window.formatMoney(it.total, true)}\n`;
         });
-        bodyText += `\nTotal a Pagar: ${currency} ${quote.total.toFixed(2)}\n`;
+        bodyText += `\nTotal a Pagar: ${currency} ${window.formatMoney(quote.total, true)}\n`;
         bodyText += `Validez de la oferta: Hasta el ${quote.validUntil || '15 días'}\n\n`;
         if (profile.bankDetails) {
             bodyText += `Datos bancarios para pagos:\n${profile.bankDetails}\n\n`;
@@ -293,10 +287,10 @@ class PDFGenerator {
         msg += `Te enviamos la información de tu *Cotización N° ${quote.quoteNumber || ''}* de *${profile.companyName || 'nuestra empresa'}*:\n\n`;
         
         quote.items.forEach((it) => {
-            msg += `▫️ *${it.quantity}x* ${it.name}: ${currency} ${it.total.toFixed(2)}\n`;
+            msg += `▫️ *${it.quantity}x* ${it.name}: ${currency} ${window.formatMoney(it.total, true)}\n`;
         });
 
-        msg += `\n💰 *Total a Pagar: ${currency} ${quote.total.toFixed(2)}*\n`;
+        msg += `\n💰 *Total a Pagar: ${currency} ${window.formatMoney(quote.total, true)}*\n`;
         msg += `📅 *Válida hasta:* ${quote.validUntil || '15 días'}\n\n`;
         msg += `Adjunto te compartimos el PDF formal con el desglose y datos de pago. ¡Quedamos a tu orden! 😊`;
 

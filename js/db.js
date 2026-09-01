@@ -1,4 +1,25 @@
 // js/db.js - Base de Datos Local, Autenticación y Gestor de Estado
+
+// Helper Global para Formato de Moneda y Miles (ej. 10.000 o 10.000,50)
+window.formatMoney = function(amount, forceDecimals = false) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '0';
+    const num = parseFloat(amount) || 0;
+    const hasDecimals = forceDecimals || (num % 1 !== 0);
+    const fixed = num.toFixed(2);
+    const [intPart, decPart] = fixed.split('.');
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return hasDecimals ? `${formattedInt},${decPart}` : formattedInt;
+};
+
+window.formatNumber = function(amount, decimals = 2) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '0';
+    const num = parseFloat(amount) || 0;
+    const fixed = num.toFixed(decimals);
+    const [intPart, decPart] = fixed.split('.');
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return decimals > 0 ? `${formattedInt},${decPart}` : formattedInt;
+};
+
 const DB_KEYS = {
     PROFILE: 'cotizador_profile',
     SUPPLIERS: 'cotizador_suppliers',
