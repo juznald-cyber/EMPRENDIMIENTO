@@ -1357,11 +1357,12 @@ class AppController {
             document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
 
-            // Precio de venta calculado
-            const cost1u = parseFloat(p.costPrice) || 0;
-            const margin1u = parseFloat(p.defaultMargin) || 50;
+            // Precio de venta calculado (incluye costo adicional)
+            const cost1u    = parseFloat(p.costPrice) || 0;
+            const margin1u  = parseFloat(p.defaultMargin) || 50;
+            const extra1u   = parseFloat(p.extraCost) || 0;
             const spEl = document.getElementById('prod-form-sale-price');
-            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100)).toFixed(2) : '';
+            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100) + extra1u).toFixed(2) : '';
 
             // Imágenes: soporta array (nuevo) o string (viejo)
             let loadImgs = [];
@@ -1516,7 +1517,7 @@ class AppController {
     // PRECIO DE VENTA ↔ MARGEN (BIDIRECCIONAL)
     // ==========================================
 
-    /** Recalcula precio de venta cuando cambia el costo */
+    /** Recalcula precio de venta cuando cambia el costo o el costo adicional */
     onProductCostChange() {
         const margin = parseFloat(document.getElementById('prod-form-margin')?.value);
         if (!isNaN(margin)) this._recalcSalePrice();
@@ -1527,25 +1528,36 @@ class AppController {
         this._recalcSalePrice();
     }
 
-    /** Cuando el usuario escribe el precio de venta → calcula el margen automáticamente */
+    /**
+     * Cuando el usuario escribe el precio de venta → calcula el margen automáticamente.
+     * El precio de venta incluye el costo adicional, así que se descuenta antes de calcular el margen.
+     */
     onProductSalePriceChange() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value);
+        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value) || 0;
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
         const marginInp = document.getElementById('prod-form-margin');
-        if (!marginInp || !salePrice || cost <= 0) return;
-        const margin = ((salePrice / cost) - 1) * 100;
-        marginInp.value = Math.round(margin * 10) / 10; // 1 decimal
+        if (!marginInp || salePrice <= 0 || cost <= 0) return;
+        // El precio base = precio de venta - costo adicional
+        const basePrice = salePrice - extraCost;
+        const margin    = ((basePrice / cost) - 1) * 100;
+        marginInp.value = Math.round(margin * 10) / 10;
     }
 
-    /** Calcula el precio de venta desde costo y margen */
+    /**
+     * Calcula el precio de venta = (costo × (1 + margen/100)) + costo adicional.
+     * El costo adicional va incluido en el precio final al cliente.
+     */
     _recalcSalePrice() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
         const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
         const salePriceInp = document.getElementById('prod-form-sale-price');
         if (!salePriceInp || cost <= 0) return;
-        const salePrice = cost * (1 + margin / 100);
+        const salePrice = cost * (1 + margin / 100) + extraCost;
         salePriceInp.value = salePrice.toFixed(2);
     }
+
 
     // ==========================================
     // SELECCIÓN MASIVA Y ELIMINACIÓN MASIVA
