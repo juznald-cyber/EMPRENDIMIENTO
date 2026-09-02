@@ -776,16 +776,6 @@ class AppController {
                             </div>
                             ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
                         </td>
-                        <td class="py-3 px-3 text-center text-xs font-mono text-slate-600 font-medium">
-                            ${currency} ${window.formatMoney(item.costPrice, true)}
-                        </td>
-                        <td class="py-3 px-3 text-center">
-                            <div class="inline-flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
-                                <input type="number" step="1" value="${item.margin}" onchange="app.changeItemMargin(${idx}, this.value)" 
-                                    class="w-10 text-xs text-center font-black text-indigo-700 bg-transparent outline-none" />
-                                <span class="text-[10px] font-bold text-indigo-400">%</span>
-                            </div>
-                        </td>
                         <td class="py-3 px-3 text-center">
                             <div class="inline-flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
                                 <button type="button" onclick="app.adjustItemQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded-lg transition-colors font-bold text-sm">-</button>
