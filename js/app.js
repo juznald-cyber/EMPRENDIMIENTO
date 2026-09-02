@@ -1115,7 +1115,8 @@ class AppController {
             const sup = suppliers.find(s => s.id === p.supplierId || s.name === p.supplierId);
             const margin = window.db.getMarginForQuantity(p, 1);
             const cost1u = window.db.getCostForQuantity(p, 1);
-            const salePrice = window.db.calculateSalePrice(cost1u, margin);
+            const extraCost = parseFloat(p.extraCost) || 0;
+            const salePrice = window.db.calculateSalePrice(cost1u, margin) + extraCost;
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
             // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
