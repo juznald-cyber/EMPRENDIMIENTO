@@ -19,7 +19,14 @@ class AppController {
         // Configurar Listener de Firebase Authentication
         this.setupFirebaseAuthListener();
 
-        // Cargar Datos del Perfil y UI inicial
+        this.renderAll();
+        this.bindEvents();
+
+        console.log('Cotizador Pro App Inicializada Correctamente.');
+    }
+
+    /** Re-renderiza toda la interfaz gráfica con los datos más recientes */
+    renderAll() {
         this.loadProfileIntoUI();
         this.renderCategoriesDataLists();
         this.renderSuppliersDataList();
@@ -30,9 +37,6 @@ class AppController {
         this.renderHistory();
         this.renderProducts();
         this.renderSuppliers();
-        this.bindEvents();
-
-        console.log('Cotizador Pro App Inicializada Correctamente.');
     }
 
     // ==========================================
@@ -56,12 +60,7 @@ class AppController {
                     if (window.db && typeof window.db.syncFromFirestore === 'function') {
                         await window.db.syncFromFirestore(user.uid);
                         // Re-renderizar la app con los datos recién cargados de la nube
-                        if (typeof this.renderAll === 'function') this.renderAll();
-                        else {
-                            if (typeof this.renderProducts === 'function') this.renderProducts();
-                            if (typeof this.renderSuppliers === 'function') this.renderSuppliers();
-                            if (typeof this.renderQuotes === 'function') this.renderQuotes();
-                        }
+                        this.renderAll();
                     }
                 } else {
                     if (authScreen) {
