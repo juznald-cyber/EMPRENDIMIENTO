@@ -1673,21 +1673,21 @@ class AppController {
         window.db.saveCategory(category);
 
         const product = {
-            id: id || undefined,
+            id: id ? id : ('prod_' + Date.now()),
             name,
-            sku,
-            supplierId,
-            category,
-            unit,
-            costPrice,
-            costTiers,
-            defaultMargin,
-            url,
-            notes,
-            extraCost,           // Costo adicional por unidad (estampado, sublimación...)
-            extraCostLabel,      // Etiqueta del costo adicional (solo interna)
-            images,              // Array de hasta 3 imágenes base64
-            imageData,           // Compatibilidad retroactiva (primera imagen)
+            sku: sku || ('PROD-' + Math.floor(Math.random() * 900 + 100)),
+            supplierId: supplierId || '',
+            category: category || 'General',
+            unit: unit || 'Unidad',
+            costPrice: costPrice || 0,
+            costTiers: costTiers || [],
+            defaultMargin: defaultMargin || 50,
+            url: url || '',
+            notes: notes || '',
+            extraCost: extraCost || 0,
+            extraCostLabel: extraCostLabel || '',
+            images: images || [],
+            imageData: imageData || '',
             useGlobalTiers: true
         };
 
@@ -1927,29 +1927,67 @@ class AppController {
         this._processProductImageFile(file, file.name);
     }
 
-    /** Procesa un archivo de imagen y lo agrega al array (máx 3) */
-    _processProductImageFile(file, label = '') {
-        const maxMB = 5;
+    /** Redimensiona y comprime una imagen a un tamaño ligero para Firestore y LocalStorage */
+    _compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.75) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxWidth || h > maxHeight) {
+                        if (w > h) {
+                            h = Math.round((h * maxWidth) / w);
+                            w = maxWidth;
+                        } else {
+                            w = Math.round((w * maxHeight) / h);
+                            h = maxHeight;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedDataUrl);
+                };
+                img.onerror = () => resolve(e.target.result);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /** Procesa un archivo de imagen, lo comprime automáticamente y lo agrega al array (máx 3) */
+    async _processProductImageFile(file, label = '') {
+        const maxMB = 10;
         if (file.size > maxMB * 1024 * 1024) {
             this.showToast(`La imagen supera los ${maxMB} MB.`, 'warning');
             return;
         }
-        // Leer array actual
         let imgs = this._getProductImagesArray();
         if (imgs.length >= 3) {
             this.showToast('Máximo 3 imágenes por producto. Elimina una para agregar otra.', 'warning');
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imgs.push(e.target.result);
+
+        try {
+            const compressedBase64 = await this._compressImage(file);
+            if (!compressedBase64) {
+                this.showToast('Error procesando la imagen.', 'error');
+                return;
+            }
+            imgs.push(compressedBase64);
             document.getElementById('prod-form-image-data').value = JSON.stringify(imgs);
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs(imgs);
             this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success');
-        };
-        reader.onerror = () => this.showToast('Error leyendo el archivo.', 'error');
-        reader.readAsDataURL(file);
+        } catch (err) {
+            this.showToast('Error al procesar la imagen.', 'error');
+        }
     }
 
     /** Obtiene el array de imágenes del campo oculto */
