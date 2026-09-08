@@ -1317,7 +1317,8 @@ class AppController {
             const margin = window.db.getMarginForQuantity(p, 1);
             const cost1u = window.db.getCostForQuantity(p, 1);
             const extraCost = parseFloat(p.extraCost) || 0;
-            const salePrice = window.db.calculateSalePrice(cost1u, margin) + extraCost;
+            const totalCost1u = cost1u + extraCost;
+            const salePrice = totalCost1u * (1 + margin / 100);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
             // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
@@ -1549,12 +1550,13 @@ class AppController {
             document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
 
-            // Precio de venta calculado (incluye costo adicional)
-            const cost1u    = parseFloat(p.costPrice) || 0;
-            const margin1u  = parseFloat(p.defaultMargin) || 50;
-            const extra1u   = parseFloat(p.extraCost) || 0;
+            // Precio de venta calculado (incluye costo adicional + margen sobre el costo total)
+            const cost1u      = parseFloat(p.costPrice) || 0;
+            const extra1u     = parseFloat(p.extraCost) || 0;
+            const totalCost1u = cost1u + extra1u;
+            const margin1u    = parseFloat(p.defaultMargin) || 50;
             const spEl = document.getElementById('prod-form-sale-price');
-            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100) + extra1u).toFixed(2) : '';
+            if (spEl) spEl.value = totalCost1u > 0 ? (totalCost1u * (1 + margin1u / 100)).toFixed(2) : '';
 
             // Imágenes: soporta array (nuevo) o string (viejo)
             let loadImgs = [];
@@ -1722,31 +1724,32 @@ class AppController {
 
     /**
      * Cuando el usuario escribe el precio de venta → calcula el margen automáticamente.
-     * El precio de venta incluye el costo adicional, así que se descuenta antes de calcular el margen.
+     * Costo total = costo base + costo adicional.
+     * Margen = ((precio_venta / costo_total) - 1) * 100
      */
     onProductSalePriceChange() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value) || 0;
         const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const totalCost = cost + extraCost;
+        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value) || 0;
         const marginInp = document.getElementById('prod-form-margin');
-        if (!marginInp || salePrice <= 0 || cost <= 0) return;
-        // El precio base = precio de venta - costo adicional
-        const basePrice = salePrice - extraCost;
-        const margin    = ((basePrice / cost) - 1) * 100;
+        if (!marginInp || salePrice <= 0 || totalCost <= 0) return;
+        const margin = ((salePrice / totalCost) - 1) * 100;
         marginInp.value = Math.round(margin * 10) / 10;
     }
 
     /**
-     * Calcula el precio de venta = (costo × (1 + margen/100)) + costo adicional.
-     * El costo adicional va incluido en el precio final al cliente.
+     * Calcula el precio de venta = (costo base + costo adicional) * (1 + margen/100).
+     * El porcentaje de ganancia se aplica tanto al costo del insumo como al costo adicional.
      */
     _recalcSalePrice() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
         const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const totalCost = cost + extraCost;
+        const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
         const salePriceInp = document.getElementById('prod-form-sale-price');
-        if (!salePriceInp || cost <= 0) return;
-        const salePrice = cost * (1 + margin / 100) + extraCost;
+        if (!salePriceInp || totalCost <= 0) return;
+        const salePrice = totalCost * (1 + margin / 100);
         salePriceInp.value = salePrice.toFixed(2);
     }
 
