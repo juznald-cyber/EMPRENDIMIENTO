@@ -315,7 +315,7 @@ class Database {
 
     /**
      * Llamado desde app.js cuando el usuario inicia sesión.
-     * Carga todos los datos desde Firestore y los vuelca al localStorage.
+     * Combina de forma segura los datos de Firestore con localStorage para evitar pérdidas.
      */
     async syncFromFirestore(uid) {
         this._uid = uid;
@@ -327,22 +327,52 @@ class Database {
             const snap = await docRef.get();
             if (snap.exists) {
                 const data = snap.data();
-                // Volcar cada colección al localStorage si existe en Firestore
-                const keys = [
-                    { fs: 'categories',  ls: DB_KEYS.CATEGORIES },
-                    { fs: 'profile',     ls: DB_KEYS.PROFILE },
-                    { fs: 'globalTiers', ls: DB_KEYS.GLOBAL_TIERS },
-                    { fs: 'suppliers',   ls: DB_KEYS.SUPPLIERS },
-                    { fs: 'products',    ls: DB_KEYS.PRODUCTS },
-                    { fs: 'vinyls',      ls: DB_KEYS.VINYLS },
-                    { fs: 'quotes',      ls: DB_KEYS.QUOTES },
-                ];
-                keys.forEach(({ fs, ls }) => {
-                    if (data[fs] !== undefined) {
-                        localStorage.setItem(ls, JSON.stringify(data[fs]));
-                    }
-                });
-                console.log('✅ Datos cargados desde Firestore.');
+                
+                // 1. Proveedores: merge seguro
+                if (Array.isArray(data.suppliers)) {
+                    const localSuppliers = this.get(DB_KEYS.SUPPLIERS, []);
+                    const mergedSup = [...data.suppliers];
+                    localSuppliers.forEach(ls => {
+                        if (ls && ls.id && !mergedSup.some(fs => fs.id === ls.id)) {
+                            mergedSup.push(ls);
+                        }
+                    });
+                    localStorage.setItem(DB_KEYS.SUPPLIERS, JSON.stringify(mergedSup));
+                }
+
+                // 2. Productos: merge seguro (NUNCA borrar productos creados localmente)
+                if (Array.isArray(data.products)) {
+                    const localProducts = this.get(DB_KEYS.PRODUCTS, []);
+                    const mergedProd = [...data.products];
+                    localProducts.forEach(lp => {
+                        if (lp && lp.id && !mergedProd.some(fp => fp.id === lp.id)) {
+                            mergedProd.push(lp);
+                        }
+                    });
+                    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(mergedProd));
+                }
+
+                // 3. Cotizaciones: merge seguro
+                if (Array.isArray(data.quotes)) {
+                    const localQuotes = this.get(DB_KEYS.QUOTES, []);
+                    const mergedQuotes = [...data.quotes];
+                    localQuotes.forEach(lq => {
+                        if (lq && lq.id && !mergedQuotes.some(fq => fq.id === lq.id)) {
+                            mergedQuotes.push(lq);
+                        }
+                    });
+                    localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(mergedQuotes));
+                }
+
+                // 4. Categorías, Perfil, Vinilos, GlobalTiers
+                if (data.categories !== undefined) localStorage.setItem(DB_KEYS.CATEGORIES, JSON.stringify(data.categories));
+                if (data.profile !== undefined) localStorage.setItem(DB_KEYS.PROFILE, JSON.stringify(data.profile));
+                if (data.globalTiers !== undefined) localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
+                if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
+
+                // Sincronizar de vuelta a Firestore con la data combinada
+                await this._pushAllToFirestore();
+                console.log('✅ Datos sincronizados y protegidos con Firestore.');
             } else {
                 // Primera vez: subir lo que hay en localStorage a Firestore
                 await this._pushAllToFirestore();
@@ -358,7 +388,7 @@ class Database {
         const docRef = this._userDoc();
         if (!docRef) return;
         try {
-            await docRef.set({
+            const cleanData = JSON.parse(JSON.stringify({
                 categories:  this.getCategories(),
                 profile:     this.getProfile(),
                 globalTiers: this.getGlobalTiers(),
@@ -367,22 +397,28 @@ class Database {
                 vinyls:      this.getVinylPresets(),
                 quotes:      this.getQuotes(),
                 updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
-            }, { merge: true });
+            }));
+            await docRef.set(cleanData, { merge: true });
         } catch (e) {
             console.warn('Error subiendo a Firestore:', e.message);
         }
     }
 
     /**
-     * Guarda UNA colección específica en Firestore en segundo plano.
+     * Guarda UNA colección específica en Firestore en segundo plano de forma limpia.
      * @param {string} firestoreKey  - nombre del campo en Firestore
      * @param {*}      value         - valor a guardar
      */
     _syncFieldToFirestore(firestoreKey, value) {
         const docRef = this._userDoc();
         if (!docRef) return;
-        docRef.set({ [firestoreKey]: value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
-            .catch(e => console.warn(`Error sync Firestore [${firestoreKey}]:`, e.message));
+        try {
+            const cleanVal = JSON.parse(JSON.stringify(value));
+            docRef.set({ [firestoreKey]: cleanVal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+                .catch(e => console.warn(`Error sync Firestore [${firestoreKey}]:`, e.message));
+        } catch (e) {
+            console.warn(`Error serializando [${firestoreKey}]:`, e.message);
+        }
     }
 
     // ==========================================
