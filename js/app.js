@@ -209,6 +209,31 @@ class AppController {
 
         const modalProdSearch = document.getElementById('modal-search-product-input');
         if (modalProdSearch) modalProdSearch.addEventListener('input', () => this.filterModalProducts());
+
+        // Cerrar dropdowns personalizados al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#supplier-select-wrapper')) {
+                document.getElementById('supplier-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#category-select-wrapper')) {
+                document.getElementById('category-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#sup-category-select-wrapper')) {
+                document.getElementById('sup-category-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#client-select-wrapper')) {
+                document.getElementById('client-custom-dropdown')?.classList.add('hidden');
+            }
+        });
+
+        // Cerrar dropdowns con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['supplier', 'category', 'sup-category', 'client'].forEach(t => {
+                    document.getElementById(`${t}-custom-dropdown`)?.classList.add('hidden');
+                });
+            }
+        });
     }
 
     // ==========================================
@@ -339,7 +364,7 @@ class AppController {
     }
 
     // ==========================================
-    // GESTOR DE PROVEEDORES EN DATALIST
+    // GESTOR DE PROVEEDORES EN DATALIST Y DROPDOWNS
     // ==========================================
     renderSuppliersDataList() {
         const suppliers = window.db.getSuppliers();
@@ -348,6 +373,182 @@ class AppController {
             dl.innerHTML = suppliers.map(s => `<option value="${this.escapeHTML(s.name)}">${s.rut ? 'RUT: ' + this.escapeHTML(s.rut) : ''}</option>`).join('');
         }
     }
+
+    // ==========================================
+    // SELECTORES PERSONALIZADOS (DROPDOWNS CON BÚSQUEDA Y VISTA COMPLETA)
+    // ==========================================
+    toggleCustomDropdown(type) {
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (!dropdown) return;
+        if (dropdown.classList.contains('hidden')) {
+            this.openCustomDropdown(type);
+        } else {
+            this.closeCustomDropdown(type);
+        }
+    }
+
+    closeCustomDropdown(type) {
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (dropdown) dropdown.classList.add('hidden');
+    }
+
+    openCustomDropdown(type, filterText = '') {
+        ['supplier', 'category', 'sup-category', 'client'].forEach(t => {
+            if (t !== type) this.closeCustomDropdown(t);
+        });
+
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (!dropdown) return;
+
+        let currentValue = '';
+
+        if (type === 'supplier') {
+            currentValue = (document.getElementById('prod-form-supplier-input')?.value || '').trim();
+            const suppliers = window.db.getSuppliers();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q 
+                ? suppliers.filter(s => (s.name || '').toLowerCase().includes(q) || (s.rut || '').toLowerCase().includes(q) || (s.category || '').toLowerCase().includes(q))
+                : suppliers;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay proveedores coincidentes. Escribe para usar uno nuevo.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(s => {
+                    const isSelected = s.name.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('supplier', '${this.escapeHTML(s.name)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <div>
+                                <div class="text-xs font-semibold">${this.escapeHTML(s.name)}</div>
+                                ${s.rut ? `<div class="text-[10px] text-slate-400 font-mono">RUT: ${this.escapeHTML(s.rut)}</div>` : ''}
+                            </div>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'category') {
+            currentValue = (document.getElementById('prod-form-category-input')?.value || '').trim();
+            const categories = window.db.getCategories();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('category', '${this.escapeHTML(c)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <span class="text-xs font-semibold">${this.escapeHTML(c)}</span>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'sup-category') {
+            currentValue = (document.getElementById('sup-form-category')?.value || '').trim();
+            const categories = window.db.getCategories();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('sup-category', '${this.escapeHTML(c)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <span class="text-xs font-semibold">${this.escapeHTML(c)}</span>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'client') {
+            currentValue = (document.getElementById('quote-client-name')?.value || '').trim();
+            const quotes = window.db.getQuotes();
+            const clientsMap = new Map();
+            quotes.forEach(q => {
+                if (q.client && q.client.name && q.client.name.trim()) {
+                    const key = q.client.name.trim().toLowerCase();
+                    if (!clientsMap.has(key)) {
+                        clientsMap.set(key, q.client);
+                    }
+                }
+            });
+            const clients = Array.from(clientsMap.values());
+            const q = filterText.toLowerCase().trim();
+            const filtered = q 
+                ? clients.filter(c => (c.name || '').toLowerCase().includes(q) || (c.rut || '').toLowerCase().includes(q) || (c.contact || '').toLowerCase().includes(q))
+                : clients;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay clientes anteriores guardados. Escribe los datos para este cliente.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.name.toLowerCase() === currentValue.toLowerCase();
+                    const safeName = this.escapeHTML(c.name || '');
+                    const safeRut = this.escapeHTML(c.rut || '');
+                    const safeContact = this.escapeHTML(c.contact || '');
+                    const safePhone = this.escapeHTML(c.phone || '');
+                    const safeEmail = this.escapeHTML(c.email || '');
+                    const safeAddress = this.escapeHTML(c.address || '');
+
+                    return `
+                        <div onclick="app.selectClientOption('${safeName}', '${safeRut}', '${safeContact}', '${safePhone}', '${safeEmail}', '${safeAddress}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <div>
+                                <div class="text-xs font-semibold">${safeName}</div>
+                                <div class="text-[10px] text-slate-400 font-mono flex flex-wrap items-center gap-2">
+                                    ${safeRut ? `<span>RUT: ${safeRut}</span>` : ''}
+                                    ${safePhone ? `<span>Tel: ${safePhone}</span>` : ''}
+                                </div>
+                            </div>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        dropdown.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    filterCustomDropdown(type, query) {
+        this.openCustomDropdown(type, query);
+    }
+
+    selectCustomOption(type, value) {
+        if (type === 'supplier') {
+            const input = document.getElementById('prod-form-supplier-input');
+            if (input) input.value = value;
+        } else if (type === 'category') {
+            const input = document.getElementById('prod-form-category-input');
+            if (input) input.value = value;
+        } else if (type === 'sup-category') {
+            const input = document.getElementById('sup-form-category');
+            if (input) input.value = value;
+        }
+        this.closeCustomDropdown(type);
+    }
+
+    selectClientOption(name, rut, contact, phone, email, address) {
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        set('quote-client-name', name);
+        set('quote-client-rut', rut);
+        set('quote-client-contact', contact);
+        set('quote-client-phone', phone);
+        set('quote-client-email', email);
+        set('quote-client-address', address);
+
+        this.syncQuoteHeaderFromUI();
+        this.closeCustomDropdown('client');
+    }
+
 
     // ==========================================
     // CALCULADORA DE VINILOS (CRUD PRESETS)
