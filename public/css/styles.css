@@ -742,3 +742,91 @@ html.dark #visual-qty-label {
     font-weight: 700 !important;
 }
 
+/* ============================================================== */
+/* MODAL EDITAR VINILO Y CALCULADORA (ALTO CONTRASTE)            */
+/* ============================================================== */
+#vinyl-preset-roll-box {
+    background: #f0f3ff;
+    border: 1px solid #c7d2fe;
+}
+
+#vinyl-preset-roll-box label {
+    font-weight: 700;
+}
+
+html.dark #modal-edit-vinyl-preset .bg-white {
+    background: rgba(28, 28, 30, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+}
+
+html.dark #modal-edit-vinyl-preset label {
+    color: #f5f5f7 !important;
+    font-weight: 700 !important;
+}
+
+html.dark #vinyl-preset-roll-box {
+    background: rgba(41, 151, 255, 0.14) !important;
+    border: 1px solid rgba(41, 151, 255, 0.38) !important;
+}
+
+html.dark #vinyl-preset-roll-box label {
+    color: #e5e5ea !important;
+    font-weight: 700 !important;
+}
+
+html.dark #vinyl-preset-area-badge {
+    background: rgba(0, 0, 0, 0.65) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.45) !important;
+    font-weight: 800 !important;
+}
+
+html.dark #vinyl-preset-form-roll-w,
+html.dark #vinyl-preset-form-roll-l {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+html.dark #vinyl-preset-form-roll-cost,
+html.dark #vinyl-preset-form-roll-labor,
+html.dark #vinyl-preset-form-cost,
+html.dark #vinyl-preset-form-labor,
+html.dark #vinyl-preset-form-margin {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border: 1px solid rgba(56, 189, 248, 0.45) !important;
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+}
+
+html.dark #vinyl-preset-form-waste,
+html.dark #vinyl-preset-form-name,
+html.dark #vinyl-preset-form-desc {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+}
+
+html.dark #tab-vinilos input {
+    color: #ffffff !important;
+}
+
+html.dark #vinyl-roll-cost-input,
+html.dark #vinyl-roll-labor-input {
+    background: rgba(41, 151, 255, 0.15) !important;
+    border-color: rgba(41, 151, 255, 0.4) !important;
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+}
+
+html.dark #vinyl-sale-price-m2-input,
+html.dark #vinyl-margin-input {
+    background: rgba(48, 209, 88, 0.15) !important;
+    border-color: rgba(48, 209, 88, 0.4) !important;
+    color: #30d158 !important;
+    font-weight: 800 !important;
+}
+
+
