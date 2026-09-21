@@ -829,4 +829,53 @@ html.dark #vinyl-margin-input {
     font-weight: 800 !important;
 }
 
+/* ============================================================== */
+/* MODALES Y LISTAS DESPLEGABLES (SCROLL Y CONTRASTE)            */
+/* ============================================================== */
+.modal-overlay {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 10px !important;
+}
+
+.modal-overlay > div {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+}
+
+[id$="-custom-dropdown"] {
+    scrollbar-width: thin;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+}
+
+html.dark [id$="-custom-dropdown"] {
+    background: #1c1c1e !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8) !important;
+}
+
+html.dark [id$="-custom-dropdown"] > div {
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark [id$="-custom-dropdown"] > div:hover {
+    background: rgba(41, 151, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+html.dark [id$="-custom-dropdown"] > div.bg-indigo-50 {
+    background: rgba(41, 151, 255, 0.35) !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+}
+
+html.dark [id$="-custom-dropdown"] span,
+html.dark [id$="-custom-dropdown"] div {
+    color: #ffffff !important;
+}
+
+
 

@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.3">
+    <link rel="stylesheet" href="css/styles.css?v=4.4">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1140,7 +1140,7 @@
 
     <!-- Modal: Crear / Editar Tipo de Vinilo (CRUD Presets) -->
     <div id="modal-edit-vinyl-preset" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="vinyl-modal-title" class="font-bold text-sm text-slate-800">Tipo de Vinilo / Trabajo</h3>
                 <button type="button" onclick="app.closeModal('modal-edit-vinyl-preset')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1229,7 +1229,7 @@
 
     <!-- Modal: Gestionar Categorías -->
     <div id="modal-category-manager" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Gestionar Categorías</h3>
                 <button type="button" onclick="app.closeModal('modal-category-manager')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1272,7 +1272,7 @@
 
     <!-- Modal: Agregar Ítem Libre / Servicio Manual -->
     <div id="modal-add-custom-item" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="font-bold text-sm text-slate-800">Agregar Ítem Libre / Servicio</h3>
                 <button type="button" onclick="app.closeModal('modal-add-custom-item')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1514,7 +1514,7 @@
 
     <!-- Modal: Crear / Editar Proveedor (Con RUT) -->
     <div id="modal-edit-supplier" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 id="supplier-modal-title" class="font-bold text-sm text-slate-800">Nuevo Proveedor</h3>
                 <button type="button" onclick="app.closeModal('modal-edit-supplier')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1585,7 +1585,7 @@
 
     <!-- Modal: Importación Masiva de Proveedores (Excel / XLS) -->
     <div id="modal-import-suppliers" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
                     <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -1638,7 +1638,7 @@
 
     <!-- Modal: Importación Masiva de Productos (Excel / XLS) -->
     <div id="modal-import-products" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
                     <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -1712,18 +1712,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.3"></script>
-    <script src="js/db.js?v=4.3"></script>
-    <script src="js/vinilos.js?v=4.3"></script>
-    <script src="js/pdf-generator.js?v=4.3"></script>
-    <script src="js/cotizador.js?v=4.3"></script>
-    <script src="js/app.js?v=4.3"></script>
+    <script src="js/firebase-config.js?v=4.4"></script>
+    <script src="js/db.js?v=4.4"></script>
+    <script src="js/vinilos.js?v=4.4"></script>
+    <script src="js/pdf-generator.js?v=4.4"></script>
+    <script src="js/cotizador.js?v=4.4"></script>
+    <script src="js/app.js?v=4.4"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.3').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.4').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
