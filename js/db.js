@@ -661,6 +661,33 @@ class Database {
         return parseFloat(product?.costPrice) || 0;
     }
 
+    getSalePriceForQuantity(product, quantity) {
+        const qty = parseFloat(quantity) || 1;
+        const baseCost = this.getCostForQuantity(product, qty);
+        const extraCost = parseFloat(product?.extraCost) || 0;
+        const totalUnitCost = baseCost + extraCost;
+
+        // 1. Si el producto tiene escalas de volumen configuradas con su propio precio de venta
+        if (product && product.costTiers && product.costTiers.length > 0) {
+            const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
+            if (matchedTier && matchedTier.salePrice !== undefined && matchedTier.salePrice !== null && !isNaN(parseFloat(matchedTier.salePrice)) && parseFloat(matchedTier.salePrice) > 0) {
+                return parseFloat(matchedTier.salePrice);
+            }
+            if (matchedTier && matchedTier.margin !== undefined && matchedTier.margin !== null && !isNaN(parseFloat(matchedTier.margin))) {
+                return Number((totalUnitCost * (1 + parseFloat(matchedTier.margin) / 100)).toFixed(2));
+            }
+        }
+
+        // 2. Si qty <= 1 y el producto tiene salePrice guardado
+        if (qty <= 1 && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(parseFloat(product.salePrice)) && parseFloat(product.salePrice) > 0) {
+            return parseFloat(product.salePrice);
+        }
+
+        // 3. Fallback: calcular aplicando el margen sobre el costo total
+        const margin = this.getMarginForQuantity(product, qty);
+        return Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
+    }
+
     saveProduct(product) {
         const products = this.getProducts();
         if (!product.id) {

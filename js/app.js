@@ -2001,10 +2001,9 @@ class AppController {
 
         container.innerHTML = products.map((p, idx) => {
             const cost1u = window.db.getCostForQuantity(p, 1);
-            const margin = window.db.getMarginForQuantity(p, 1);
             const extraCost = parseFloat(p.extraCost) || 0;
             const unitCost = cost1u + extraCost;
-            const unitSalePrice = unitCost * (1 + margin / 100);
+            const unitSalePrice = window.db.getSalePriceForQuantity(p, 1);
 
             totalCost += unitCost;
             totalSalePrice += unitSalePrice;
@@ -2051,7 +2050,7 @@ class AppController {
                         </div>
 
                         ${products.length > 2 ? `
-                        <button type="button" onclick="app.removeCombineItem(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Quitar de la combinación">
+                        <button type="button" onclick="app.removeCombineItem(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Quitar de la combinación">
                             <i data-lucide="x" class="w-4 h-4"></i>
                         </button>` : ''}
                     </div>
@@ -2076,9 +2075,7 @@ class AppController {
         document.getElementById('combine-form-margin').value = Number(margin.toFixed(2));
 
         const notes = 'Producto combinado formado por:\n' + products.map(p => {
-            const cost1u = window.db.getCostForQuantity(p, 1);
-            const margin1u = window.db.getMarginForQuantity(p, 1);
-            const sp = (cost1u + (parseFloat(p.extraCost) || 0)) * (1 + margin1u / 100);
+            const sp = window.db.getSalePriceForQuantity(p, 1);
             return `• ${p.name} (Venta: ${currency} ${window.formatMoney(sp)})`;
         }).join('\n');
         document.getElementById('combine-form-notes').value = notes;
@@ -2159,9 +2156,8 @@ class AppController {
             products.forEach(p => {
                 const costAtQty = window.db.getCostForQuantity(p, min);
                 const extraCost = parseFloat(p.extraCost) || 0;
-                const marginAtQty = window.db.getMarginForQuantity(p, min);
                 const unitCost = costAtQty + extraCost;
-                const unitSalePrice = unitCost * (1 + marginAtQty / 100);
+                const unitSalePrice = window.db.getSalePriceForQuantity(p, min);
 
                 totalCost += unitCost;
                 totalSalePrice += unitSalePrice;
@@ -2413,12 +2409,19 @@ class AppController {
             const salePrice = parseFloat(String(row.querySelector('.combine-tier-sale-price')?.value).replace(',', '.'));
 
             if (!isNaN(min) && min > 0 && !isNaN(cost) && cost >= 0) {
+                let tierMarg = margin;
+                if (!isNaN(salePrice) && salePrice > 0 && cost > 0) {
+                    const exactMargin = ((salePrice / cost) - 1) * 100;
+                    if (isNaN(tierMarg) || Math.abs(exactMargin - tierMarg) < 0.15) {
+                        tierMarg = exactMargin;
+                    }
+                }
                 costTiers.push({
                     min,
                     max: isNaN(max) ? 999999 : max,
                     cost,
-                    margin: isNaN(margin) ? defaultMargin : margin,
-                    salePrice: isNaN(salePrice) ? Number((cost * (1 + (isNaN(margin) ? defaultMargin : margin) / 100)).toFixed(2)) : salePrice
+                    margin: !isNaN(tierMarg) ? tierMarg : defaultMargin,
+                    salePrice: !isNaN(salePrice) && salePrice > 0 ? salePrice : Number((cost * (1 + (!isNaN(tierMarg) ? tierMarg : defaultMargin) / 100)).toFixed(2))
                 });
             }
         });
@@ -2439,6 +2442,7 @@ class AppController {
             category,
             unit,
             costPrice,
+            salePrice: typedSalePrice > 0 ? typedSalePrice : Number((costPrice * (1 + defaultMargin / 100)).toFixed(2)),
             costTiers: costTiers || [],
             defaultMargin,
             url: '',

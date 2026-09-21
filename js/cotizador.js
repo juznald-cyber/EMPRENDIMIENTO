@@ -79,12 +79,19 @@ class CotizadorManager {
         const baseCost = window.db.getCostForQuantity(product, qty);
         const extraCost = parseFloat(product.extraCost) || 0;
         const totalUnitCost = baseCost + extraCost;
-        const margin = customMargin !== null && !isNaN(customMargin) 
-            ? parseFloat(customMargin) 
-            : window.db.getMarginForQuantity(product, qty);
 
-        // Precio unitario aplicando margen sobre el costo total (base + adicional)
-        const unitPrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
+        let unitPrice;
+        let margin;
+        if (customMargin !== null && !isNaN(customMargin)) {
+            margin = parseFloat(customMargin);
+            unitPrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
+        } else {
+            unitPrice = window.db.getSalePriceForQuantity(product, qty);
+            margin = totalUnitCost > 0
+                ? Number((((unitPrice / totalUnitCost) - 1) * 100).toFixed(2))
+                : window.db.getMarginForQuantity(product, qty);
+        }
+
         const lineTotal = Number((unitPrice * qty).toFixed(2));
 
         const newItem = {
@@ -151,8 +158,10 @@ class CotizadorManager {
                 const baseCost = window.db.getCostForQuantity(product, qty);
                 const extraCost = parseFloat(product.extraCost) || 0;
                 item.costPrice = baseCost + extraCost;
-                item.margin = window.db.getMarginForQuantity(product, qty);
-                item.unitPrice = Number((item.costPrice * (1 + item.margin / 100)).toFixed(2));
+                item.unitPrice = window.db.getSalePriceForQuantity(product, qty);
+                item.margin = item.costPrice > 0 
+                    ? Number((((item.unitPrice / item.costPrice) - 1) * 100).toFixed(2))
+                    : window.db.getMarginForQuantity(product, qty);
             }
         }
 
