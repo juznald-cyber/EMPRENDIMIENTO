@@ -877,5 +877,53 @@ html.dark [id$="-custom-dropdown"] div {
     color: #ffffff !important;
 }
 
+/* ============================================================== */
+/* TOOLBAR MASIVA Y COMBINADOR EN MODO OSCURO                     */
+/* ============================================================== */
+html.dark #products-bulk-bar {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid rgba(99, 102, 241, 0.45) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark #products-bulk-count {
+    color: #f8fafc !important;
+}
+
+html.dark #combine-products-list > div {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark #combine-products-list span.font-bold {
+    color: #ffffff !important;
+}
+
+html.dark #combine-form-name,
+html.dark #combine-form-sku,
+html.dark #combine-form-category,
+html.dark #combine-form-unit,
+html.dark #combine-form-cost,
+html.dark #combine-form-margin,
+html.dark #combine-form-sale-price,
+html.dark #combine-form-notes {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+}
+
+html.dark #combine-form-sale-price {
+    color: #30d158 !important;
+    border-color: rgba(48, 209, 88, 0.45) !important;
+    font-weight: 800 !important;
+}
+
+html.dark #combine-form-margin {
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    font-weight: 800 !important;
+}
+
+
 
 

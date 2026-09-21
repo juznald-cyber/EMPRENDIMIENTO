@@ -1804,15 +1804,26 @@ class AppController {
         const checked = document.querySelectorAll('.product-row-check:checked');
         const bar = document.getElementById('products-bulk-bar');
         const count = document.getElementById('products-bulk-count');
+        const combineBtn = document.getElementById('btn-bulk-combine');
         if (!bar) return;
         if (checked.length > 0) {
             bar.classList.remove('hidden');
             bar.classList.add('flex');
             if (count) count.textContent = `${checked.length} producto${checked.length > 1 ? 's' : ''} seleccionado${checked.length > 1 ? 's' : ''}`;
+            if (combineBtn) {
+                if (checked.length >= 2) {
+                    combineBtn.classList.remove('opacity-50', 'pointer-events-none');
+                    combineBtn.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> Combinar en Nuevo Producto (${checked.length})`;
+                } else {
+                    combineBtn.classList.add('opacity-50', 'pointer-events-none');
+                    combineBtn.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> Selecciona 2+ para Combinar`;
+                }
+            }
         } else {
             bar.classList.add('hidden');
             bar.classList.remove('flex');
         }
+        if (window.lucide) window.lucide.createIcons();
     }
 
     deleteSelectedProducts() {
@@ -1822,6 +1833,185 @@ class AppController {
         checked.forEach(cb => window.db.deleteProduct(cb.dataset.id));
         this.renderProducts();
         this.showToast(`${checked.length} producto${checked.length > 1 ? 's eliminados' : ' eliminado'}.`, 'info');
+    }
+
+    // ==========================================
+    // COMBINACIÓN DE PRODUCTOS EN UNO NUEVO
+    // ==========================================
+    openCombineProductsModal() {
+        const checked = document.querySelectorAll('.product-row-check:checked');
+        const selectedIds = Array.from(checked).map(cb => cb.dataset.id);
+        
+        if (selectedIds.length < 2) {
+            this.showToast('Selecciona al menos 2 productos para combinarlos en uno nuevo.', 'warning');
+            return;
+        }
+
+        const products = selectedIds.map(id => window.db.getProductById(id)).filter(Boolean);
+        if (products.length < 2) {
+            this.showToast('No se pudieron cargar los productos seleccionados.', 'error');
+            return;
+        }
+
+        this._combineSelectedProducts = products;
+        this._renderCombineModalContent();
+        this.openModal('modal-combine-products');
+    }
+
+    _renderCombineModalContent() {
+        const products = this._combineSelectedProducts || [];
+        const container = document.getElementById('combine-products-list');
+        const profile = window.db.getProfile();
+        const currency = profile.currency || '$';
+
+        let totalCost = 0;
+        let totalSalePrice = 0;
+        const names = [];
+        const images = [];
+
+        container.innerHTML = products.map((p, idx) => {
+            const cost1u = window.db.getCostForQuantity(p, 1);
+            const margin = window.db.getMarginForQuantity(p, 1);
+            const extraCost = parseFloat(p.extraCost) || 0;
+            const unitCost = cost1u + extraCost;
+            const unitSalePrice = unitCost * (1 + margin / 100);
+
+            totalCost += unitCost;
+            totalSalePrice += unitSalePrice;
+            names.push(p.name);
+
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                p.images.forEach(img => { if (images.length < 3 && !images.includes(img)) images.push(img); });
+            } else if (p.imageData && !images.includes(p.imageData)) {
+                if (images.length < 3) images.push(p.imageData);
+            }
+
+            return `
+                <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-5 h-5 bg-indigo-100 text-indigo-700 font-bold rounded-full flex items-center justify-center text-[10px] shrink-0">${idx + 1}</span>
+                        <div class="truncate">
+                            <span class="font-bold text-slate-800">${this.escapeHTML(p.name)}</span>
+                            <span class="text-[10px] text-slate-400 font-mono block">${p.sku || ''} · ${p.category || 'General'}</span>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 font-mono">
+                        <div class="text-slate-500 text-[11px]">Costo: ${currency} ${window.formatMoney(unitCost)}</div>
+                        <div class="text-emerald-700 font-bold text-xs">Venta: ${currency} ${window.formatMoney(unitSalePrice)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this._combineImages = images;
+
+        // Auto-generar nombre concatenando con +
+        const combinedName = names.join(' + ');
+        document.getElementById('combine-form-name').value = combinedName;
+        document.getElementById('combine-form-sku').value = 'COMBO-' + Math.floor(Math.random() * 900 + 100);
+        document.getElementById('combine-form-category').value = products[0]?.category || 'Combos';
+        document.getElementById('combine-form-unit').value = 'Unidad';
+
+        // Setear costos y precios sumados
+        document.getElementById('combine-form-cost').value = Number(totalCost.toFixed(2));
+        document.getElementById('combine-form-sale-price').value = Number(totalSalePrice.toFixed(2));
+
+        const margin = totalCost > 0 ? (((totalSalePrice / totalCost) - 1) * 100) : 50;
+        document.getElementById('combine-form-margin').value = Number(margin.toFixed(2));
+
+        const notes = 'Producto combinado formado por:\n' + products.map(p => {
+            const cost1u = window.db.getCostForQuantity(p, 1);
+            const margin1u = window.db.getMarginForQuantity(p, 1);
+            const sp = (cost1u + (parseFloat(p.extraCost) || 0)) * (1 + margin1u / 100);
+            return `• ${p.name} (Venta: ${currency} ${window.formatMoney(sp)})`;
+        }).join('\n');
+        document.getElementById('combine-form-notes').value = notes;
+        
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    onCombineCostChange() {
+        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 0;
+        const spEl = document.getElementById('combine-form-sale-price');
+        if (spEl && cost > 0) {
+            spEl.value = Number((cost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onCombineMarginChange() {
+        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 0;
+        const spEl = document.getElementById('combine-form-sale-price');
+        if (spEl && cost > 0) {
+            spEl.value = Number((cost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onCombineSalePriceChange() {
+        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
+        const salePrice = parseFloat(String(document.getElementById('combine-form-sale-price')?.value).replace(',', '.')) || 0;
+        const marginEl = document.getElementById('combine-form-margin');
+        if (marginEl && cost > 0 && salePrice > 0) {
+            const margin = ((salePrice / cost) - 1) * 100;
+            marginEl.value = Number(margin.toFixed(2));
+        }
+    }
+
+    submitCombineProducts() {
+        const name = (document.getElementById('combine-form-name')?.value || '').trim();
+        const sku = (document.getElementById('combine-form-sku')?.value || '').trim();
+        const category = (document.getElementById('combine-form-category')?.value || '').trim() || 'Combos';
+        const unit = (document.getElementById('combine-form-unit')?.value || '').trim() || 'Unidad';
+        const costPrice = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
+        const typedSalePrice = parseFloat(String(document.getElementById('combine-form-sale-price')?.value).replace(',', '.')) || 0;
+        let defaultMargin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.'));
+        if (isNaN(defaultMargin)) defaultMargin = 50;
+
+        if (!name) {
+            this.showToast('Por favor escribe un nombre para el producto combinado.', 'warning');
+            return;
+        }
+
+        if (typedSalePrice > 0 && costPrice > 0) {
+            const exactMargin = ((typedSalePrice / costPrice) - 1) * 100;
+            if (Math.abs(exactMargin - defaultMargin) < 0.15) {
+                defaultMargin = exactMargin;
+            }
+        }
+
+        const notes = (document.getElementById('combine-form-notes')?.value || '').trim();
+        const images = this._combineImages || [];
+        const firstProd = (this._combineSelectedProducts && this._combineSelectedProducts[0]) || null;
+        const supplierId = firstProd ? firstProd.supplierId : '';
+
+        window.db.saveCategory(category);
+
+        const newProduct = {
+            id: 'prod_' + Date.now(),
+            name,
+            sku: sku || ('COMBO-' + Math.floor(Math.random() * 900 + 100)),
+            supplierId: supplierId || '',
+            category,
+            unit,
+            costPrice,
+            costTiers: [],
+            defaultMargin,
+            url: '',
+            notes,
+            extraCost: 0,
+            extraCostLabel: '',
+            images,
+            imageData: images.length > 0 ? images[0] : '',
+            useGlobalTiers: true
+        };
+
+        window.db.saveProduct(newProduct);
+        this.renderCategoriesDataLists();
+        this.renderProducts();
+        this.closeModal('modal-combine-products');
+        this.clearProductSelection();
+        this.showToast('¡Producto combinado creado exitosamente en el catálogo!', 'success');
     }
 
     clearProductSelection() {

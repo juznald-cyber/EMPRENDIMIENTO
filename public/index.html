@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.5">
+    <link rel="stylesheet" href="css/styles.css?v=4.6">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -885,14 +885,22 @@
                         </div>
 
                         <!-- Toolbar masiva: aparece cuando hay checkboxes seleccionados -->
-                        <div id="products-bulk-bar" class="hidden items-center gap-2 px-1 py-2 bg-rose-50 border border-rose-200 rounded-xl mb-2">
-                            <span id="products-bulk-count" class="text-xs font-bold text-rose-700"></span>
-                            <button onclick="app.deleteSelectedProducts()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar seleccionados
-                            </button>
-                            <button onclick="app.clearProductSelection()" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
-                                Cancelar
-                            </button>
+                        <div id="products-bulk-bar" class="hidden items-center justify-between gap-3 px-3.5 py-2.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl mb-3 shadow-sm transition-all">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                                <span id="products-bulk-count" class="text-xs font-bold text-indigo-900"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="app.openCombineProductsModal()" id="btn-bulk-combine" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-all">
+                                    <i data-lucide="layers" class="w-3.5 h-3.5"></i> Combinar en Nuevo Producto
+                                </button>
+                                <button onclick="app.deleteSelectedProducts()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-all">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
+                                </button>
+                                <button onclick="app.clearProductSelection()" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Tabla de Productos -->
@@ -1512,6 +1520,105 @@
         </div>
     </div>
 
+    <!-- Modal: Combinar Productos Seleccionados -->
+    <div id="modal-combine-products" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Combinar Productos en uno Nuevo</h3>
+                        <p class="text-[11px] text-slate-400">Crea un producto nuevo sumando sus valores sin borrar los originales</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-combine-products')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Lista de productos que se están combinando -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700">Componentes Seleccionados a Combinar:</label>
+                <div id="combine-products-list" class="space-y-2 max-h-48 overflow-y-auto p-1">
+                    <!-- Inyectado dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Formulario del Nuevo Producto Combinado -->
+            <div class="space-y-3 pt-2 border-t border-slate-100">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Código / SKU</label>
+                        <input type="text" id="combine-form-sku" placeholder="COMBO-001" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-mono" />
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Producto Combinado *</label>
+                        <input type="text" id="combine-form-name" placeholder="Nombre combinado..." 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-800" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
+                        <input type="text" id="combine-form-category" placeholder="Ej. Combos, Textil..." 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Unidad</label>
+                        <input type="text" id="combine-form-unit" value="Unidad" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <!-- Resumen Financiero Combinado -->
+                <div class="p-3.5 bg-gradient-to-br from-indigo-50/80 to-emerald-50/80 rounded-2xl border border-indigo-100/80 space-y-3">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Costo Base Total ($)</label>
+                            <input type="number" id="combine-form-cost" step="any"
+                                oninput="app.onCombineCostChange()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-slate-800 text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-indigo-700 mb-1">Margen Resultante (%)</label>
+                            <input type="number" id="combine-form-margin" step="any"
+                                oninput="app.onCombineMarginChange()"
+                                class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl focus:border-indigo-400 outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-700 mb-1">Precio Venta Total ($)</label>
+                            <input type="number" id="combine-form-sale-price" step="any"
+                                oninput="app.onCombineSalePriceChange()"
+                                class="w-full px-3 py-2 text-xs font-black text-emerald-700 bg-white border border-emerald-300 rounded-xl focus:border-emerald-500 outline-none text-center" />
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 text-center">
+                        💡 Suma el costo y precio de venta de los componentes. Los valores son totalmente editables.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalle de Componentes</label>
+                    <textarea id="combine-form-notes" rows="2" placeholder="Opcional..." 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="app.closeModal('modal-combine-products')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all">
+                    Cancelar
+                </button>
+                <button type="button" onclick="app.submitCombineProducts()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all">
+                    <i data-lucide="check" class="w-4 h-4"></i> Guardar Producto Combinado
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Crear / Editar Proveedor (Con RUT) -->
     <div id="modal-edit-supplier" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -1712,18 +1819,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.5"></script>
-    <script src="js/db.js?v=4.5"></script>
-    <script src="js/vinilos.js?v=4.5"></script>
-    <script src="js/pdf-generator.js?v=4.5"></script>
-    <script src="js/cotizador.js?v=4.5"></script>
-    <script src="js/app.js?v=4.5"></script>
+    <script src="js/firebase-config.js?v=4.6"></script>
+    <script src="js/db.js?v=4.6"></script>
+    <script src="js/vinilos.js?v=4.6"></script>
+    <script src="js/pdf-generator.js?v=4.6"></script>
+    <script src="js/cotizador.js?v=4.6"></script>
+    <script src="js/app.js?v=4.6"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.5').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
