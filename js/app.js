@@ -1377,7 +1377,7 @@ class AppController {
                         ${currency} ${window.formatMoney(cost1u)}
                     </td>
                     <td class="py-3 px-3 text-center price-col">
-                        <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
+                        <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${window.formatNumber(margin, 2)}%</span>
                     </td>
                     <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice)}</td>
                     <td class="py-3 px-3 text-center">
@@ -1479,14 +1479,16 @@ class AppController {
         container.innerHTML = filtered.map(p => {
             const cost1u = window.db.getCostForQuantity(p, 1);
             const margin = window.db.getMarginForQuantity(p, 1);
-            const salePrice = window.db.calculateSalePrice(cost1u, margin);
+            const extraCost = parseFloat(p.extraCost) || 0;
+            const totalCost1u = cost1u + extraCost;
+            const salePrice = totalCost1u * (1 + margin / 100);
 
             return `
                 <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex items-center justify-between transition-colors">
                     <div>
                         <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(cost1u)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice)}</span></p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(totalCost1u)} | Margen: +${window.formatNumber(margin, 2)}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice)}</span></p>
                     </div>
                     <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar
@@ -1555,7 +1557,8 @@ class AppController {
             document.getElementById('prod-form-category-input').value = p.category || 'Vinilos';
             document.getElementById('prod-form-unit').value = p.unit || 'Unidad';
             document.getElementById('prod-form-cost').value = p.costPrice || 0;
-            document.getElementById('prod-form-margin').value = p.defaultMargin || 50;
+            const marginVal = p.defaultMargin !== undefined && p.defaultMargin !== null ? parseFloat(p.defaultMargin) : 50;
+            document.getElementById('prod-form-margin').value = Number(marginVal.toFixed(2));
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
 
@@ -1564,12 +1567,12 @@ class AppController {
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
 
             // Precio de venta calculado (incluye costo adicional + margen sobre el costo total)
-            const cost1u      = parseFloat(p.costPrice) || 0;
-            const extra1u     = parseFloat(p.extraCost) || 0;
+            const cost1u      = parseFloat(String(p.costPrice).replace(',', '.')) || 0;
+            const extra1u     = parseFloat(String(p.extraCost).replace(',', '.')) || 0;
             const totalCost1u = cost1u + extra1u;
-            const margin1u    = parseFloat(p.defaultMargin) || 50;
+            const margin1u    = marginVal;
             const spEl = document.getElementById('prod-form-sale-price');
-            if (spEl) spEl.value = totalCost1u > 0 ? (totalCost1u * (1 + margin1u / 100)).toFixed(2) : '';
+            if (spEl) spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
 
             // Imágenes: soporta array (nuevo) o string (viejo)
             let loadImgs = [];
@@ -1631,7 +1634,7 @@ class AppController {
             <div class="col-span-4">
                 <div class="relative">
                     <span class="absolute left-2 top-1 text-xs text-slate-400">$</span>
-                    <input type="number" step="0.01" value="${cost}" placeholder="Costo" class="tier-cost w-full pl-5 pr-2 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none" />
+                    <input type="number" step="any" value="${cost}" placeholder="Costo" class="tier-cost w-full pl-5 pr-2 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none" />
                 </div>
             </div>
             <div class="col-span-1 text-center">
@@ -1651,13 +1654,25 @@ class AppController {
         const supplierName = document.getElementById('prod-form-supplier-input').value.trim();
         const category = document.getElementById('prod-form-category-input').value.trim() || 'General';
         const unit = document.getElementById('prod-form-unit').value.trim();
-        const costPrice = parseFloat(document.getElementById('prod-form-cost').value) || 0;
-        const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
+        const costPrice = parseFloat(String(document.getElementById('prod-form-cost').value).replace(',', '.')) || 0;
+        let defaultMargin = parseFloat(String(document.getElementById('prod-form-margin').value).replace(',', '.'));
+        if (isNaN(defaultMargin)) defaultMargin = 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
         // Costo adicional (estampado, sublimación, etc.)
-        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
         const extraCostLabel = (document.getElementById('prod-form-extra-cost-label')?.value || '').trim();
+
+        // Si el usuario especificó un precio de venta directo, asegurar margen exacto para cuadre perfecto
+        const typedSalePrice = parseFloat(String(document.getElementById('prod-form-sale-price')?.value).replace(',', '.')) || 0;
+        const totalUnitCost = costPrice + extraCost;
+        if (typedSalePrice > 0 && totalUnitCost > 0) {
+            const exactMargin = ((typedSalePrice / totalUnitCost) - 1) * 100;
+            if (Math.abs(exactMargin - defaultMargin) < 0.15) {
+                defaultMargin = exactMargin;
+            }
+        }
+
         // Leer imágenes como array (hasta 3)
         const images = this._getProductImagesArray();
         // Compatibilidad retroactiva: imageData = primera imagen si existe
@@ -1677,7 +1692,7 @@ class AppController {
             const min = parseInt(row.querySelector('.tier-min')?.value, 10) || 1;
             const maxVal = row.querySelector('.tier-max')?.value;
             const max = maxVal ? parseInt(maxVal, 10) : 999999;
-            const cost = parseFloat(row.querySelector('.tier-cost')?.value);
+            const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.'));
             if (!isNaN(cost) && cost >= 0) {
                 costTiers.push({ min, max, cost });
             }
@@ -1695,7 +1710,7 @@ class AppController {
             unit: unit || 'Unidad',
             costPrice: costPrice || 0,
             costTiers: costTiers || [],
-            defaultMargin: defaultMargin || 50,
+            defaultMargin: defaultMargin,
             url: url || '',
             notes: notes || '',
             extraCost: extraCost || 0,
@@ -1726,7 +1741,7 @@ class AppController {
 
     /** Recalcula precio de venta cuando cambia el costo o el costo adicional */
     onProductCostChange() {
-        const margin = parseFloat(document.getElementById('prod-form-margin')?.value);
+        const margin = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.'));
         if (!isNaN(margin)) this._recalcSalePrice();
     }
 
@@ -1741,14 +1756,14 @@ class AppController {
      * Margen = ((precio_venta / costo_total) - 1) * 100
      */
     onProductSalePriceChange() {
-        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const cost      = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
         const totalCost = cost + extraCost;
-        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value) || 0;
+        const salePrice = parseFloat(String(document.getElementById('prod-form-sale-price')?.value).replace(',', '.')) || 0;
         const marginInp = document.getElementById('prod-form-margin');
         if (!marginInp || salePrice <= 0 || totalCost <= 0) return;
         const margin = ((salePrice / totalCost) - 1) * 100;
-        marginInp.value = Math.round(margin * 10) / 10;
+        marginInp.value = Number(margin.toFixed(2));
     }
 
     /**
@@ -1756,14 +1771,14 @@ class AppController {
      * El porcentaje de ganancia se aplica tanto al costo del insumo como al costo adicional.
      */
     _recalcSalePrice() {
-        const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const cost      = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
         const totalCost = cost + extraCost;
-        const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
+        const margin    = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.')) || 0;
         const salePriceInp = document.getElementById('prod-form-sale-price');
         if (!salePriceInp || totalCost <= 0) return;
         const salePrice = totalCost * (1 + margin / 100);
-        salePriceInp.value = salePrice.toFixed(2);
+        salePriceInp.value = Number(salePrice.toFixed(2));
     }
 
 

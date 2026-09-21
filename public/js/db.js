@@ -58,7 +58,11 @@ window.formatNumber = function(amount, decimals = 2) {
     const fixed = num.toFixed(decimals);
     const [intPart, decPart] = fixed.split('.');
     const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return decimals > 0 && decPart !== '00' ? `${formattedInt},${decPart}` : formattedInt;
+    if (decimals > 0 && decPart && decPart !== '00') {
+        const cleanDec = decPart.replace(/0+$/, '');
+        return cleanDec.length > 0 ? `${formattedInt},${cleanDec}` : formattedInt;
+    }
+    return formattedInt;
 };
 
 const DB_KEYS = {
@@ -893,18 +897,37 @@ class Database {
         // 1. Si el producto tiene escalas personalizadas activas
         if (product && product.customTiers && product.customTiers.length > 0) {
             const matchedTier = product.customTiers.find(tier => qty >= tier.min && qty <= tier.max);
-            if (matchedTier) return parseFloat(matchedTier.margin);
+            if (matchedTier && !isNaN(matchedTier.margin)) return parseFloat(matchedTier.margin);
         }
 
-        // 2. Si usa las escalas globales
-        if (!product || product.useGlobalTiers !== false) {
+        // 2. Si el producto tiene su margen base configurado (defaultMargin)
+        const hasProductMargin = product && product.defaultMargin !== undefined && product.defaultMargin !== null && !isNaN(parseFloat(product.defaultMargin));
+
+        // Para 1 unidad (menudeo / precio base), se respeta SIEMPRE el margen propio del producto
+        if (hasProductMargin && qty <= 1) {
+            return parseFloat(product.defaultMargin);
+        }
+
+        // 3. Si usa las escalas globales para mayores volúmenes (qty > 1)
+        if (product && product.useGlobalTiers) {
             const globalTiers = this.getGlobalTiers();
             const matchedTier = globalTiers.find(tier => qty >= tier.min && qty <= tier.max);
-            if (matchedTier) return parseFloat(matchedTier.margin);
+            if (matchedTier && matchedTier.min > 1 && !isNaN(matchedTier.margin)) {
+                return parseFloat(matchedTier.margin);
+            }
         }
 
-        // 3. Margen por defecto del producto
-        return product?.defaultMargin !== undefined ? parseFloat(product.defaultMargin) : 40;
+        // 4. Margen base del producto
+        if (hasProductMargin) {
+            return parseFloat(product.defaultMargin);
+        }
+
+        // 5. Fallback a escalas globales
+        const globalTiers = this.getGlobalTiers();
+        const matchedTier = globalTiers.find(tier => qty >= tier.min && qty <= tier.max);
+        if (matchedTier && !isNaN(matchedTier.margin)) return parseFloat(matchedTier.margin);
+
+        return 50;
     }
 
     calculateSalePrice(costPrice, marginPercent) {

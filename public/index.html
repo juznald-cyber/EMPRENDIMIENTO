@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.4">
+    <link rel="stylesheet" href="css/styles.css?v=4.5">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1300,12 +1300,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Costo Base ($)</label>
-                        <input type="number" id="custom-item-cost" step="0.1" value="10" 
+                        <input type="number" id="custom-item-cost" step="any" value="10" 
                             class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">% Margen Ganancia</label>
-                        <input type="number" id="custom-item-margin" step="1" value="50" 
+                        <input type="number" id="custom-item-margin" step="any" value="50" 
                             class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
                     </div>
                 </div>
@@ -1386,19 +1386,19 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Costo Base 1u ($)</label>
-                        <input type="number" id="prod-form-cost" step="0.01" value="5.00" 
+                        <input type="number" id="prod-form-cost" step="any" value="5.00" 
                             oninput="app.onProductCostChange()"
                             class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Margen Base (%)</label>
-                        <input type="number" id="prod-form-margin" step="1" value="50" 
+                        <input type="number" id="prod-form-margin" step="any" value="50" 
                             oninput="app.onProductMarginChange()"
                             class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl focus:bg-white outline-none text-center" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-emerald-700 mb-1">Precio Venta 1u ($) <span class="font-normal text-slate-400">(o escribe el precio y se calcula el margen)</span></label>
-                        <input type="number" id="prod-form-sale-price" step="0.01" value=""
+                        <input type="number" id="prod-form-sale-price" step="any" value=""
                             oninput="app.onProductSalePriceChange()"
                             placeholder="Auto"
                             class="w-full px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl focus:bg-white outline-none" />
@@ -1423,7 +1423,7 @@
                             <label class="block text-[11px] font-bold text-amber-700 mb-1">Monto Adicional por Unidad ($)</label>
                             <div class="relative">
                                 <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">$</span>
-                                <input type="number" id="prod-form-extra-cost" step="0.01" value="0" min="0"
+                                <input type="number" id="prod-form-extra-cost" step="any" value="0" min="0"
                                     oninput="app.onProductCostChange()"
                                     class="w-full pl-6 pr-2 py-2 text-xs font-bold text-amber-700 bg-white border border-amber-200 rounded-xl focus:border-amber-400 outline-none text-center" />
                             </div>
@@ -1712,18 +1712,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.4"></script>
-    <script src="js/db.js?v=4.4"></script>
-    <script src="js/vinilos.js?v=4.4"></script>
-    <script src="js/pdf-generator.js?v=4.4"></script>
-    <script src="js/cotizador.js?v=4.4"></script>
-    <script src="js/app.js?v=4.4"></script>
+    <script src="js/firebase-config.js?v=4.5"></script>
+    <script src="js/db.js?v=4.5"></script>
+    <script src="js/vinilos.js?v=4.5"></script>
+    <script src="js/pdf-generator.js?v=4.5"></script>
+    <script src="js/cotizador.js?v=4.5"></script>
+    <script src="js/app.js?v=4.5"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.4').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.5').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
