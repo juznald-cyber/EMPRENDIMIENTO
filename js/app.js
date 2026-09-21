@@ -2083,7 +2083,246 @@ class AppController {
         }).join('\n');
         document.getElementById('combine-form-notes').value = notes;
         
+        // Generar y poblar las escalas de volumen combinadas
+        const tierContainer = document.getElementById('combine-cost-tiers-container');
+        if (tierContainer) {
+            tierContainer.innerHTML = '';
+            const combinedTiers = this._computeCombinedCostTiers(products);
+            if (combinedTiers.length > 0) {
+                combinedTiers.forEach(t => {
+                    this.addCombineCostTierRow(t.min, t.max, t.cost, t.margin, t.salePrice);
+                });
+            } else {
+                tierContainer.innerHTML = `
+                    <div class="combine-tiers-empty-msg text-center py-3 text-slate-400 text-xs italic bg-white/50 rounded-xl border border-dashed border-slate-200">
+                        Los productos seleccionados no tienen escalas de volumen configuradas.<br>
+                        <span class="text-[11px] text-indigo-500 font-medium">Puedes agregar escalas personalizadas con el botón "+ Agregar Rango" arriba.</span>
+                    </div>
+                `;
+            }
+        }
+        
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    _computeCombinedCostTiers(products) {
+        if (!Array.isArray(products) || products.length === 0) return [];
+
+        const hasAnyTiers = products.some(p => p.costTiers && p.costTiers.length > 0);
+        if (!hasAnyTiers) return [];
+
+        // Recolectar todos los puntos de quiebre (cantidades mínimas y máximas + 1)
+        const cutPoints = new Set();
+        products.forEach(p => {
+            if (p.costTiers && p.costTiers.length > 0) {
+                p.costTiers.forEach(t => {
+                    const min = parseInt(t.min, 10);
+                    const max = parseInt(t.max, 10);
+                    if (!isNaN(min) && min >= 1) cutPoints.add(min);
+                    if (!isNaN(max) && max >= 1 && max < 999999) cutPoints.add(max + 1);
+                });
+            }
+        });
+
+        const sortedCuts = Array.from(cutPoints).filter(n => n > 1).sort((a, b) => a - b);
+        if (sortedCuts.length === 0) return [];
+
+        // Determinar cota superior máxima entre los productos
+        let globalMax = 999;
+        products.forEach(p => {
+            if (p.costTiers) {
+                p.costTiers.forEach(t => {
+                    const max = parseInt(t.max, 10);
+                    if (!isNaN(max) && max > 0 && max < 999999) {
+                        if (max > globalMax || globalMax === 999) globalMax = Math.max(globalMax, max);
+                    }
+                });
+            }
+        });
+
+        const combinedTiers = [];
+        for (let i = 0; i < sortedCuts.length; i++) {
+            const min = sortedCuts[i];
+            let max;
+            if (i + 1 < sortedCuts.length) {
+                max = sortedCuts[i + 1] - 1;
+            } else {
+                max = globalMax >= min ? globalMax : min + 50;
+            }
+
+            if (max < min) continue;
+
+            // Evaluar costos y precios de cada producto en la cantidad 'min'
+            let totalCost = 0;
+            let totalSalePrice = 0;
+
+            products.forEach(p => {
+                const costAtQty = window.db.getCostForQuantity(p, min);
+                const extraCost = parseFloat(p.extraCost) || 0;
+                const marginAtQty = window.db.getMarginForQuantity(p, min);
+                const unitCost = costAtQty + extraCost;
+                const unitSalePrice = unitCost * (1 + marginAtQty / 100);
+
+                totalCost += unitCost;
+                totalSalePrice += unitSalePrice;
+            });
+
+            const tierMargin = totalCost > 0 ? (((totalSalePrice / totalCost) - 1) * 100) : 50;
+
+            combinedTiers.push({
+                min,
+                max,
+                cost: Number(totalCost.toFixed(2)),
+                margin: Number(tierMargin.toFixed(2)),
+                salePrice: Number(totalSalePrice.toFixed(2))
+            });
+        }
+
+        // Fusionar rangos consecutivos si el costo y precio resultante son idénticos
+        const merged = [];
+        for (const t of combinedTiers) {
+            if (merged.length > 0) {
+                const prev = merged[merged.length - 1];
+                if (prev.cost === t.cost && prev.margin === t.margin && prev.salePrice === t.salePrice && prev.max + 1 === t.min) {
+                    prev.max = t.max;
+                    continue;
+                }
+            }
+            merged.push(t);
+        }
+
+        return merged;
+    }
+
+    addCombineCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '') {
+        const container = document.getElementById('combine-cost-tiers-container');
+        if (!container) return;
+
+        const placeholder = container.querySelector('.combine-tiers-empty-msg');
+        if (placeholder) placeholder.remove();
+
+        const baseCost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
+        const baseMargin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 50;
+
+        const existingRows = container.querySelectorAll('.combine-tier-row');
+        let autoMin = 1;
+        let autoMax = 10;
+        if (min === null) {
+            if (existingRows.length > 0) {
+                const lastRow = existingRows[existingRows.length - 1];
+                const lastMax = parseInt(lastRow.querySelector('.combine-tier-max')?.value, 10);
+                if (!isNaN(lastMax) && lastMax > 0) {
+                    autoMin = lastMax + 1;
+                    autoMax = autoMin + 10;
+                } else {
+                    autoMin = 11;
+                    autoMax = 50;
+                }
+            } else {
+                autoMin = 6;
+                autoMax = 12;
+            }
+        } else {
+            autoMin = min;
+            autoMax = max === 999999 ? '' : max;
+        }
+
+        const tierCost = (cost !== '' && cost !== null && !isNaN(cost)) ? cost : (baseCost > 0 ? baseCost : '');
+        let tierMargin = (margin !== '' && margin !== null && !isNaN(margin)) ? margin : baseMargin;
+        let tierSalePrice = salePrice;
+
+        const numCost = parseFloat(tierCost) || 0;
+        if ((tierSalePrice === '' || tierSalePrice === null || isNaN(tierSalePrice)) && numCost > 0) {
+            tierSalePrice = Number((numCost * (1 + (parseFloat(tierMargin) || 0) / 100)).toFixed(2));
+        } else if (tierSalePrice !== '' && numCost > 0 && (margin === '' || margin === null)) {
+            tierMargin = Number((((parseFloat(tierSalePrice) / numCost) - 1) * 100).toFixed(2));
+        }
+
+        const row = document.createElement('div');
+        row.className = 'combine-tier-row bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
+        row.innerHTML = `
+            <!-- Cantidades Min a Max -->
+            <div class="sm:col-span-3 flex items-center gap-1">
+                <input type="number" min="1" value="${autoMin}" placeholder="Min" 
+                    class="combine-tier-min w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                <span class="text-xs text-slate-400 font-bold px-0.5">a</span>
+                <input type="number" min="1" value="${autoMax}" placeholder="Max (+)" 
+                    class="combine-tier-max w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+            </div>
+
+            <!-- Costo del Rango -->
+            <div class="sm:col-span-3 relative">
+                <span class="text-[10px] text-slate-400 font-bold sm:hidden block mb-0.5">Costo ($):</span>
+                <div class="relative">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                    <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
+                        oninput="app.onCombineTierCostChange(this)"
+                        class="combine-tier-cost w-full pl-6 pr-2 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
+                </div>
+            </div>
+
+            <!-- Margen del Rango -->
+            <div class="sm:col-span-2 relative">
+                <span class="text-[10px] text-indigo-500 font-bold sm:hidden block mb-0.5">Margen (%):</span>
+                <input type="number" step="any" value="${tierMargin !== '' ? Number(parseFloat(tierMargin).toFixed(2)) : ''}" placeholder="%" 
+                    oninput="app.onCombineTierMarginChange(this)"
+                    class="combine-tier-margin w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
+            </div>
+
+            <!-- Precio Venta del Rango -->
+            <div class="sm:col-span-3 relative">
+                <span class="text-[10px] text-emerald-600 font-bold sm:hidden block mb-0.5">Precio Venta ($):</span>
+                <div class="relative">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold">$</span>
+                    <input type="number" step="any" value="${tierSalePrice !== '' ? Number(parseFloat(tierSalePrice).toFixed(2)) : ''}" placeholder="Venta" 
+                        oninput="app.onCombineTierSalePriceChange(this)"
+                        class="combine-tier-sale-price w-full pl-6 pr-2 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
+                </div>
+            </div>
+
+            <!-- Botón Eliminar -->
+            <div class="sm:col-span-1 text-center">
+                <button type="button" onclick="this.closest('.combine-tier-row').remove()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Eliminar este rango">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    onCombineTierCostChange(inputEl) {
+        const row = inputEl.closest('.combine-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.')) || 0;
+        const salePriceInp = row.querySelector('.combine-tier-sale-price');
+        if (salePriceInp && cost > 0) {
+            salePriceInp.value = Number((cost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onCombineTierMarginChange(inputEl) {
+        const row = inputEl.closest('.combine-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.')) || 0;
+        const salePriceInp = row.querySelector('.combine-tier-sale-price');
+        if (salePriceInp && cost > 0) {
+            salePriceInp.value = Number((cost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onCombineTierSalePriceChange(inputEl) {
+        const row = inputEl.closest('.combine-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
+        const salePrice = parseFloat(String(row.querySelector('.combine-tier-sale-price')?.value).replace(',', '.')) || 0;
+        const marginInp = row.querySelector('.combine-tier-margin');
+        if (marginInp && cost > 0 && salePrice > 0) {
+            const margin = ((salePrice / cost) - 1) * 100;
+            marginInp.value = Number(margin.toFixed(2));
+        }
     }
 
     moveCombineItem(index, direction) {
@@ -2162,6 +2401,29 @@ class AppController {
             }
         }
 
+        // Extraer escalas de costos/precios combinadas
+        const costTiers = [];
+        const tierRows = document.querySelectorAll('#combine-cost-tiers-container .combine-tier-row');
+        tierRows.forEach(row => {
+            const min = parseInt(row.querySelector('.combine-tier-min')?.value, 10);
+            const maxVal = row.querySelector('.combine-tier-max')?.value;
+            const max = maxVal === '' || maxVal === null ? 999999 : parseInt(maxVal, 10);
+            const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.'));
+            const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.'));
+            const salePrice = parseFloat(String(row.querySelector('.combine-tier-sale-price')?.value).replace(',', '.'));
+
+            if (!isNaN(min) && min > 0 && !isNaN(cost) && cost >= 0) {
+                costTiers.push({
+                    min,
+                    max: isNaN(max) ? 999999 : max,
+                    cost,
+                    margin: isNaN(margin) ? defaultMargin : margin,
+                    salePrice: isNaN(salePrice) ? Number((cost * (1 + (isNaN(margin) ? defaultMargin : margin) / 100)).toFixed(2)) : salePrice
+                });
+            }
+        });
+        costTiers.sort((a, b) => a.min - b.min);
+
         const notes = (document.getElementById('combine-form-notes')?.value || '').trim();
         const images = this._combineImages || [];
         const firstProd = (this._combineSelectedProducts && this._combineSelectedProducts[0]) || null;
@@ -2177,7 +2439,7 @@ class AppController {
             category,
             unit,
             costPrice,
-            costTiers: [],
+            costTiers: costTiers || [],
             defaultMargin,
             url: '',
             notes,

@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.8">
+    <link rel="stylesheet" href="css/styles.css?v=4.9">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1620,6 +1620,36 @@
                     </p>
                 </div>
 
+                <!-- Escala de Precios y Costos por Volumen Combinada -->
+                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <i data-lucide="trending-down" class="w-4 h-4 text-indigo-600"></i>
+                                Escala de Costos y Precios por Volumen Combinada
+                            </h4>
+                            <p class="text-[11px] text-slate-400">Combina y calcula automáticamente los rangos de precios de los componentes.</p>
+                        </div>
+                        <button type="button" onclick="app.addCombineCostTierRow()" 
+                            class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-sm">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar Rango
+                        </button>
+                    </div>
+
+                    <!-- Encabezados de Columnas para los Rangos -->
+                    <div class="hidden sm:grid sm:grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">
+                        <div class="sm:col-span-3 text-center">Cantidades</div>
+                        <div class="sm:col-span-3 text-center">Costo ($)</div>
+                        <div class="sm:col-span-2 text-center text-indigo-600">Margen (%)</div>
+                        <div class="sm:col-span-3 text-center text-emerald-600">Precio Venta ($)</div>
+                        <div class="sm:col-span-1 text-center">Acción</div>
+                    </div>
+
+                    <div id="combine-cost-tiers-container" class="space-y-2 max-h-48 overflow-y-auto p-0.5">
+                        <!-- Filas de rangos combinados generadas dinámicamente -->
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalle de Componentes</label>
                     <textarea id="combine-form-notes" rows="2" placeholder="Opcional..." 
@@ -1838,18 +1868,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.8"></script>
-    <script src="js/db.js?v=4.8"></script>
-    <script src="js/vinilos.js?v=4.8"></script>
-    <script src="js/pdf-generator.js?v=4.8"></script>
-    <script src="js/cotizador.js?v=4.8"></script>
-    <script src="js/app.js?v=4.8"></script>
+    <script src="js/firebase-config.js?v=4.9"></script>
+    <script src="js/db.js?v=4.9"></script>
+    <script src="js/vinilos.js?v=4.9"></script>
+    <script src="js/pdf-generator.js?v=4.9"></script>
+    <script src="js/cotizador.js?v=4.9"></script>
+    <script src="js/app.js?v=4.9"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.8').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.9').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
