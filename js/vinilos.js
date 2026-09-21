@@ -37,6 +37,17 @@ class VinylCalculator {
         return 0;
     }
 
+    calculateLaborPerM2FromRoll(rollWidthCm, rollLengthCm, rollLabor) {
+        const wM = (parseFloat(rollWidthCm) || 0) / 100;
+        const lM = (parseFloat(rollLengthCm) || 0) / 100;
+        const labor = parseFloat(rollLabor) || 0;
+        const areaM2 = wM * lM;
+        if (areaM2 > 0 && labor > 0) {
+            return Number((labor / areaM2).toFixed(2));
+        }
+        return 0;
+    }
+
     calculate(params) {
         const {
             presetId = this.currentPresetId,

@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.1">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -559,24 +559,33 @@
                                 <!-- Badge resultado -->
                                 <span id="vinyl-roll-calc-equivalent" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">Costo: $0 / m²</span>
                             </div>
-                            <div class="grid grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho del Pliego (cm)</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho Pliego (cm)</label>
                                     <input type="number" id="vinyl-roll-width-input" step="1" value="58" min="1"
                                         oninput="app.onVinylRollChange()"
                                         class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo del Pliego (cm)</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo Pliego (cm)</label>
                                     <input type="number" id="vinyl-roll-length-input" step="1" value="100" min="1"
                                         oninput="app.onVinylRollChange()"
                                         class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Precio Pagado por el Pliego ($)</label>
+                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Precio Material ($)</label>
                                     <div class="relative">
                                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                                         <input type="text" id="vinyl-roll-cost-input" value="" placeholder="Ej: 14000"
+                                            oninput="app.onVinylRollChange()"
+                                            class="w-full pl-6 pr-2 py-2.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-center" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Mano Obra Pliego ($)</label>
+                                    <div class="relative">
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                                        <input type="text" id="vinyl-roll-labor-input" value="" placeholder="Ej: 1600"
                                             oninput="app.onVinylRollChange()"
                                             class="w-full pl-6 pr-2 py-2.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-center" />
                                     </div>
@@ -1147,9 +1156,12 @@
                 </div>
 
                 <!-- Medida Habitual de Compra (ej. 58x100 cm) -->
-                <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-2">
-                    <label class="block text-xs font-bold text-indigo-950">Medida Habitual de Compra (Bobina / Pliego)</label>
-                    <div class="grid grid-cols-3 gap-2">
+                <div class="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-indigo-950">Medida Habitual de Compra (Bobina / Pliego)</label>
+                        <span id="vinyl-preset-area-badge" class="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200">0.58 m²</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Ancho (cm)</label>
                             <input type="number" id="vinyl-preset-form-roll-w" step="1" value="58" oninput="app.syncPresetCostFromRoll()"
@@ -1161,8 +1173,13 @@
                                 class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg outline-none text-center" />
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Precio Pagado ($)</label>
-                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="4.50" oninput="app.syncPresetCostFromRoll()"
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-0.5">Precio Material ($)</label>
+                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="14000" oninput="app.syncPresetCostFromRoll()"
+                                class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-0.5">Mano Obra ($)</label>
+                            <input type="number" id="vinyl-preset-form-roll-labor" step="0.01" value="1600" oninput="app.syncPresetCostFromRoll()"
                                 class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none text-center" />
                         </div>
                     </div>
@@ -1170,14 +1187,14 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Resultante / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="7.76" 
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Material / m² ($)</label>
+                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="24137.93" 
                             class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-labor" step="0.1" value="4.5" 
-                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        <input type="number" id="vinyl-preset-form-labor" step="0.01" value="2758.62" 
+                            class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -1695,18 +1712,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.0"></script>
-    <script src="js/db.js?v=4.0"></script>
-    <script src="js/vinilos.js?v=4.0"></script>
-    <script src="js/pdf-generator.js?v=4.0"></script>
-    <script src="js/cotizador.js?v=4.0"></script>
-    <script src="js/app.js?v=4.0"></script>
+    <script src="js/firebase-config.js?v=4.1"></script>
+    <script src="js/db.js?v=4.1"></script>
+    <script src="js/vinilos.js?v=4.1"></script>
+    <script src="js/pdf-generator.js?v=4.1"></script>
+    <script src="js/cotizador.js?v=4.1"></script>
+    <script src="js/app.js?v=4.1"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.0').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.1').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

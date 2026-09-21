@@ -610,13 +610,15 @@ class AppController {
 
     /** Llamado al cambiar ancho, largo o precio pagado del pliego */
     onVinylRollChange() {
-        const rollW    = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
-        const rollL    = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
-        const rollCost = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollW     = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
+        const rollL     = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
+        const rollCost  = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollLabor = this.parseChileanFloat(document.getElementById('vinyl-roll-labor-input')?.value);
 
-        // Calcular costo por m²
+        // Calcular costo y mano de obra por m²
         const areaM2  = (rollW * rollL) / 10000;
-        const costM2  = areaM2 > 0 && rollCost > 0 ? rollCost / areaM2 : 0;
+        const costM2  = areaM2 > 0 && rollCost > 0 ? (rollCost / areaM2) : 0;
+        const laborM2 = areaM2 > 0 && rollLabor > 0 ? (rollLabor / areaM2) : 0;
 
         // Actualizar campo oculto y display
         const hiddenInput = document.getElementById('vinyl-cost-m2-input');
@@ -626,6 +628,12 @@ class AppController {
         if (hiddenInput) hiddenInput.value = costM2.toFixed(4);
         if (display)     display.textContent = `$${this._fmt(costM2, true)}`;
         if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2, true)} / m²`;
+
+        // Si se ingresó mano de obra en el pliego, actualizar mano de obra / m² automáticamente
+        if (rollLabor > 0 && laborM2 > 0) {
+            const laborInput = document.getElementById('vinyl-labor-m2-input');
+            if (laborInput) laborInput.value = laborM2.toFixed(2);
+        }
 
         // Recalcular precio venta/m² a partir del margen
         this._recalcVinylSalePriceM2(costM2);
@@ -667,12 +675,23 @@ class AppController {
     syncRollToCostM2() { this.onVinylRollChange(); }
 
     syncPresetCostFromRoll() {
-        const rollW = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
-        const rollL = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
-        const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const rollW     = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
+        const rollL     = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
+        const rollCost  = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
+        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor')?.value) || 0;
+
+        const areaM2 = (rollW * rollL) / 10000;
+        const badgeArea = document.getElementById('vinyl-preset-area-badge');
+        if (badgeArea) badgeArea.textContent = `${areaM2.toFixed(4)} m²`;
+
+        const costM2  = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const laborM2 = window.vinylCalc.calculateLaborPerM2FromRoll(rollW, rollL, rollLabor);
+
         const costInput = document.getElementById('vinyl-preset-form-cost');
         if (costInput && costM2 > 0) costInput.value = costM2.toFixed(2);
+
+        const laborInput = document.getElementById('vinyl-preset-form-labor');
+        if (laborInput && laborM2 > 0) laborInput.value = laborM2.toFixed(2);
     }
 
     /**
@@ -692,6 +711,7 @@ class AppController {
         set('vinyl-roll-width-input',  preset.rollWidthCm  || 58);
         set('vinyl-roll-length-input', preset.rollLengthCm || 100);
         set('vinyl-roll-cost-input',   preset.rollCost > 0 ? preset.rollCost : '');
+        set('vinyl-roll-labor-input',  preset.rollLabor > 0 ? preset.rollLabor : '');
         set('vinyl-labor-m2-input',    preset.laborCostPerM2 || 0);
         set('vinyl-waste-input',       preset.wasteRate     || 10);
         set('vinyl-margin-input',      preset.defaultMargin || 50);
@@ -714,8 +734,9 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = p.name || '';
             document.getElementById('vinyl-preset-form-roll-w').value = p.rollWidthCm || 58;
             document.getElementById('vinyl-preset-form-roll-l').value = p.rollLengthCm || 100;
-            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 4.50;
-            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 7.76;
+            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 0;
+            document.getElementById('vinyl-preset-form-roll-labor').value = p.rollLabor || 0;
+            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
             document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 || 0;
             document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
             document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
@@ -727,15 +748,17 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = '';
             document.getElementById('vinyl-preset-form-roll-w').value = '58';
             document.getElementById('vinyl-preset-form-roll-l').value = '100';
-            document.getElementById('vinyl-preset-form-roll-cost').value = '4.50';
-            document.getElementById('vinyl-preset-form-cost').value = '7.76';
-            document.getElementById('vinyl-preset-form-labor').value = '4.00';
-            document.getElementById('vinyl-preset-form-waste').value = '12';
+            document.getElementById('vinyl-preset-form-roll-cost').value = '14000';
+            document.getElementById('vinyl-preset-form-roll-labor').value = '1600';
+            document.getElementById('vinyl-preset-form-cost').value = '24137.93';
+            document.getElementById('vinyl-preset-form-labor').value = '2758.62';
+            document.getElementById('vinyl-preset-form-waste').value = '10';
             document.getElementById('vinyl-preset-form-margin').value = '50';
             document.getElementById('vinyl-preset-form-desc').value = '';
             if (deleteBtn) deleteBtn.classList.add('hidden');
         }
 
+        this.syncPresetCostFromRoll();
         this.openModal('modal-edit-vinyl-preset');
     }
 
@@ -744,7 +767,8 @@ class AppController {
         const name = document.getElementById('vinyl-preset-form-name').value.trim();
         const rollWidthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-w').value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-l').value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 4.50;
+        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 0;
+        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor').value) || 0;
         const costPerM2 = parseFloat(document.getElementById('vinyl-preset-form-cost').value) || 0;
         const laborCostPerM2 = parseFloat(document.getElementById('vinyl-preset-form-labor').value) || 0;
         const wasteRate = parseFloat(document.getElementById('vinyl-preset-form-waste').value) || 0;
@@ -762,6 +786,7 @@ class AppController {
             rollWidthCm,
             rollLengthCm,
             rollCost,
+            rollLabor,
             costPerM2,
             laborCostPerM2,
             wasteRate,

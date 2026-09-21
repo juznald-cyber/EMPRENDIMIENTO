@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.1">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -273,10 +273,19 @@
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
+                            <div class="relative" id="client-select-wrapper">
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Nombre o Razón Social *</label>
-                                <input type="text" id="quote-client-name" placeholder="Ej. Inversiones El Sol C.A. / Juan Pérez" 
-                                    class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                <div class="relative">
+                                    <input type="text" id="quote-client-name" placeholder="Ej. Inversiones El Sol C.A. / Juan Pérez" autocomplete="off"
+                                        onclick="app.openCustomDropdown('client')"
+                                        oninput="app.filterCustomDropdown('client', this.value)"
+                                        class="w-full pl-3.5 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all" />
+                                    <button type="button" onclick="app.toggleCustomDropdown('client')" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors" title="Ver clientes registrados">
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                                <div id="client-custom-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-indigo-700 mb-1">RUT / Cédula / NIT del Cliente</label>
@@ -383,8 +392,6 @@
                                 <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
                                     <th class="py-3 px-3 rounded-l-lg w-12 text-center">#</th>
                                     <th class="py-3 px-3">Producto / Concepto</th>
-                                    <th class="py-3 px-3 w-28 text-center">Costo Prov.</th>
-                                    <th class="py-3 px-3 w-24 text-center">Margen %</th>
                                     <th class="py-3 px-3 w-28 text-center">Cantidad</th>
                                     <th class="py-3 px-3 w-32 text-right">Precio Venta Unit.</th>
                                     <th class="py-3 px-3 w-32 text-right">Total</th>
@@ -552,24 +559,33 @@
                                 <!-- Badge resultado -->
                                 <span id="vinyl-roll-calc-equivalent" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">Costo: $0 / m²</span>
                             </div>
-                            <div class="grid grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho del Pliego (cm)</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho Pliego (cm)</label>
                                     <input type="number" id="vinyl-roll-width-input" step="1" value="58" min="1"
                                         oninput="app.onVinylRollChange()"
                                         class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo del Pliego (cm)</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Largo Pliego (cm)</label>
                                     <input type="number" id="vinyl-roll-length-input" step="1" value="100" min="1"
                                         oninput="app.onVinylRollChange()"
                                         class="w-full px-3 py-2.5 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 outline-none text-center" />
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Precio Pagado por el Pliego ($)</label>
+                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Precio Material ($)</label>
                                     <div class="relative">
                                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                                         <input type="text" id="vinyl-roll-cost-input" value="" placeholder="Ej: 14000"
+                                            oninput="app.onVinylRollChange()"
+                                            class="w-full pl-6 pr-2 py-2.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-center" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-indigo-700 mb-1">Mano Obra Pliego ($)</label>
+                                    <div class="relative">
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                                        <input type="text" id="vinyl-roll-labor-input" value="" placeholder="Ej: 1600"
                                             oninput="app.onVinylRollChange()"
                                             class="w-full pl-6 pr-2 py-2.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-center" />
                                     </div>
@@ -1140,9 +1156,12 @@
                 </div>
 
                 <!-- Medida Habitual de Compra (ej. 58x100 cm) -->
-                <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-2">
-                    <label class="block text-xs font-bold text-indigo-950">Medida Habitual de Compra (Bobina / Pliego)</label>
-                    <div class="grid grid-cols-3 gap-2">
+                <div class="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-indigo-950">Medida Habitual de Compra (Bobina / Pliego)</label>
+                        <span id="vinyl-preset-area-badge" class="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200">0.58 m²</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Ancho (cm)</label>
                             <input type="number" id="vinyl-preset-form-roll-w" step="1" value="58" oninput="app.syncPresetCostFromRoll()"
@@ -1154,8 +1173,13 @@
                                 class="w-full px-2 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg outline-none text-center" />
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Precio Pagado ($)</label>
-                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="4.50" oninput="app.syncPresetCostFromRoll()"
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-0.5">Precio Material ($)</label>
+                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="14000" oninput="app.syncPresetCostFromRoll()"
+                                class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-0.5">Mano Obra ($)</label>
+                            <input type="number" id="vinyl-preset-form-roll-labor" step="0.01" value="1600" oninput="app.syncPresetCostFromRoll()"
                                 class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none text-center" />
                         </div>
                     </div>
@@ -1163,14 +1187,14 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Resultante / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="7.76" 
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Material / m² ($)</label>
+                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="24137.93" 
                             class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-labor" step="0.1" value="4.5" 
-                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        <input type="number" id="vinyl-preset-form-labor" step="0.01" value="2758.62" 
+                            class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -1322,23 +1346,35 @@
                     </div>
                 </div>
 
-                <!-- Proveedor y Categoría con Búsqueda Tipeable -->
+                <!-- Proveedor y Categoría con Búsqueda Tipeable y Desplegable Completo -->
                 <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-indigo-700 mb-1">Proveedor (Tipea para buscar)</label>
-                        <input list="suppliers-datalist" id="prod-form-supplier-input" placeholder="Escribe el proveedor..." 
-                            class="w-full px-3 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white outline-none" />
-                        <datalist id="suppliers-datalist">
-                            <!-- Inyectado dinámicamente -->
-                        </datalist>
+                    <div class="relative" id="supplier-select-wrapper">
+                        <label class="block text-xs font-bold text-indigo-700 mb-1">Proveedor (Tipea o despliega)</label>
+                        <div class="relative">
+                            <input type="text" id="prod-form-supplier-input" placeholder="Escribe o selecciona..." autocomplete="off"
+                                onclick="app.openCustomDropdown('supplier')"
+                                oninput="app.filterCustomDropdown('supplier', this.value)"
+                                class="w-full pl-3 pr-8 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all cursor-pointer" />
+                            <button type="button" onclick="app.toggleCustomDropdown('supplier')" tabindex="-1" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div id="supplier-custom-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-52 overflow-y-auto divide-y divide-slate-100">
+                        </div>
                     </div>
-                    <div>
+                    <div class="relative" id="category-select-wrapper">
                         <label class="block text-xs font-bold text-indigo-700 mb-1">Categoría (Tipea o elige)</label>
-                        <input list="categories-datalist" id="prod-form-category-input" placeholder="Escribe la categoría..." 
-                            class="w-full px-3 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white outline-none" />
-                        <datalist id="categories-datalist">
-                            <!-- Inyectado dinámicamente -->
-                        </datalist>
+                        <div class="relative">
+                            <input type="text" id="prod-form-category-input" placeholder="Escribe o selecciona..." autocomplete="off"
+                                onclick="app.openCustomDropdown('category')"
+                                oninput="app.filterCustomDropdown('category', this.value)"
+                                class="w-full pl-3 pr-8 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all cursor-pointer" />
+                            <button type="button" onclick="app.toggleCustomDropdown('category')" tabindex="-1" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div id="category-custom-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-52 overflow-y-auto divide-y divide-slate-100">
+                        </div>
                     </div>
                 </div>
 
@@ -1366,6 +1402,32 @@
                             oninput="app.onProductSalePriceChange()"
                             placeholder="Auto"
                             class="w-full px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <!-- Costo Adicional (ej. estampado, sublimación) -->
+                <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="plus-square" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <label class="text-xs font-bold text-amber-800">Costo Adicional (opcional)</label>
+                        <span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">Se suma al costo y se le aplica el % de ganancia</span>
+                    </div>
+                    <p class="text-[11px] text-amber-700">Úsalo para estampado, sublimación, etc. El % de ganancia se aplicará sobre el costo total (Costo Base + Costo Adicional).</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-amber-700 mb-1">Concepto del Costo Adicional</label>
+                            <input type="text" id="prod-form-extra-cost-label" placeholder="Ej: Estampado, Sublimación, Bordado..."
+                                class="w-full px-3 py-2 text-xs bg-white border border-amber-200 rounded-xl focus:bg-white focus:border-amber-400 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-amber-700 mb-1">Monto Adicional por Unidad ($)</label>
+                            <div class="relative">
+                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">$</span>
+                                <input type="number" id="prod-form-extra-cost" step="0.01" value="0" min="0"
+                                    oninput="app.onProductCostChange()"
+                                    class="w-full pl-6 pr-2 py-2 text-xs font-bold text-amber-700 bg-white border border-amber-200 rounded-xl focus:border-amber-400 outline-none text-center" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1489,9 +1551,23 @@
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Categoría Principal</label>
-                    <input list="categories-datalist" id="sup-form-category" placeholder="Vinilos, Textil..." 
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Dirección / Ubicación</label>
+                    <input type="text" id="sup-form-address" placeholder="Ej. Av. Providencia 1234, Santiago" 
                         class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+                <div class="relative" id="sup-category-select-wrapper">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Categoría Principal</label>
+                    <div class="relative">
+                        <input type="text" id="sup-form-category" placeholder="Vinilos, Textil..." autocomplete="off"
+                            onclick="app.openCustomDropdown('sup-category')"
+                            oninput="app.filterCustomDropdown('sup-category', this.value)"
+                            class="w-full pl-3 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all cursor-pointer" />
+                        <button type="button" onclick="app.toggleCustomDropdown('sup-category')" tabindex="-1" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <div id="sup-category-custom-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-52 overflow-y-auto divide-y divide-slate-100">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Condiciones Comerciales</label>
@@ -1636,18 +1712,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.0"></script>
-    <script src="js/db.js?v=4.0"></script>
-    <script src="js/vinilos.js?v=4.0"></script>
-    <script src="js/pdf-generator.js?v=4.0"></script>
-    <script src="js/cotizador.js?v=4.0"></script>
-    <script src="js/app.js?v=4.0"></script>
+    <script src="js/firebase-config.js?v=4.1"></script>
+    <script src="js/db.js?v=4.1"></script>
+    <script src="js/vinilos.js?v=4.1"></script>
+    <script src="js/pdf-generator.js?v=4.1"></script>
+    <script src="js/cotizador.js?v=4.1"></script>
+    <script src="js/app.js?v=4.1"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.0').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.1').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

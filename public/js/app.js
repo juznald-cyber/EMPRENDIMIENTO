@@ -19,7 +19,14 @@ class AppController {
         // Configurar Listener de Firebase Authentication
         this.setupFirebaseAuthListener();
 
-        // Cargar Datos del Perfil y UI inicial
+        this.renderAll();
+        this.bindEvents();
+
+        console.log('Cotizador Pro App Inicializada Correctamente.');
+    }
+
+    /** Re-renderiza toda la interfaz gráfica con los datos más recientes */
+    renderAll() {
         this.loadProfileIntoUI();
         this.renderCategoriesDataLists();
         this.renderSuppliersDataList();
@@ -30,9 +37,6 @@ class AppController {
         this.renderHistory();
         this.renderProducts();
         this.renderSuppliers();
-        this.bindEvents();
-
-        console.log('Cotizador Pro App Inicializada Correctamente.');
     }
 
     // ==========================================
@@ -56,12 +60,7 @@ class AppController {
                     if (window.db && typeof window.db.syncFromFirestore === 'function') {
                         await window.db.syncFromFirestore(user.uid);
                         // Re-renderizar la app con los datos recién cargados de la nube
-                        if (typeof this.renderAll === 'function') this.renderAll();
-                        else {
-                            if (typeof this.renderProducts === 'function') this.renderProducts();
-                            if (typeof this.renderSuppliers === 'function') this.renderSuppliers();
-                            if (typeof this.renderQuotes === 'function') this.renderQuotes();
-                        }
+                        this.renderAll();
                     }
                 } else {
                     if (authScreen) {
@@ -209,6 +208,31 @@ class AppController {
 
         const modalProdSearch = document.getElementById('modal-search-product-input');
         if (modalProdSearch) modalProdSearch.addEventListener('input', () => this.filterModalProducts());
+
+        // Cerrar dropdowns personalizados al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#supplier-select-wrapper')) {
+                document.getElementById('supplier-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#category-select-wrapper')) {
+                document.getElementById('category-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#sup-category-select-wrapper')) {
+                document.getElementById('sup-category-custom-dropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#client-select-wrapper')) {
+                document.getElementById('client-custom-dropdown')?.classList.add('hidden');
+            }
+        });
+
+        // Cerrar dropdowns con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['supplier', 'category', 'sup-category', 'client'].forEach(t => {
+                    document.getElementById(`${t}-custom-dropdown`)?.classList.add('hidden');
+                });
+            }
+        });
     }
 
     // ==========================================
@@ -339,7 +363,7 @@ class AppController {
     }
 
     // ==========================================
-    // GESTOR DE PROVEEDORES EN DATALIST
+    // GESTOR DE PROVEEDORES EN DATALIST Y DROPDOWNS
     // ==========================================
     renderSuppliersDataList() {
         const suppliers = window.db.getSuppliers();
@@ -348,6 +372,182 @@ class AppController {
             dl.innerHTML = suppliers.map(s => `<option value="${this.escapeHTML(s.name)}">${s.rut ? 'RUT: ' + this.escapeHTML(s.rut) : ''}</option>`).join('');
         }
     }
+
+    // ==========================================
+    // SELECTORES PERSONALIZADOS (DROPDOWNS CON BÚSQUEDA Y VISTA COMPLETA)
+    // ==========================================
+    toggleCustomDropdown(type) {
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (!dropdown) return;
+        if (dropdown.classList.contains('hidden')) {
+            this.openCustomDropdown(type);
+        } else {
+            this.closeCustomDropdown(type);
+        }
+    }
+
+    closeCustomDropdown(type) {
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (dropdown) dropdown.classList.add('hidden');
+    }
+
+    openCustomDropdown(type, filterText = '') {
+        ['supplier', 'category', 'sup-category', 'client'].forEach(t => {
+            if (t !== type) this.closeCustomDropdown(t);
+        });
+
+        const dropdown = document.getElementById(`${type}-custom-dropdown`);
+        if (!dropdown) return;
+
+        let currentValue = '';
+
+        if (type === 'supplier') {
+            currentValue = (document.getElementById('prod-form-supplier-input')?.value || '').trim();
+            const suppliers = window.db.getSuppliers();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q 
+                ? suppliers.filter(s => (s.name || '').toLowerCase().includes(q) || (s.rut || '').toLowerCase().includes(q) || (s.category || '').toLowerCase().includes(q))
+                : suppliers;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay proveedores coincidentes. Escribe para usar uno nuevo.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(s => {
+                    const isSelected = s.name.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('supplier', '${this.escapeHTML(s.name)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <div>
+                                <div class="text-xs font-semibold">${this.escapeHTML(s.name)}</div>
+                                ${s.rut ? `<div class="text-[10px] text-slate-400 font-mono">RUT: ${this.escapeHTML(s.rut)}</div>` : ''}
+                            </div>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'category') {
+            currentValue = (document.getElementById('prod-form-category-input')?.value || '').trim();
+            const categories = window.db.getCategories();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('category', '${this.escapeHTML(c)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <span class="text-xs font-semibold">${this.escapeHTML(c)}</span>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'sup-category') {
+            currentValue = (document.getElementById('sup-form-category')?.value || '').trim();
+            const categories = window.db.getCategories();
+            const q = filterText.toLowerCase().trim();
+            const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.toLowerCase() === currentValue.toLowerCase();
+                    return `
+                        <div onclick="app.selectCustomOption('sup-category', '${this.escapeHTML(c)}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <span class="text-xs font-semibold">${this.escapeHTML(c)}</span>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else if (type === 'client') {
+            currentValue = (document.getElementById('quote-client-name')?.value || '').trim();
+            const quotes = window.db.getQuotes();
+            const clientsMap = new Map();
+            quotes.forEach(q => {
+                if (q.client && q.client.name && q.client.name.trim()) {
+                    const key = q.client.name.trim().toLowerCase();
+                    if (!clientsMap.has(key)) {
+                        clientsMap.set(key, q.client);
+                    }
+                }
+            });
+            const clients = Array.from(clientsMap.values());
+            const q = filterText.toLowerCase().trim();
+            const filtered = q 
+                ? clients.filter(c => (c.name || '').toLowerCase().includes(q) || (c.rut || '').toLowerCase().includes(q) || (c.contact || '').toLowerCase().includes(q))
+                : clients;
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay clientes anteriores guardados. Escribe los datos para este cliente.</div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => {
+                    const isSelected = c.name.toLowerCase() === currentValue.toLowerCase();
+                    const safeName = this.escapeHTML(c.name || '');
+                    const safeRut = this.escapeHTML(c.rut || '');
+                    const safeContact = this.escapeHTML(c.contact || '');
+                    const safePhone = this.escapeHTML(c.phone || '');
+                    const safeEmail = this.escapeHTML(c.email || '');
+                    const safeAddress = this.escapeHTML(c.address || '');
+
+                    return `
+                        <div onclick="app.selectClientOption('${safeName}', '${safeRut}', '${safeContact}', '${safePhone}', '${safeEmail}', '${safeAddress}')"
+                            class="px-3.5 py-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors ${isSelected ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-slate-800'}">
+                            <div>
+                                <div class="text-xs font-semibold">${safeName}</div>
+                                <div class="text-[10px] text-slate-400 font-mono flex flex-wrap items-center gap-2">
+                                    ${safeRut ? `<span>RUT: ${safeRut}</span>` : ''}
+                                    ${safePhone ? `<span>Tel: ${safePhone}</span>` : ''}
+                                </div>
+                            </div>
+                            ${isSelected ? `<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        dropdown.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    filterCustomDropdown(type, query) {
+        this.openCustomDropdown(type, query);
+    }
+
+    selectCustomOption(type, value) {
+        if (type === 'supplier') {
+            const input = document.getElementById('prod-form-supplier-input');
+            if (input) input.value = value;
+        } else if (type === 'category') {
+            const input = document.getElementById('prod-form-category-input');
+            if (input) input.value = value;
+        } else if (type === 'sup-category') {
+            const input = document.getElementById('sup-form-category');
+            if (input) input.value = value;
+        }
+        this.closeCustomDropdown(type);
+    }
+
+    selectClientOption(name, rut, contact, phone, email, address) {
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        set('quote-client-name', name);
+        set('quote-client-rut', rut);
+        set('quote-client-contact', contact);
+        set('quote-client-phone', phone);
+        set('quote-client-email', email);
+        set('quote-client-address', address);
+
+        this.syncQuoteHeaderFromUI();
+        this.closeCustomDropdown('client');
+    }
+
 
     // ==========================================
     // CALCULADORA DE VINILOS (CRUD PRESETS)
@@ -410,13 +610,15 @@ class AppController {
 
     /** Llamado al cambiar ancho, largo o precio pagado del pliego */
     onVinylRollChange() {
-        const rollW    = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
-        const rollL    = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
-        const rollCost = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollW     = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
+        const rollL     = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
+        const rollCost  = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollLabor = this.parseChileanFloat(document.getElementById('vinyl-roll-labor-input')?.value);
 
-        // Calcular costo por m²
+        // Calcular costo y mano de obra por m²
         const areaM2  = (rollW * rollL) / 10000;
-        const costM2  = areaM2 > 0 && rollCost > 0 ? rollCost / areaM2 : 0;
+        const costM2  = areaM2 > 0 && rollCost > 0 ? (rollCost / areaM2) : 0;
+        const laborM2 = areaM2 > 0 && rollLabor > 0 ? (rollLabor / areaM2) : 0;
 
         // Actualizar campo oculto y display
         const hiddenInput = document.getElementById('vinyl-cost-m2-input');
@@ -426,6 +628,12 @@ class AppController {
         if (hiddenInput) hiddenInput.value = costM2.toFixed(4);
         if (display)     display.textContent = `$${this._fmt(costM2, true)}`;
         if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2, true)} / m²`;
+
+        // Si se ingresó mano de obra en el pliego, actualizar mano de obra / m² automáticamente
+        if (rollLabor > 0 && laborM2 > 0) {
+            const laborInput = document.getElementById('vinyl-labor-m2-input');
+            if (laborInput) laborInput.value = laborM2.toFixed(2);
+        }
 
         // Recalcular precio venta/m² a partir del margen
         this._recalcVinylSalePriceM2(costM2);
@@ -467,12 +675,23 @@ class AppController {
     syncRollToCostM2() { this.onVinylRollChange(); }
 
     syncPresetCostFromRoll() {
-        const rollW = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
-        const rollL = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
-        const costM2 = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const rollW     = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
+        const rollL     = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
+        const rollCost  = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
+        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor')?.value) || 0;
+
+        const areaM2 = (rollW * rollL) / 10000;
+        const badgeArea = document.getElementById('vinyl-preset-area-badge');
+        if (badgeArea) badgeArea.textContent = `${areaM2.toFixed(4)} m²`;
+
+        const costM2  = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
+        const laborM2 = window.vinylCalc.calculateLaborPerM2FromRoll(rollW, rollL, rollLabor);
+
         const costInput = document.getElementById('vinyl-preset-form-cost');
         if (costInput && costM2 > 0) costInput.value = costM2.toFixed(2);
+
+        const laborInput = document.getElementById('vinyl-preset-form-labor');
+        if (laborInput && laborM2 > 0) laborInput.value = laborM2.toFixed(2);
     }
 
     /**
@@ -492,6 +711,7 @@ class AppController {
         set('vinyl-roll-width-input',  preset.rollWidthCm  || 58);
         set('vinyl-roll-length-input', preset.rollLengthCm || 100);
         set('vinyl-roll-cost-input',   preset.rollCost > 0 ? preset.rollCost : '');
+        set('vinyl-roll-labor-input',  preset.rollLabor > 0 ? preset.rollLabor : '');
         set('vinyl-labor-m2-input',    preset.laborCostPerM2 || 0);
         set('vinyl-waste-input',       preset.wasteRate     || 10);
         set('vinyl-margin-input',      preset.defaultMargin || 50);
@@ -514,8 +734,9 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = p.name || '';
             document.getElementById('vinyl-preset-form-roll-w').value = p.rollWidthCm || 58;
             document.getElementById('vinyl-preset-form-roll-l').value = p.rollLengthCm || 100;
-            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 4.50;
-            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 7.76;
+            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 0;
+            document.getElementById('vinyl-preset-form-roll-labor').value = p.rollLabor || 0;
+            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
             document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 || 0;
             document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
             document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
@@ -527,15 +748,17 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = '';
             document.getElementById('vinyl-preset-form-roll-w').value = '58';
             document.getElementById('vinyl-preset-form-roll-l').value = '100';
-            document.getElementById('vinyl-preset-form-roll-cost').value = '4.50';
-            document.getElementById('vinyl-preset-form-cost').value = '7.76';
-            document.getElementById('vinyl-preset-form-labor').value = '4.00';
-            document.getElementById('vinyl-preset-form-waste').value = '12';
+            document.getElementById('vinyl-preset-form-roll-cost').value = '14000';
+            document.getElementById('vinyl-preset-form-roll-labor').value = '1600';
+            document.getElementById('vinyl-preset-form-cost').value = '24137.93';
+            document.getElementById('vinyl-preset-form-labor').value = '2758.62';
+            document.getElementById('vinyl-preset-form-waste').value = '10';
             document.getElementById('vinyl-preset-form-margin').value = '50';
             document.getElementById('vinyl-preset-form-desc').value = '';
             if (deleteBtn) deleteBtn.classList.add('hidden');
         }
 
+        this.syncPresetCostFromRoll();
         this.openModal('modal-edit-vinyl-preset');
     }
 
@@ -544,7 +767,8 @@ class AppController {
         const name = document.getElementById('vinyl-preset-form-name').value.trim();
         const rollWidthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-w').value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-l').value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 4.50;
+        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 0;
+        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor').value) || 0;
         const costPerM2 = parseFloat(document.getElementById('vinyl-preset-form-cost').value) || 0;
         const laborCostPerM2 = parseFloat(document.getElementById('vinyl-preset-form-labor').value) || 0;
         const wasteRate = parseFloat(document.getElementById('vinyl-preset-form-waste').value) || 0;
@@ -562,6 +786,7 @@ class AppController {
             rollWidthCm,
             rollLengthCm,
             rollCost,
+            rollLabor,
             costPerM2,
             laborCostPerM2,
             wasteRate,
@@ -775,16 +1000,6 @@ class AppController {
                                 ${this.escapeHTML(item.name)}
                             </div>
                             ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
-                        </td>
-                        <td class="py-3 px-3 text-center text-xs font-mono text-slate-600 font-medium">
-                            ${currency} ${window.formatMoney(item.costPrice, true)}
-                        </td>
-                        <td class="py-3 px-3 text-center">
-                            <div class="inline-flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
-                                <input type="number" step="1" value="${item.margin}" onchange="app.changeItemMargin(${idx}, this.value)" 
-                                    class="w-10 text-xs text-center font-black text-indigo-700 bg-transparent outline-none" />
-                                <span class="text-[10px] font-bold text-indigo-400">%</span>
-                            </div>
                         </td>
                         <td class="py-3 px-3 text-center">
                             <div class="inline-flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
@@ -1125,7 +1340,9 @@ class AppController {
             const sup = suppliers.find(s => s.id === p.supplierId || s.name === p.supplierId);
             const margin = window.db.getMarginForQuantity(p, 1);
             const cost1u = window.db.getCostForQuantity(p, 1);
-            const salePrice = window.db.calculateSalePrice(cost1u, margin);
+            const extraCost = parseFloat(p.extraCost) || 0;
+            const totalCost1u = cost1u + extraCost;
+            const salePrice = totalCost1u * (1 + margin / 100);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
             // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
@@ -1353,11 +1570,17 @@ class AppController {
             document.getElementById('prod-form-url').value = p.url || '';
             document.getElementById('prod-form-notes').value = p.notes || '';
 
-            // Precio de venta calculado
-            const cost1u = parseFloat(p.costPrice) || 0;
-            const margin1u = parseFloat(p.defaultMargin) || 50;
+            // Costo adicional (estampado, sublimación, etc.)
+            document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
+            document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
+
+            // Precio de venta calculado (incluye costo adicional + margen sobre el costo total)
+            const cost1u      = parseFloat(p.costPrice) || 0;
+            const extra1u     = parseFloat(p.extraCost) || 0;
+            const totalCost1u = cost1u + extra1u;
+            const margin1u    = parseFloat(p.defaultMargin) || 50;
             const spEl = document.getElementById('prod-form-sale-price');
-            if (spEl) spEl.value = cost1u > 0 ? (cost1u * (1 + margin1u / 100)).toFixed(2) : '';
+            if (spEl) spEl.value = totalCost1u > 0 ? (totalCost1u * (1 + margin1u / 100)).toFixed(2) : '';
 
             // Imágenes: soporta array (nuevo) o string (viejo)
             let loadImgs = [];
@@ -1390,6 +1613,9 @@ class AppController {
             if (spElNew) spElNew.value = '7.50';
             document.getElementById('prod-form-url').value = '';
             document.getElementById('prod-form-notes').value = '';
+            // Costo adicional - limpiar
+            document.getElementById('prod-form-extra-cost').value = '0';
+            document.getElementById('prod-form-extra-cost-label').value = '';
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
@@ -1440,6 +1666,9 @@ class AppController {
         const defaultMargin = parseFloat(document.getElementById('prod-form-margin').value) || 50;
         const url = (document.getElementById('prod-form-url')?.value || '').trim();
         const notes = document.getElementById('prod-form-notes').value.trim();
+        // Costo adicional (estampado, sublimación, etc.)
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const extraCostLabel = (document.getElementById('prod-form-extra-cost-label')?.value || '').trim();
         // Leer imágenes como array (hasta 3)
         const images = this._getProductImagesArray();
         // Compatibilidad retroactiva: imageData = primera imagen si existe
@@ -1469,19 +1698,21 @@ class AppController {
         window.db.saveCategory(category);
 
         const product = {
-            id: id || undefined,
+            id: id ? id : ('prod_' + Date.now()),
             name,
-            sku,
-            supplierId,
-            category,
-            unit,
-            costPrice,
-            costTiers,
-            defaultMargin,
-            url,
-            notes,
-            images,     // Array de hasta 3 imágenes base64
-            imageData,  // Compatibilidad retroactiva (primera imagen)
+            sku: sku || ('PROD-' + Math.floor(Math.random() * 900 + 100)),
+            supplierId: supplierId || '',
+            category: category || 'General',
+            unit: unit || 'Unidad',
+            costPrice: costPrice || 0,
+            costTiers: costTiers || [],
+            defaultMargin: defaultMargin || 50,
+            url: url || '',
+            notes: notes || '',
+            extraCost: extraCost || 0,
+            extraCostLabel: extraCostLabel || '',
+            images: images || [],
+            imageData: imageData || '',
             useGlobalTiers: true
         };
 
@@ -1504,7 +1735,7 @@ class AppController {
     // PRECIO DE VENTA ↔ MARGEN (BIDIRECCIONAL)
     // ==========================================
 
-    /** Recalcula precio de venta cuando cambia el costo */
+    /** Recalcula precio de venta cuando cambia el costo o el costo adicional */
     onProductCostChange() {
         const margin = parseFloat(document.getElementById('prod-form-margin')?.value);
         if (!isNaN(margin)) this._recalcSalePrice();
@@ -1515,25 +1746,37 @@ class AppController {
         this._recalcSalePrice();
     }
 
-    /** Cuando el usuario escribe el precio de venta → calcula el margen automáticamente */
+    /**
+     * Cuando el usuario escribe el precio de venta → calcula el margen automáticamente.
+     * Costo total = costo base + costo adicional.
+     * Margen = ((precio_venta / costo_total) - 1) * 100
+     */
     onProductSalePriceChange() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
-        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value);
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const totalCost = cost + extraCost;
+        const salePrice = parseFloat(document.getElementById('prod-form-sale-price')?.value) || 0;
         const marginInp = document.getElementById('prod-form-margin');
-        if (!marginInp || !salePrice || cost <= 0) return;
-        const margin = ((salePrice / cost) - 1) * 100;
-        marginInp.value = Math.round(margin * 10) / 10; // 1 decimal
+        if (!marginInp || salePrice <= 0 || totalCost <= 0) return;
+        const margin = ((salePrice / totalCost) - 1) * 100;
+        marginInp.value = Math.round(margin * 10) / 10;
     }
 
-    /** Calcula el precio de venta desde costo y margen */
+    /**
+     * Calcula el precio de venta = (costo base + costo adicional) * (1 + margen/100).
+     * El porcentaje de ganancia se aplica tanto al costo del insumo como al costo adicional.
+     */
     _recalcSalePrice() {
         const cost      = parseFloat(document.getElementById('prod-form-cost')?.value) || 0;
+        const extraCost = parseFloat(document.getElementById('prod-form-extra-cost')?.value) || 0;
+        const totalCost = cost + extraCost;
         const margin    = parseFloat(document.getElementById('prod-form-margin')?.value) || 0;
         const salePriceInp = document.getElementById('prod-form-sale-price');
-        if (!salePriceInp || cost <= 0) return;
-        const salePrice = cost * (1 + margin / 100);
+        if (!salePriceInp || totalCost <= 0) return;
+        const salePrice = totalCost * (1 + margin / 100);
         salePriceInp.value = salePrice.toFixed(2);
     }
+
 
     // ==========================================
     // SELECCIÓN MASIVA Y ELIMINACIÓN MASIVA
@@ -1709,29 +1952,67 @@ class AppController {
         this._processProductImageFile(file, file.name);
     }
 
-    /** Procesa un archivo de imagen y lo agrega al array (máx 3) */
-    _processProductImageFile(file, label = '') {
-        const maxMB = 5;
+    /** Redimensiona y comprime una imagen a un tamaño ligero para Firestore y LocalStorage */
+    _compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.75) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxWidth || h > maxHeight) {
+                        if (w > h) {
+                            h = Math.round((h * maxWidth) / w);
+                            w = maxWidth;
+                        } else {
+                            w = Math.round((w * maxHeight) / h);
+                            h = maxHeight;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedDataUrl);
+                };
+                img.onerror = () => resolve(e.target.result);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /** Procesa un archivo de imagen, lo comprime automáticamente y lo agrega al array (máx 3) */
+    async _processProductImageFile(file, label = '') {
+        const maxMB = 10;
         if (file.size > maxMB * 1024 * 1024) {
             this.showToast(`La imagen supera los ${maxMB} MB.`, 'warning');
             return;
         }
-        // Leer array actual
         let imgs = this._getProductImagesArray();
         if (imgs.length >= 3) {
             this.showToast('Máximo 3 imágenes por producto. Elimina una para agregar otra.', 'warning');
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            imgs.push(e.target.result);
+
+        try {
+            const compressedBase64 = await this._compressImage(file);
+            if (!compressedBase64) {
+                this.showToast('Error procesando la imagen.', 'error');
+                return;
+            }
+            imgs.push(compressedBase64);
             document.getElementById('prod-form-image-data').value = JSON.stringify(imgs);
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs(imgs);
             this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success');
-        };
-        reader.onerror = () => this.showToast('Error leyendo el archivo.', 'error');
-        reader.readAsDataURL(file);
+        } catch (err) {
+            this.showToast('Error al procesar la imagen.', 'error');
+        }
     }
 
     /** Obtiene el array de imágenes del campo oculto */
@@ -2000,6 +2281,7 @@ class AppController {
             document.getElementById('sup-form-contact').value = s.contact || '';
             document.getElementById('sup-form-phone').value = s.phone || '';
             document.getElementById('sup-form-email').value = s.email || '';
+            document.getElementById('sup-form-address').value = s.address || '';
             document.getElementById('sup-form-category').value = s.category || '';
             document.getElementById('sup-form-notes').value = s.notes || '';
         } else {
@@ -2011,6 +2293,7 @@ class AppController {
             document.getElementById('sup-form-contact').value = '';
             document.getElementById('sup-form-phone').value = '';
             document.getElementById('sup-form-email').value = '';
+            document.getElementById('sup-form-address').value = '';
             document.getElementById('sup-form-category').value = '';
             document.getElementById('sup-form-notes').value = '';
         }
@@ -2018,14 +2301,15 @@ class AppController {
     }
 
     submitSupplierForm() {
-        const id = document.getElementById('sup-form-id').value;
-        const name = document.getElementById('sup-form-name').value.trim();
-        const rut = document.getElementById('sup-form-rut').value.trim();
+        const id      = document.getElementById('sup-form-id').value;
+        const name    = document.getElementById('sup-form-name').value.trim();
+        const rut     = document.getElementById('sup-form-rut').value.trim();
         const contact = document.getElementById('sup-form-contact').value.trim();
-        const phone = document.getElementById('sup-form-phone').value.trim();
-        const email = document.getElementById('sup-form-email').value.trim();
+        const phone   = document.getElementById('sup-form-phone').value.trim();
+        const email   = document.getElementById('sup-form-email').value.trim();
+        const address = document.getElementById('sup-form-address').value.trim();
         const category = document.getElementById('sup-form-category').value.trim();
-        const notes = document.getElementById('sup-form-notes').value.trim();
+        const notes   = document.getElementById('sup-form-notes').value.trim();
 
         if (!name) {
             this.showToast('Por favor escribe el nombre de la empresa proveedora.', 'warning');
@@ -2041,6 +2325,7 @@ class AppController {
             contact,
             phone,
             email,
+            address,
             category,
             notes
         };
