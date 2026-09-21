@@ -945,9 +945,30 @@ html.dark #modal-combine-products .bg-gradient-to-br {
 html.dark #modal-combine-products .bg-gradient-to-br p,
 html.dark #modal-combine-products .bg-gradient-to-br label {
     color: #f1f5f9 !important;
+}html.dark .cost-tier-row {
+    background: rgba(0, 0, 0, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+html.dark .cost-tier-row input {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+}
 
+html.dark .cost-tier-row .tier-cost {
+    color: #ffffff !important;
+}
 
+html.dark .cost-tier-row .tier-margin {
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    background: rgba(56, 189, 248, 0.1) !important;
+}
 
+html.dark .cost-tier-row .tier-sale-price {
+    color: #30d158 !important;
+    border-color: rgba(48, 209, 88, 0.4) !important;
+    background: rgba(48, 209, 88, 0.1) !important;
+}
 

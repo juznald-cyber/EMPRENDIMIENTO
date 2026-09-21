@@ -894,7 +894,15 @@ class Database {
     getMarginForQuantity(product, quantity) {
         const qty = parseFloat(quantity) || 1;
         
-        // 1. Si el producto tiene escalas personalizadas activas
+        // 1. Si el producto tiene escalas de volumen configuradas con su propio margen
+        if (product && product.costTiers && product.costTiers.length > 0) {
+            const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
+            if (matchedTier && matchedTier.margin !== undefined && matchedTier.margin !== null && !isNaN(parseFloat(matchedTier.margin))) {
+                return parseFloat(matchedTier.margin);
+            }
+        }
+
+        // Retrocompatibilidad con customTiers
         if (product && product.customTiers && product.customTiers.length > 0) {
             const matchedTier = product.customTiers.find(tier => qty >= tier.min && qty <= tier.max);
             if (matchedTier && !isNaN(matchedTier.margin)) return parseFloat(matchedTier.margin);

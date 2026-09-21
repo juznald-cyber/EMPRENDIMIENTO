@@ -1586,7 +1586,12 @@ class AppController {
             this._renderProductImageThumbs(loadImgs);
 
             if (p.costTiers && p.costTiers.length > 0) {
-                p.costTiers.forEach(t => this.addCostTierRow(t.min, t.max, t.cost));
+                p.costTiers.forEach(t => {
+                    const tierCost = t.cost !== undefined ? t.cost : (p.costPrice || 0);
+                    const tierMargin = t.margin !== undefined ? t.margin : (p.defaultMargin || 50);
+                    const tierSalePrice = t.salePrice !== undefined ? t.salePrice : '';
+                    this.addCostTierRow(t.min, t.max, tierCost, tierMargin, tierSalePrice);
+                });
             }
         } else {
             const titleEl = document.getElementById('product-modal-title');
@@ -1617,34 +1622,142 @@ class AppController {
         this.openModal('modal-edit-product');
     }
 
-    addCostTierRow(min = 1, max = 10, cost = '') {
+    addCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '') {
         const container = document.getElementById('cost-tiers-rows-container');
         if (!container) return;
 
+        const baseCost = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const baseMargin = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.')) || 50;
+
+        // Si no se especifica min/max, inferir según filas existentes
+        const existingRows = container.querySelectorAll('.cost-tier-row');
+        let autoMin = 1;
+        let autoMax = 10;
+        if (min === null) {
+            if (existingRows.length > 0) {
+                const lastRow = existingRows[existingRows.length - 1];
+                const lastMax = parseInt(lastRow.querySelector('.tier-max')?.value, 10);
+                if (!isNaN(lastMax) && lastMax > 0) {
+                    autoMin = lastMax + 1;
+                    autoMax = autoMin + 10;
+                } else {
+                    autoMin = 11;
+                    autoMax = 50;
+                }
+            } else {
+                autoMin = 1;
+                autoMax = 10;
+            }
+        } else {
+            autoMin = min;
+            autoMax = max === 999999 ? '' : max;
+        }
+
+        const tierCost = (cost !== '' && cost !== null && !isNaN(cost)) ? cost : (baseCost > 0 ? baseCost : '');
+        let tierMargin = (margin !== '' && margin !== null && !isNaN(margin)) ? margin : baseMargin;
+        let tierSalePrice = salePrice;
+
+        const numCost = parseFloat(tierCost) || 0;
+        const totalUnitCost = numCost + extraCost;
+
+        if ((tierSalePrice === '' || tierSalePrice === null || isNaN(tierSalePrice)) && totalUnitCost > 0) {
+            tierSalePrice = Number((totalUnitCost * (1 + (parseFloat(tierMargin) || 0) / 100)).toFixed(2));
+        } else if (tierSalePrice !== '' && totalUnitCost > 0 && (margin === '' || margin === null)) {
+            tierMargin = Number((((parseFloat(tierSalePrice) / totalUnitCost) - 1) * 100).toFixed(2));
+        }
+
         const row = document.createElement('div');
-        row.className = 'cost-tier-row grid grid-cols-12 gap-2 items-center';
+        row.className = 'cost-tier-row bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
         row.innerHTML = `
-            <div class="col-span-3">
-                <input type="number" min="1" value="${min}" placeholder="Min" class="tier-min w-full px-2 py-1 text-xs text-center font-bold bg-white border border-slate-200 rounded-lg outline-none" />
+            <!-- Cantidades Min a Max -->
+            <div class="sm:col-span-3 flex items-center gap-1">
+                <input type="number" min="1" value="${autoMin}" placeholder="Min" 
+                    class="tier-min w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                <span class="text-xs text-slate-400 font-bold px-0.5">a</span>
+                <input type="number" min="1" value="${autoMax}" placeholder="Max (+)" 
+                    class="tier-max w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
             </div>
-            <div class="col-span-1 text-center text-xs text-slate-400 font-bold">a</div>
-            <div class="col-span-3">
-                <input type="number" min="1" value="${max === 999999 ? '' : max}" placeholder="Max (+)" class="tier-max w-full px-2 py-1 text-xs text-center font-bold bg-white border border-slate-200 rounded-lg outline-none" />
-            </div>
-            <div class="col-span-4">
+
+            <!-- Costo del Rango -->
+            <div class="sm:col-span-3 relative">
+                <span class="text-[10px] text-slate-400 font-bold sm:hidden block mb-0.5">Costo ($):</span>
                 <div class="relative">
-                    <span class="absolute left-2 top-1 text-xs text-slate-400">$</span>
-                    <input type="number" step="any" value="${cost}" placeholder="Costo" class="tier-cost w-full pl-5 pr-2 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-lg outline-none" />
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                    <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
+                        oninput="app.onTierCostChange(this)"
+                        class="tier-cost w-full pl-6 pr-2 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
-            <div class="col-span-1 text-center">
-                <button type="button" onclick="this.closest('.cost-tier-row').remove()" class="text-rose-500 hover:text-rose-700 p-1">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+
+            <!-- Margen del Rango -->
+            <div class="sm:col-span-2 relative">
+                <span class="text-[10px] text-indigo-500 font-bold sm:hidden block mb-0.5">Margen (%):</span>
+                <input type="number" step="any" value="${tierMargin !== '' ? Number(parseFloat(tierMargin).toFixed(2)) : ''}" placeholder="%" 
+                    oninput="app.onTierMarginChange(this)"
+                    class="tier-margin w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
+            </div>
+
+            <!-- Precio Venta del Rango -->
+            <div class="sm:col-span-3 relative">
+                <span class="text-[10px] text-emerald-600 font-bold sm:hidden block mb-0.5">Precio Venta ($):</span>
+                <div class="relative">
+                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold">$</span>
+                    <input type="number" step="any" value="${tierSalePrice !== '' ? Number(parseFloat(tierSalePrice).toFixed(2)) : ''}" placeholder="Venta" 
+                        oninput="app.onTierSalePriceChange(this)"
+                        class="tier-sale-price w-full pl-6 pr-2 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
+                </div>
+            </div>
+
+            <!-- Botón Eliminar -->
+            <div class="sm:col-span-1 text-center">
+                <button type="button" onclick="this.closest('.cost-tier-row').remove()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Eliminar este rango">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
         `;
         container.appendChild(row);
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    onTierCostChange(inputEl) {
+        const row = inputEl.closest('.cost-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.')) || 0;
+        const totalCost = cost + extraCost;
+        const salePriceInp = row.querySelector('.tier-sale-price');
+        if (salePriceInp && totalCost > 0) {
+            salePriceInp.value = Number((totalCost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onTierMarginChange(inputEl) {
+        const row = inputEl.closest('.cost-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.')) || 0;
+        const totalCost = cost + extraCost;
+        const salePriceInp = row.querySelector('.tier-sale-price');
+        if (salePriceInp && totalCost > 0) {
+            salePriceInp.value = Number((totalCost * (1 + margin / 100)).toFixed(2));
+        }
+    }
+
+    onTierSalePriceChange(inputEl) {
+        const row = inputEl.closest('.cost-tier-row');
+        if (!row) return;
+        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const salePrice = parseFloat(String(row.querySelector('.tier-sale-price')?.value).replace(',', '.')) || 0;
+        const totalCost = cost + extraCost;
+        const marginInp = row.querySelector('.tier-margin');
+        if (marginInp && totalCost > 0 && salePrice > 0) {
+            const margin = ((salePrice / totalCost) - 1) * 100;
+            marginInp.value = Number(margin.toFixed(2));
+        }
     }
 
     submitProductForm() {
@@ -1693,8 +1806,24 @@ class AppController {
             const maxVal = row.querySelector('.tier-max')?.value;
             const max = maxVal ? parseInt(maxVal, 10) : 999999;
             const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.'));
+            let margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.'));
+            const salePrice = parseFloat(String(row.querySelector('.tier-sale-price')?.value).replace(',', '.'));
+
             if (!isNaN(cost) && cost >= 0) {
-                costTiers.push({ min, max, cost });
+                const totalTierCost = cost + extraCost;
+                if (!isNaN(salePrice) && salePrice > 0 && totalTierCost > 0) {
+                    const exactMargin = ((salePrice / totalTierCost) - 1) * 100;
+                    if (isNaN(margin) || Math.abs(exactMargin - margin) < 0.15) {
+                        margin = exactMargin;
+                    }
+                }
+                costTiers.push({
+                    min,
+                    max,
+                    cost,
+                    margin: !isNaN(margin) ? margin : defaultMargin,
+                    salePrice: !isNaN(salePrice) && salePrice > 0 ? salePrice : Number(((cost + extraCost) * (1 + (margin || defaultMargin) / 100)).toFixed(2))
+                });
             }
         });
         costTiers.sort((a, b) => a.min - b.min);

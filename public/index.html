@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.7">
+    <link rel="stylesheet" href="css/styles.css?v=4.8">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1439,16 +1439,29 @@
                     </div>
                 </div>
 
-                <!-- Escala de Precios de Costo del Proveedor por Cantidad -->
-                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <!-- Escala de Precios y Costos por Cantidad (Volumen / Mayorista) -->
+                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-slate-800">Escala de Costos del Proveedor por Volumen</label>
-                        <button type="button" onclick="app.addCostTierRow()" class="text-xs text-indigo-600 font-bold hover:underline">+ Agregar Rango</button>
+                        <div>
+                            <label class="text-xs font-bold text-slate-800">Escala de Precios por Volumen (Vender más barato por cantidad)</label>
+                            <p class="text-[11px] text-slate-500">Configura precios especiales por cantidad con su costo, margen y precio de venta:</p>
+                        </div>
+                        <button type="button" onclick="app.addCostTierRow()" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all shrink-0 cursor-pointer">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar Rango
+                        </button>
                     </div>
-                    <p class="text-[11px] text-slate-500">Define si el proveedor te vende más barato por cantidad (ej: 1-12 unds: $5.00, 13-50 unds: $4.20):</p>
+
+                    <!-- Header de columnas en pantallas medianas -->
+                    <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 pt-1">
+                        <div class="col-span-3 text-center">Cantidades</div>
+                        <div class="col-span-3 text-center">Costo ($)</div>
+                        <div class="col-span-2 text-center">Margen (%)</div>
+                        <div class="col-span-3 text-center">Precio Venta ($)</div>
+                        <div class="col-span-1 text-center"></div>
+                    </div>
                     
-                    <div id="cost-tiers-rows-container" class="space-y-1.5">
-                        <!-- Filas de rangos de costo inyectadas -->
+                    <div id="cost-tiers-rows-container" class="space-y-2">
+                        <!-- Filas de rangos inyectadas -->
                     </div>
                 </div>
 
@@ -1825,18 +1838,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.7"></script>
-    <script src="js/db.js?v=4.7"></script>
-    <script src="js/vinilos.js?v=4.7"></script>
-    <script src="js/pdf-generator.js?v=4.7"></script>
-    <script src="js/cotizador.js?v=4.7"></script>
-    <script src="js/app.js?v=4.7"></script>
+    <script src="js/firebase-config.js?v=4.8"></script>
+    <script src="js/db.js?v=4.8"></script>
+    <script src="js/vinilos.js?v=4.8"></script>
+    <script src="js/pdf-generator.js?v=4.8"></script>
+    <script src="js/cotizador.js?v=4.8"></script>
+    <script src="js/app.js?v=4.8"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.7').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.8').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
