@@ -1668,49 +1668,49 @@ class AppController {
         }
 
         const row = document.createElement('div');
-        row.className = 'cost-tier-row bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
+        row.className = 'cost-tier-row bg-white p-2 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-1.5 items-center';
         row.innerHTML = `
             <!-- Cantidades Min a Max -->
-            <div class="sm:col-span-3 flex items-center gap-1">
+            <div class="sm:col-span-3 flex items-center gap-1 min-w-0">
                 <input type="number" min="1" value="${autoMin}" placeholder="Min" 
-                    class="tier-min w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
-                <span class="text-xs text-slate-400 font-bold px-0.5">a</span>
+                    class="tier-min w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                <span class="text-xs text-slate-500 font-bold px-0.5 shrink-0">a</span>
                 <input type="number" min="1" value="${autoMax}" placeholder="Max (+)" 
-                    class="tier-max w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                    class="tier-max w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
             </div>
 
             <!-- Costo del Rango -->
-            <div class="sm:col-span-3 relative">
-                <span class="text-[10px] text-slate-400 font-bold sm:hidden block mb-0.5">Costo ($):</span>
+            <div class="sm:col-span-3 relative min-w-0">
+                <span class="text-[10px] text-slate-500 font-bold sm:hidden block mb-0.5">Costo ($):</span>
                 <div class="relative">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold pointer-events-none">$</span>
                     <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
                         oninput="app.onTierCostChange(this)"
-                        class="tier-cost w-full pl-6 pr-2 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
+                        class="tier-cost w-full pl-5 pr-1 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
 
             <!-- Margen del Rango -->
-            <div class="sm:col-span-2 relative">
-                <span class="text-[10px] text-indigo-500 font-bold sm:hidden block mb-0.5">Margen (%):</span>
+            <div class="sm:col-span-2 relative min-w-0">
+                <span class="text-[10px] text-indigo-600 font-bold sm:hidden block mb-0.5">Margen (%):</span>
                 <input type="number" step="any" value="${tierMargin !== '' ? Number(parseFloat(tierMargin).toFixed(2)) : ''}" placeholder="%" 
                     oninput="app.onTierMarginChange(this)"
-                    class="tier-margin w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
+                    class="tier-margin w-full px-1 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
             </div>
 
             <!-- Precio Venta del Rango -->
-            <div class="sm:col-span-3 relative">
+            <div class="sm:col-span-3 relative min-w-0">
                 <span class="text-[10px] text-emerald-600 font-bold sm:hidden block mb-0.5">Precio Venta ($):</span>
                 <div class="relative">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold">$</span>
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold pointer-events-none">$</span>
                     <input type="number" step="any" value="${tierSalePrice !== '' ? Number(parseFloat(tierSalePrice).toFixed(2)) : ''}" placeholder="Venta" 
                         oninput="app.onTierSalePriceChange(this)"
-                        class="tier-sale-price w-full pl-6 pr-2 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
+                        class="tier-sale-price w-full pl-5 pr-1 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
 
             <!-- Botón Eliminar -->
-            <div class="sm:col-span-1 text-center">
+            <div class="sm:col-span-1 text-center shrink-0">
                 <button type="button" onclick="this.closest('.cost-tier-row').remove()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Eliminar este rango">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
@@ -2239,49 +2239,49 @@ class AppController {
         }
 
         const row = document.createElement('div');
-        row.className = 'combine-tier-row bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
+        row.className = 'combine-tier-row bg-white p-2 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-1.5 items-center';
         row.innerHTML = `
             <!-- Cantidades Min a Max -->
-            <div class="sm:col-span-3 flex items-center gap-1">
+            <div class="sm:col-span-3 flex items-center gap-1 min-w-0">
                 <input type="number" min="1" value="${autoMin}" placeholder="Min" 
-                    class="combine-tier-min w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
-                <span class="text-xs text-slate-400 font-bold px-0.5">a</span>
+                    class="combine-tier-min w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                <span class="text-xs text-slate-500 font-bold px-0.5 shrink-0">a</span>
                 <input type="number" min="1" value="${autoMax}" placeholder="Max (+)" 
-                    class="combine-tier-max w-full px-2 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
+                    class="combine-tier-max w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
             </div>
 
             <!-- Costo del Rango -->
-            <div class="sm:col-span-3 relative">
-                <span class="text-[10px] text-slate-400 font-bold sm:hidden block mb-0.5">Costo ($):</span>
+            <div class="sm:col-span-3 relative min-w-0">
+                <span class="text-[10px] text-slate-500 font-bold sm:hidden block mb-0.5">Costo ($):</span>
                 <div class="relative">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold pointer-events-none">$</span>
                     <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
                         oninput="app.onCombineTierCostChange(this)"
-                        class="combine-tier-cost w-full pl-6 pr-2 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
+                        class="combine-tier-cost w-full pl-5 pr-1 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
 
             <!-- Margen del Rango -->
-            <div class="sm:col-span-2 relative">
-                <span class="text-[10px] text-indigo-500 font-bold sm:hidden block mb-0.5">Margen (%):</span>
+            <div class="sm:col-span-2 relative min-w-0">
+                <span class="text-[10px] text-indigo-600 font-bold sm:hidden block mb-0.5">Margen (%):</span>
                 <input type="number" step="any" value="${tierMargin !== '' ? Number(parseFloat(tierMargin).toFixed(2)) : ''}" placeholder="%" 
                     oninput="app.onCombineTierMarginChange(this)"
-                    class="combine-tier-margin w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
+                    class="combine-tier-margin w-full px-1 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
             </div>
 
             <!-- Precio Venta del Rango -->
-            <div class="sm:col-span-3 relative">
+            <div class="sm:col-span-3 relative min-w-0">
                 <span class="text-[10px] text-emerald-600 font-bold sm:hidden block mb-0.5">Precio Venta ($):</span>
                 <div class="relative">
-                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold">$</span>
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold pointer-events-none">$</span>
                     <input type="number" step="any" value="${tierSalePrice !== '' ? Number(parseFloat(tierSalePrice).toFixed(2)) : ''}" placeholder="Venta" 
                         oninput="app.onCombineTierSalePriceChange(this)"
-                        class="combine-tier-sale-price w-full pl-6 pr-2 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
+                        class="combine-tier-sale-price w-full pl-5 pr-1 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
 
             <!-- Botón Eliminar -->
-            <div class="sm:col-span-1 text-center">
+            <div class="sm:col-span-1 text-center shrink-0">
                 <button type="button" onclick="this.closest('.combine-tier-row').remove()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Eliminar este rango">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>

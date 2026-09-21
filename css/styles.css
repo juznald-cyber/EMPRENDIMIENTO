@@ -999,3 +999,76 @@ html.dark .combine-tier-row .combine-tier-sale-price {
     background: rgba(48, 209, 88, 0.1) !important;
 }
 
+/* Ocultar flechas/spinners en campos numéricos para evitar que recorten los números */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
+input[type=number] {
+    -moz-appearance: textfield !important;
+}
+
+/* Modales - Contenedores de Escalas de Volumen en Modo Oscuro */
+html.dark #modal-combine-products .bg-slate-50\/80,
+html.dark #modal-combine-products .bg-slate-50,
+html.dark #modal-edit-product .bg-slate-50 {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark #modal-combine-products h3,
+html.dark #modal-combine-products h4,
+html.dark #modal-combine-products label,
+html.dark #modal-edit-product h3,
+html.dark #modal-edit-product h4,
+html.dark #modal-edit-product label {
+    color: #ffffff !important;
+}
+
+html.dark #modal-combine-products p,
+html.dark #modal-edit-product p {
+    color: #e2e8f0 !important;
+}
+
+html.dark #modal-combine-products .text-slate-400,
+html.dark #modal-combine-products .text-slate-500,
+html.dark #modal-combine-products .text-slate-600,
+html.dark #modal-edit-product .text-slate-400,
+html.dark #modal-edit-product .text-slate-500,
+html.dark #modal-edit-product .text-slate-600 {
+    color: #cbd5e1 !important;
+}
+
+/* Botón Agregar Rango en Modo Oscuro */
+html.dark #modal-combine-products button[onclick*="addCombineCostTierRow"],
+html.dark #modal-combine-products button[onclick*="addCostTierRow"],
+html.dark #modal-edit-product button[onclick*="addCostTierRow"] {
+    background: rgba(99, 102, 241, 0.35) !important;
+    color: #a5b4fc !important;
+    border: 1px solid rgba(129, 140, 248, 0.5) !important;
+}
+
+html.dark #modal-combine-products button[onclick*="addCombineCostTierRow"]:hover,
+html.dark #modal-edit-product button[onclick*="addCostTierRow"]:hover {
+    background: rgba(99, 102, 241, 0.5) !important;
+    color: #ffffff !important;
+}
+
+/* Letras y símbolos dentro de las filas de escalas */
+html.dark .cost-tier-row span,
+html.dark .combine-tier-row span {
+    color: #cbd5e1 !important;
+}
+
+html.dark .cost-tier-row button,
+html.dark .combine-tier-row button {
+    color: #94a3b8 !important;
+}
+
+html.dark .cost-tier-row button:hover,
+html.dark .combine-tier-row button:hover {
+    color: #fb7185 !important;
+    background: rgba(244, 63, 94, 0.2) !important;
+}
+
