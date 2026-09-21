@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.2">
+    <link rel="stylesheet" href="css/styles.css?v=4.3">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -612,7 +612,7 @@
                                     <label class="block text-[11px] font-bold text-slate-600 mb-1">Mano Obra / m²</label>
                                     <div class="relative">
                                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
-                                        <input type="number" id="vinyl-labor-m2-input" step="0.1" value="0"
+                                        <input type="text" id="vinyl-labor-m2-input" value="0"
                                             oninput="app.calculateVinylLive()"
                                             class="w-full pl-6 pr-2 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
                                     </div>
@@ -639,7 +639,7 @@
                                     <label class="block text-[11px] font-bold text-emerald-700 mb-1">Precio Venta / m²</label>
                                     <div class="relative">
                                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">$</span>
-                                        <input type="number" id="vinyl-sale-price-m2-input" step="1" value=""
+                                        <input type="text" id="vinyl-sale-price-m2-input" value=""
                                             oninput="app.onVinylSalePriceM2Change()"
                                             placeholder="Auto"
                                             class="w-full pl-6 pr-2 py-2 text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-xl focus:bg-white outline-none text-center" />
@@ -1174,12 +1174,12 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-indigo-900 mb-0.5">Precio Material ($)</label>
-                            <input type="number" id="vinyl-preset-form-roll-cost" step="0.01" value="14000" oninput="app.syncPresetCostFromRoll()"
+                            <input type="text" id="vinyl-preset-form-roll-cost" value="14.000" oninput="app.syncPresetCostFromRoll()"
                                 class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 rounded-lg outline-none text-center" />
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-indigo-900 mb-0.5">Mano Obra ($)</label>
-                            <input type="number" id="vinyl-preset-form-roll-labor" step="0.01" value="1600" oninput="app.syncPresetCostFromRoll()"
+                            <input type="text" id="vinyl-preset-form-roll-labor" value="1.600" oninput="app.syncPresetCostFromRoll()"
                                 class="w-full px-2 py-1.5 text-xs font-bold text-indigo-700 bg-white border border-indigo-300 rounded-lg outline-none text-center" />
                         </div>
                     </div>
@@ -1188,12 +1188,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Costo Material / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-cost" step="0.01" value="24137.93" 
+                        <input type="text" id="vinyl-preset-form-cost" value="24.137,93" 
                             class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Mano Obra / m² ($)</label>
-                        <input type="number" id="vinyl-preset-form-labor" step="0.01" value="2758.62" 
+                        <input type="text" id="vinyl-preset-form-labor" value="2.758,62" 
                             class="w-full px-3.5 py-2 text-xs font-bold text-indigo-700 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
                     </div>
                 </div>
@@ -1712,18 +1712,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.2"></script>
-    <script src="js/db.js?v=4.2"></script>
-    <script src="js/vinilos.js?v=4.2"></script>
-    <script src="js/pdf-generator.js?v=4.2"></script>
-    <script src="js/cotizador.js?v=4.2"></script>
-    <script src="js/app.js?v=4.2"></script>
+    <script src="js/firebase-config.js?v=4.3"></script>
+    <script src="js/db.js?v=4.3"></script>
+    <script src="js/vinilos.js?v=4.3"></script>
+    <script src="js/pdf-generator.js?v=4.3"></script>
+    <script src="js/cotizador.js?v=4.3"></script>
+    <script src="js/app.js?v=4.3"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.2').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.3').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

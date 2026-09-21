@@ -21,8 +21,8 @@ class PDFGenerator {
                 </td>
                 <td class="py-2.5 px-2 text-slate-600 text-center">${item.unit || 'Unid'}</td>
                 <td class="py-2.5 px-2 text-slate-800 text-center font-bold">${item.quantity}</td>
-                <td class="py-2.5 px-2 text-slate-700 text-right font-medium">${currency} ${window.formatMoney(item.unitPrice, true)}</td>
-                <td class="py-2.5 px-2 text-indigo-700 text-right font-bold">${currency} ${window.formatMoney(item.total, true)}</td>
+                <td class="py-2.5 px-2 text-slate-700 text-right font-medium">${currency} ${window.formatMoney(item.unitPrice)}</td>
+                <td class="py-2.5 px-2 text-indigo-700 text-right font-bold">${currency} ${window.formatMoney(item.total)}</td>
             </tr>
         `).join('');
 
@@ -43,47 +43,45 @@ class PDFGenerator {
                     <div>
                         <h1 class="text-xl font-black text-slate-900 tracking-tight leading-tight">${this.escapeHTML(profile.companyName || 'Mi Empresa')}</h1>
                         <p class="text-[11px] text-slate-500 font-medium">RUT / Identificación: <span class="text-slate-800 font-bold">${this.escapeHTML(profile.taxId || 'N/A')}</span></p>
-                        <p class="text-[11px] text-slate-500 font-medium">Telf: <span class="text-slate-700">${this.escapeHTML(profile.phone || '')}</span> | Email: <span class="text-slate-700">${this.escapeHTML(profile.email || '')}</span></p>
-                        <p class="text-[10px] text-slate-500">${this.escapeHTML(profile.address || '')}</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusColor} mb-1 uppercase tracking-wide">
+                    <div class="inline-block px-3 py-1 rounded-lg border text-xs font-black uppercase tracking-wider mb-1 ${statusColor}">
                         ${quote.status || 'Borrador'}
                     </div>
-                    <h2 class="text-xl font-black text-indigo-700 uppercase tracking-wide">COTIZACIÓN</h2>
-                    <p class="text-xs font-bold text-slate-800">N° ${quote.quoteNumber || 'COT-0000'}</p>
-                    <p class="text-[10px] text-slate-500 mt-0.5">Fecha: <span class="font-semibold text-slate-700">${quote.date || ''}</span></p>
-                    <p class="text-[10px] text-slate-500">Válida hasta: <span class="font-semibold text-slate-700">${quote.validUntil || ''}</span></p>
+                    <p class="text-base font-black text-indigo-700 font-mono tracking-tight">${quote.quoteNumber || 'COT-0000'}</p>
+                    <p class="text-[11px] text-slate-500">Fecha: <span class="text-slate-800 font-bold">${quote.date || ''}</span></p>
+                    <p class="text-[11px] text-slate-500">Vence: <span class="text-slate-800 font-bold">${quote.validUntil || ''}</span></p>
                 </div>
             </div>
 
-            <!-- Datos del Cliente y Resumen -->
-            <div class="grid grid-cols-2 gap-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+            <!-- Datos de Cliente y Emisor -->
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200 mb-4 text-xs">
                 <div>
-                    <h3 class="text-[10px] font-black text-indigo-700 uppercase tracking-wider mb-1">Cliente / Solicitante</h3>
-                    <p class="font-black text-slate-900 text-sm leading-tight">${this.escapeHTML(quote.client?.name || 'Cliente Particular')}</p>
-                    ${quote.client?.rut ? `<p class="text-[11px] text-slate-700 font-bold">RUT / Identificación: <span class="text-slate-900 font-mono">${this.escapeHTML(quote.client.rut)}</span></p>` : ''}
-                    ${quote.client?.contact ? `<p class="text-[10px] text-slate-600">Contacto: ${this.escapeHTML(quote.client.contact)}</p>` : ''}
-                    ${quote.client?.phone ? `<p class="text-[10px] text-slate-600">Teléfono: ${this.escapeHTML(quote.client.phone)}</p>` : ''}
-                    ${quote.client?.email ? `<p class="text-[10px] text-slate-600">Email: ${this.escapeHTML(quote.client.email)}</p>` : ''}
-                    ${quote.client?.address ? `<p class="text-[10px] text-slate-600">Dirección: ${this.escapeHTML(quote.client.address)}</p>` : ''}
+                    <h3 class="font-bold text-[10px] text-slate-400 uppercase tracking-wider mb-1">Cliente / Destinatario</h3>
+                    <p class="font-black text-slate-900 text-sm">${this.escapeHTML(quote.client?.name || 'Cliente Particular')}</p>
+                    ${quote.client?.taxId ? `<p class="text-slate-600 text-[11px]">RUT / ID: <span class="font-semibold">${this.escapeHTML(quote.client.taxId)}</span></p>` : ''}
+                    ${quote.client?.phone ? `<p class="text-slate-600 text-[11px]">Tel: <span class="font-semibold">${this.escapeHTML(quote.client.phone)}</span></p>` : ''}
+                    ${quote.client?.email ? `<p class="text-slate-600 text-[11px]">Email: <span class="font-semibold">${this.escapeHTML(quote.client.email)}</span></p>` : ''}
+                    ${quote.client?.address ? `<p class="text-slate-600 text-[11px]">Dir: <span class="font-semibold">${this.escapeHTML(quote.client.address)}</span></p>` : ''}
                 </div>
-                <div class="border-l border-slate-200 pl-3 flex flex-col justify-center text-xs">
-                    <div class="text-[11px] text-slate-500 mb-0.5">Total de Ítems: <span class="font-bold text-slate-800">${quote.items.length}</span></div>
-                    <div class="text-[11px] text-slate-500 mb-0.5">Moneda: <span class="font-bold text-slate-800">${profile.currencyCode || 'USD'} (${currency})</span></div>
-                    ${quote.notes ? `<div class="text-[10px] text-slate-600 bg-white p-1.5 rounded border border-slate-200 mt-1 italic">${this.escapeHTML(quote.notes)}</div>` : ''}
+                <div>
+                    <h3 class="font-bold text-[10px] text-slate-400 uppercase tracking-wider mb-1">Emisor / Taller</h3>
+                    <p class="font-bold text-slate-800">${this.escapeHTML(profile.companyName || '')}</p>
+                    ${profile.phone ? `<p class="text-slate-600 text-[11px]">Tel: ${this.escapeHTML(profile.phone)}</p>` : ''}
+                    ${profile.email ? `<p class="text-slate-600 text-[11px]">Email: ${this.escapeHTML(profile.email)}</p>` : ''}
+                    ${profile.address ? `<p class="text-slate-600 text-[11px]">Dir: ${this.escapeHTML(profile.address)}</p>` : ''}
                 </div>
             </div>
 
-            <!-- Tabla de Ítems (Ajustada para Carta) -->
-            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm mb-4">
+            <!-- Tabla de Ítems -->
+            <div class="overflow-hidden rounded-xl border border-slate-200 mb-4">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider">
+                        <tr class="bg-indigo-900 text-white text-[10px] font-bold uppercase tracking-wider">
                             <th class="py-2 px-2 text-center w-8">#</th>
-                            <th class="py-2 px-2">Descripción / Detalle</th>
-                            <th class="py-2 px-2 text-center w-16">Unidad</th>
+                            <th class="py-2 px-2">Descripción del Ítem</th>
+                            <th class="py-2 px-2 text-center w-14">Unidad</th>
                             <th class="py-2 px-2 text-center w-12">Cant.</th>
                             <th class="py-2 px-2 text-right w-24">Precio Unit.</th>
                             <th class="py-2 px-2 text-right w-24">Total</th>
@@ -95,26 +93,20 @@ class PDFGenerator {
                 </table>
             </div>
 
-            <!-- Cuadro de Totales y Términos -->
-            <div class="grid grid-cols-12 gap-4 mb-4">
-                <div class="col-span-7 space-y-2">
-                    <!-- Datos de Pago -->
+            <!-- Sección Inferior: Totales y Condiciones -->
+            <div class="grid grid-cols-12 gap-4 items-start">
+                <!-- Condiciones y Datos Bancarios -->
+                <div class="col-span-7 space-y-2.5">
                     ${profile.bankDetails ? `
-                        <div class="bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100">
-                            <h4 class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                <span>💳</span> Datos de Pago y Cuentas
-                            </h4>
-                            <p class="text-[10px] text-slate-700 whitespace-pre-line leading-relaxed font-mono">${this.escapeHTML(profile.bankDetails)}</p>
+                        <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100">
+                            <h4 class="font-bold text-[10px] text-indigo-900 uppercase tracking-wider mb-1">Datos de Pago / Transferencia</h4>
+                            <p class="text-[11px] text-slate-700 whitespace-pre-line font-medium leading-relaxed">${this.escapeHTML(profile.bankDetails)}</p>
                         </div>
                     ` : ''}
-
-                    <!-- Términos y Condiciones -->
-                    ${profile.terms ? `
+                    ${quote.terms ? `
                         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-                            <h4 class="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
-                                📋 Términos y Condiciones
-                            </h4>
-                            <p class="text-[9px] text-slate-500 whitespace-pre-line leading-relaxed">${this.escapeHTML(profile.terms)}</p>
+                            <h4 class="font-bold text-[10px] text-slate-600 uppercase tracking-wider mb-0.5">Términos y Condiciones</h4>
+                            <p class="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">${this.escapeHTML(quote.terms)}</p>
                         </div>
                     ` : ''}
                 </div>
@@ -124,23 +116,23 @@ class PDFGenerator {
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs">
                         <div class="flex justify-between text-slate-600 font-medium text-[11px]">
                             <span>Subtotal Neto:</span>
-                            <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.subtotal, true)}</span>
+                            <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.subtotal)}</span>
                         </div>
                         ${quote.discountAmount > 0 ? `
                             <div class="flex justify-between text-emerald-600 font-medium text-[11px]">
                                 <span>Descuento (${quote.discountPercentage || 0}%):</span>
-                                <span class="font-bold">-${currency} ${window.formatMoney(quote.discountAmount, true)}</span>
+                                <span class="font-bold">-${currency} ${window.formatMoney(quote.discountAmount)}</span>
                             </div>
                         ` : ''}
                         ${profile.enableTax ? `
                             <div class="flex justify-between text-slate-600 font-medium text-[11px]">
                                 <span>IVA (${quote.taxRate || profile.taxRate || 0}%):</span>
-                                <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.taxAmount, true)}</span>
+                                <span class="font-bold text-slate-800">${currency} ${window.formatMoney(quote.taxAmount)}</span>
                             </div>
                         ` : ''}
                         <div class="border-t-2 border-indigo-200 pt-1.5 mt-1.5 flex justify-between items-baseline">
                             <span class="text-xs font-black text-slate-900 uppercase">TOTAL:</span>
-                            <span class="text-lg font-black text-indigo-700 font-mono">${currency} ${window.formatMoney(quote.total, true)}</span>
+                            <span class="text-lg font-black text-indigo-700 font-mono">${currency} ${window.formatMoney(quote.total)}</span>
                         </div>
                     </div>
 
@@ -243,12 +235,12 @@ class PDFGenerator {
         const currency = profile.currency || '$';
 
         let bodyText = `Estimado(a) ${quote.client?.name || 'Cliente'},\n\n`;
-        bodyText += `Le hacemos entrega formal de la cotización N° ${quote.quoteNumber || ''} por un monto total de ${currency} ${window.formatMoney(quote.total, true)}.\n\n`;
+        bodyText += `Le hacemos entrega formal de la cotización N° ${quote.quoteNumber || ''} por un monto total de ${currency} ${window.formatMoney(quote.total)}.\n\n`;
         bodyText += `Resumen de ítems cotizados:\n`;
         quote.items.forEach((it) => {
-            bodyText += `- ${it.quantity}x ${it.name} -> ${currency} ${window.formatMoney(it.total, true)}\n`;
+            bodyText += `- ${it.quantity}x ${it.name} -> ${currency} ${window.formatMoney(it.total)}\n`;
         });
-        bodyText += `\nTotal a Pagar: ${currency} ${window.formatMoney(quote.total, true)}\n`;
+        bodyText += `\nTotal a Pagar: ${currency} ${window.formatMoney(quote.total)}\n`;
         bodyText += `Validez de la oferta: Hasta el ${quote.validUntil || '15 días'}\n\n`;
         if (profile.bankDetails) {
             bodyText += `Datos bancarios para pagos:\n${profile.bankDetails}\n\n`;
@@ -287,10 +279,10 @@ class PDFGenerator {
         msg += `Te enviamos la información de tu *Cotización N° ${quote.quoteNumber || ''}* de *${profile.companyName || 'nuestra empresa'}*:\n\n`;
         
         quote.items.forEach((it) => {
-            msg += `▫️ *${it.quantity}x* ${it.name}: ${currency} ${window.formatMoney(it.total, true)}\n`;
+            msg += `▫️ *${it.quantity}x* ${it.name}: ${currency} ${window.formatMoney(it.total)}\n`;
         });
 
-        msg += `\n💰 *Total a Pagar: ${currency} ${window.formatMoney(quote.total, true)}*\n`;
+        msg += `\n💰 *Total a Pagar: ${currency} ${window.formatMoney(quote.total)}*\n`;
         msg += `📅 *Válida hasta:* ${quote.validUntil || '15 días'}\n\n`;
         msg += `Adjunto te compartimos el PDF formal con el desglose y datos de pago. ¡Quedamos a tu orden! 😊`;
 

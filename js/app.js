@@ -593,27 +593,15 @@ class AppController {
      *   la coma (,) es separador decimal → 14.000,50 = 14000.50
      */
     parseChileanFloat(str) {
-        if (str === '' || str === null || str === undefined) return 0;
-        const s = String(str).trim();
-        // Si tiene coma: punto = miles, coma = decimal
-        if (s.includes(',')) {
-            return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-        }
-        // Si tiene solo puntos: puede ser miles (14.000) o decimal (14.5)
-        // Heurística: si la parte después del punto tiene 3 dígitos = miles
-        const parts = s.split('.');
-        if (parts.length === 2 && parts[1].length === 3) {
-            return parseFloat(s.replace('.', '')) || 0; // miles
-        }
-        return parseFloat(s) || 0;
+        return window.parseMoney(str);
     }
 
     /** Llamado al cambiar ancho, largo o precio pagado del pliego */
     onVinylRollChange() {
         const rollW     = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 1;
         const rollL     = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 1;
-        const rollCost  = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
-        const rollLabor = this.parseChileanFloat(document.getElementById('vinyl-roll-labor-input')?.value);
+        const rollCost  = window.parseMoney(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollLabor = window.parseMoney(document.getElementById('vinyl-roll-labor-input')?.value);
 
         // Calcular costo y mano de obra por m²
         const areaM2  = (rollW * rollL) / 10000;
@@ -626,13 +614,13 @@ class AppController {
         const badge       = document.getElementById('vinyl-roll-calc-equivalent');
 
         if (hiddenInput) hiddenInput.value = costM2.toFixed(4);
-        if (display)     display.textContent = `$${this._fmt(costM2, true)}`;
-        if (badge)       badge.textContent   = `Costo: $${this._fmt(costM2, true)} / m²`;
+        if (display)     display.textContent = `$${window.formatMoney(costM2)}`;
+        if (badge)       badge.textContent   = `Costo: $${window.formatMoney(costM2)} / m²`;
 
         // Si se ingresó mano de obra en el pliego, actualizar mano de obra / m² automáticamente
         if (rollLabor > 0 && laborM2 > 0) {
             const laborInput = document.getElementById('vinyl-labor-m2-input');
-            if (laborInput) laborInput.value = laborM2.toFixed(2);
+            if (laborInput) laborInput.value = window.formatMoney(laborM2);
         }
 
         // Recalcular precio venta/m² a partir del margen
@@ -650,7 +638,7 @@ class AppController {
     /** Cuando el usuario escribe el precio venta/m² → calcula el % ganancia automáticamente */
     onVinylSalePriceM2Change() {
         const costM2      = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value) || 0;
-        const salePriceM2 = parseFloat(document.getElementById('vinyl-sale-price-m2-input')?.value) || 0;
+        const salePriceM2 = window.parseMoney(document.getElementById('vinyl-sale-price-m2-input')?.value) || 0;
         const marginInp   = document.getElementById('vinyl-margin-input');
         if (!marginInp || costM2 <= 0 || salePriceM2 <= 0) return;
         const margin = ((salePriceM2 / costM2) - 1) * 100;
@@ -663,7 +651,8 @@ class AppController {
         const margin         = parseFloat(document.getElementById('vinyl-margin-input')?.value) || 0;
         const salePriceInp   = document.getElementById('vinyl-sale-price-m2-input');
         if (!salePriceInp || costM2 <= 0) return;
-        salePriceInp.value = (costM2 * (1 + margin / 100)).toFixed(2);
+        const salePrice = costM2 * (1 + margin / 100);
+        salePriceInp.value = window.formatMoney(salePrice);
     }
 
     /** Formatea número con puntos de miles y decimales */
@@ -677,21 +666,21 @@ class AppController {
     syncPresetCostFromRoll() {
         const rollW     = parseFloat(document.getElementById('vinyl-preset-form-roll-w')?.value) || 58;
         const rollL     = parseFloat(document.getElementById('vinyl-preset-form-roll-l')?.value) || 100;
-        const rollCost  = parseFloat(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
-        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor')?.value) || 0;
+        const rollCost  = window.parseMoney(document.getElementById('vinyl-preset-form-roll-cost')?.value) || 0;
+        const rollLabor = window.parseMoney(document.getElementById('vinyl-preset-form-roll-labor')?.value) || 0;
 
         const areaM2 = (rollW * rollL) / 10000;
         const badgeArea = document.getElementById('vinyl-preset-area-badge');
-        if (badgeArea) badgeArea.textContent = `${areaM2.toFixed(4)} m²`;
+        if (badgeArea) badgeArea.textContent = `${window.formatNumber(areaM2, 2)} m²`;
 
         const costM2  = window.vinylCalc.calculateCostPerM2FromRoll(rollW, rollL, rollCost);
         const laborM2 = window.vinylCalc.calculateLaborPerM2FromRoll(rollW, rollL, rollLabor);
 
         const costInput = document.getElementById('vinyl-preset-form-cost');
-        if (costInput && costM2 > 0) costInput.value = costM2.toFixed(2);
+        if (costInput && costM2 > 0) costInput.value = window.formatMoney(costM2);
 
         const laborInput = document.getElementById('vinyl-preset-form-labor');
-        if (laborInput && laborM2 > 0) laborInput.value = laborM2.toFixed(2);
+        if (laborInput && laborM2 > 0) laborInput.value = window.formatMoney(laborM2);
     }
 
     /**
@@ -710,9 +699,9 @@ class AppController {
 
         set('vinyl-roll-width-input',  preset.rollWidthCm  || 58);
         set('vinyl-roll-length-input', preset.rollLengthCm || 100);
-        set('vinyl-roll-cost-input',   preset.rollCost > 0 ? preset.rollCost : '');
-        set('vinyl-roll-labor-input',  preset.rollLabor > 0 ? preset.rollLabor : '');
-        set('vinyl-labor-m2-input',    preset.laborCostPerM2 || 0);
+        set('vinyl-roll-cost-input',   preset.rollCost > 0 ? window.formatMoney(preset.rollCost) : '');
+        set('vinyl-roll-labor-input',  preset.rollLabor > 0 ? window.formatMoney(preset.rollLabor) : '');
+        set('vinyl-labor-m2-input',    preset.laborCostPerM2 > 0 ? window.formatMoney(preset.laborCostPerM2) : '0');
         set('vinyl-waste-input',       preset.wasteRate     || 10);
         set('vinyl-margin-input',      preset.defaultMargin || 50);
 
@@ -734,10 +723,10 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = p.name || '';
             document.getElementById('vinyl-preset-form-roll-w').value = p.rollWidthCm || 58;
             document.getElementById('vinyl-preset-form-roll-l').value = p.rollLengthCm || 100;
-            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost || 0;
-            document.getElementById('vinyl-preset-form-roll-labor').value = p.rollLabor || 0;
-            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 || 0;
-            document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 || 0;
+            document.getElementById('vinyl-preset-form-roll-cost').value = p.rollCost > 0 ? window.formatMoney(p.rollCost) : '';
+            document.getElementById('vinyl-preset-form-roll-labor').value = p.rollLabor > 0 ? window.formatMoney(p.rollLabor) : '';
+            document.getElementById('vinyl-preset-form-cost').value = p.costPerM2 > 0 ? window.formatMoney(p.costPerM2) : '';
+            document.getElementById('vinyl-preset-form-labor').value = p.laborCostPerM2 > 0 ? window.formatMoney(p.laborCostPerM2) : '';
             document.getElementById('vinyl-preset-form-waste').value = p.wasteRate || 10;
             document.getElementById('vinyl-preset-form-margin').value = p.defaultMargin || 50;
             document.getElementById('vinyl-preset-form-desc').value = p.description || '';
@@ -748,10 +737,10 @@ class AppController {
             document.getElementById('vinyl-preset-form-name').value = '';
             document.getElementById('vinyl-preset-form-roll-w').value = '58';
             document.getElementById('vinyl-preset-form-roll-l').value = '100';
-            document.getElementById('vinyl-preset-form-roll-cost').value = '14000';
-            document.getElementById('vinyl-preset-form-roll-labor').value = '1600';
-            document.getElementById('vinyl-preset-form-cost').value = '24137.93';
-            document.getElementById('vinyl-preset-form-labor').value = '2758.62';
+            document.getElementById('vinyl-preset-form-roll-cost').value = '14.000';
+            document.getElementById('vinyl-preset-form-roll-labor').value = '1.600';
+            document.getElementById('vinyl-preset-form-cost').value = '24.137,93';
+            document.getElementById('vinyl-preset-form-labor').value = '2.758,62';
             document.getElementById('vinyl-preset-form-waste').value = '10';
             document.getElementById('vinyl-preset-form-margin').value = '50';
             document.getElementById('vinyl-preset-form-desc').value = '';
@@ -767,10 +756,10 @@ class AppController {
         const name = document.getElementById('vinyl-preset-form-name').value.trim();
         const rollWidthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-w').value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-preset-form-roll-l').value) || 100;
-        const rollCost = parseFloat(document.getElementById('vinyl-preset-form-roll-cost').value) || 0;
-        const rollLabor = parseFloat(document.getElementById('vinyl-preset-form-roll-labor').value) || 0;
-        const costPerM2 = parseFloat(document.getElementById('vinyl-preset-form-cost').value) || 0;
-        const laborCostPerM2 = parseFloat(document.getElementById('vinyl-preset-form-labor').value) || 0;
+        const rollCost = window.parseMoney(document.getElementById('vinyl-preset-form-roll-cost').value) || 0;
+        const rollLabor = window.parseMoney(document.getElementById('vinyl-preset-form-roll-labor').value) || 0;
+        const costPerM2 = window.parseMoney(document.getElementById('vinyl-preset-form-cost').value) || 0;
+        const laborCostPerM2 = window.parseMoney(document.getElementById('vinyl-preset-form-labor').value) || 0;
         const wasteRate = parseFloat(document.getElementById('vinyl-preset-form-waste').value) || 0;
         const defaultMargin = parseFloat(document.getElementById('vinyl-preset-form-margin').value) || 0;
         const description = document.getElementById('vinyl-preset-form-desc').value.trim();
@@ -839,10 +828,10 @@ class AppController {
         const qty         = parseInt(document.getElementById('vinyl-quantity-input')?.value, 10) || 1;
         const rollWidthCm  = parseFloat(document.getElementById('vinyl-roll-width-input')?.value) || 58;
         const rollLengthCm = parseFloat(document.getElementById('vinyl-roll-length-input')?.value) || 100;
-        const rollCost    = this.parseChileanFloat(document.getElementById('vinyl-roll-cost-input')?.value);
+        const rollCost    = window.parseMoney(document.getElementById('vinyl-roll-cost-input')?.value);
         // Usar el costM2 ya calculado por onVinylRollChange (campo oculto)
         const customCost  = parseFloat(document.getElementById('vinyl-cost-m2-input')?.value) || undefined;
-        const customLabor = parseFloat(document.getElementById('vinyl-labor-m2-input')?.value);
+        const customLabor = window.parseMoney(document.getElementById('vinyl-labor-m2-input')?.value);
         const customWaste = parseFloat(document.getElementById('vinyl-waste-input')?.value);
         const customMargin = parseFloat(document.getElementById('vinyl-margin-input')?.value);
         const customTitle  = document.getElementById('vinyl-custom-title-input')?.value || '';
@@ -881,12 +870,12 @@ class AppController {
         if (elNet) elNet.innerText = `${window.formatNumber(res.totalNetAreaM2, 2)} m² (${qty} unds de ${window.formatNumber(res.unitAreaM2, 2)} m²)`;
         if (elWaste) elWaste.innerText = res.wasteRate;
         if (elGross) elGross.innerText = `${window.formatNumber(res.totalGrossAreaM2, 2)} m²`;
-        if (elMat) elMat.innerText = `${currency} ${window.formatMoney(res.materialCostTotal, true)}`;
-        if (elLab) elLab.innerText = `${currency} ${window.formatMoney(res.laborCostTotal, true)}`;
-        if (elCost) elCost.innerText = `${currency} ${window.formatMoney(res.totalBaseCost, true)}`;
-        if (elProf) elProf.innerText = `+${currency} ${window.formatMoney(res.profitAmount, true)} (${res.margin}%)`;
-        if (elUnit) elUnit.innerText = `${currency} ${window.formatMoney(res.unitPrice, true)}`;
-        if (elSale) elSale.innerText = `${currency} ${window.formatMoney(res.totalSalePrice, true)}`;
+        if (elMat) elMat.innerText = `${currency} ${window.formatMoney(res.materialCostTotal)}`;
+        if (elLab) elLab.innerText = `${currency} ${window.formatMoney(res.laborCostTotal)}`;
+        if (elCost) elCost.innerText = `${currency} ${window.formatMoney(res.totalBaseCost)}`;
+        if (elProf) elProf.innerText = `+${currency} ${window.formatMoney(res.profitAmount)} (${res.margin}%)`;
+        if (elUnit) elUnit.innerText = `${currency} ${window.formatMoney(res.unitPrice)}`;
+        if (elSale) elSale.innerText = `${currency} ${window.formatMoney(res.totalSalePrice)}`;
 
         const visualRect = document.getElementById('vinyl-visual-rect');
         const visualDimLabel = document.getElementById('visual-dim-label');
@@ -1011,12 +1000,12 @@ class AppController {
                         </td>
                         <td class="py-3 px-3 text-right">
                             <div class="text-xs font-bold font-mono text-slate-700">
-                                ${currency} ${window.formatMoney(item.unitPrice, true)}
+                                ${currency} ${window.formatMoney(item.unitPrice)}
                             </div>
                         </td>
                         <td class="py-3 px-3 text-right">
                             <div class="text-sm font-black font-mono text-indigo-700">
-                                ${currency} ${window.formatMoney(item.total, true)}
+                                ${currency} ${window.formatMoney(item.total)}
                             </div>
                         </td>
                         <td class="py-3 px-3 text-center">
@@ -1060,10 +1049,10 @@ class AppController {
         const elTax = document.getElementById('quote-tax-display');
         const elTot = document.getElementById('quote-total-display');
 
-        if (elSub) elSub.innerText = `${currency} ${window.formatMoney(q.subtotal, true)}`;
-        if (elDisc) elDisc.innerText = `-${currency} ${window.formatMoney(q.discountAmount, true)}`;
-        if (elTax) elTax.innerText = `${currency} ${window.formatMoney(q.taxAmount, true)}`;
-        if (elTot) elTot.innerText = `${currency} ${window.formatMoney(q.total, true)}`;
+        if (elSub) elSub.innerText = `${currency} ${window.formatMoney(q.subtotal)}`;
+        if (elDisc) elDisc.innerText = `-${currency} ${window.formatMoney(q.discountAmount)}`;
+        if (elTax) elTax.innerText = `${currency} ${window.formatMoney(q.taxAmount)}`;
+        if (elTot) elTot.innerText = `${currency} ${window.formatMoney(q.total)}`;
     }
 
     adjustItemQty(index, delta) {
@@ -1183,7 +1172,7 @@ class AppController {
         if (elTot) elTot.innerText = totalCount;
         if (elApp) elApp.innerText = approvedQuotes.length;
         if (elSent) elSent.innerText = sentQuotes.length;
-        if (elAmt) elAmt.innerText = `${currency} ${window.formatMoney(approvedTotalAmount, true)}`;
+        if (elAmt) elAmt.innerText = `${currency} ${window.formatMoney(approvedTotalAmount)}`;
 
         const query = (document.getElementById('history-search-input')?.value || '').toLowerCase();
         const statusFilter = document.getElementById('history-status-filter')?.value || 'todos';
@@ -1237,7 +1226,7 @@ class AppController {
                         ${q.status}
                     </span>
                 </td>
-                <td class="py-3 px-3 text-right font-mono font-bold text-sm text-slate-900">${currency} ${window.formatMoney(q.total, true)}</td>
+                <td class="py-3 px-3 text-right font-mono font-bold text-sm text-slate-900">${currency} ${window.formatMoney(q.total)}</td>
                 <td class="py-3 px-3 text-center">
                     <div class="flex items-center justify-center gap-1">
                         <button type="button" onclick="app.loadQuoteToEditor('${q.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar / Abrir">
@@ -1385,12 +1374,12 @@ class AppController {
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
                     <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700 price-col">
-                        ${currency} ${window.formatMoney(cost1u, true)}
+                        ${currency} ${window.formatMoney(cost1u)}
                     </td>
                     <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${margin}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice, true)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
@@ -1497,7 +1486,7 @@ class AppController {
                     <div>
                         <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(cost1u, true)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice, true)}</span></p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(cost1u)} | Margen: +${margin}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice)}</span></p>
                     </div>
                     <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar

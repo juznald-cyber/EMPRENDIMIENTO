@@ -1,14 +1,55 @@
 // js/db.js - Base de Datos Local, Autenticación y Gestor de Estado
 
-// Helper Global para Formato de Moneda y Miles (ej. 10.000 o 10.000,50)
+// Helper Global para Formato de Moneda y Miles (ej. 14000 -> 14.000 | 14000.5 -> 14.000,50 | 24137.93 -> 24.137,93)
 window.formatMoney = function(amount, forceDecimals = false) {
-    if (amount === null || amount === undefined || isNaN(amount)) return '0';
-    const num = parseFloat(amount) || 0;
-    const hasDecimals = forceDecimals || (num % 1 !== 0);
+    if (amount === null || amount === undefined || amount === '' || isNaN(amount)) return '0';
+    const num = parseFloat(amount);
+    if (isNaN(num)) return '0';
+    
     const fixed = num.toFixed(2);
     const [intPart, decPart] = fixed.split('.');
     const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return hasDecimals ? `${formattedInt},${decPart}` : formattedInt;
+    
+    if (decPart !== '00') {
+        return `${formattedInt},${decPart}`;
+    }
+    if (forceDecimals === true) {
+        return `${formattedInt},${decPart}`;
+    }
+    return formattedInt;
+};
+
+// Helper Global para parsear strings monetarios con puntos de miles y comas decimales
+window.parseMoney = function(str) {
+    if (str === '' || str === null || str === undefined) return 0;
+    if (typeof str === 'number') return isNaN(str) ? 0 : str;
+    const s = String(str).trim();
+    if (!s) return 0;
+    
+    // Si contiene punto y coma (ej. 14.000,50 o 14,000.50)
+    if (s.includes('.') && s.includes(',')) {
+        if (s.indexOf('.') < s.indexOf(',')) {
+            return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+        } else {
+            return parseFloat(s.replace(/,/g, '')) || 0;
+        }
+    }
+    // Si contiene solo coma: coma es decimal (ej. 14000,50 -> 14000.50)
+    if (s.includes(',')) {
+        return parseFloat(s.replace(',', '.')) || 0;
+    }
+    // Si contiene solo puntos (ej. 14.000 o 1.000.000 o 14.50)
+    if (s.includes('.')) {
+        const parts = s.split('.');
+        if (parts.length > 2) {
+            return parseFloat(parts.join('')) || 0;
+        }
+        if (parts.length === 2 && parts[1].length === 3) {
+            return parseFloat(parts.join('')) || 0;
+        }
+        return parseFloat(s) || 0;
+    }
+    return parseFloat(s) || 0;
 };
 
 window.formatNumber = function(amount, decimals = 2) {
@@ -17,7 +58,7 @@ window.formatNumber = function(amount, decimals = 2) {
     const fixed = num.toFixed(decimals);
     const [intPart, decPart] = fixed.split('.');
     const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return decimals > 0 ? `${formattedInt},${decPart}` : formattedInt;
+    return decimals > 0 && decPart !== '00' ? `${formattedInt},${decPart}` : formattedInt;
 };
 
 const DB_KEYS = {
