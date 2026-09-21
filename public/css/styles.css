@@ -924,6 +924,30 @@ html.dark #combine-form-margin {
     font-weight: 800 !important;
 }
 
+html.dark #combine-products-list .bg-white {
+    background: rgba(0, 0, 0, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+html.dark #combine-products-list button {
+    color: #38bdf8 !important;
+}
+
+html.dark #combine-products-list button[disabled] {
+    color: rgba(255, 255, 255, 0.2) !important;
+}
+
+html.dark #modal-combine-products .bg-gradient-to-br {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark #modal-combine-products .bg-gradient-to-br p,
+html.dark #modal-combine-products .bg-gradient-to-br label {
+    color: #f1f5f9 !important;
+}
+
+
 
 
 

@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=4.6">
+    <link rel="stylesheet" href="css/styles.css?v=4.7">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1540,8 +1540,14 @@
 
             <!-- Lista de productos que se están combinando -->
             <div class="space-y-2">
-                <label class="block text-xs font-bold text-slate-700">Componentes Seleccionados a Combinar:</label>
-                <div id="combine-products-list" class="space-y-2 max-h-48 overflow-y-auto p-1">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-slate-700">Componentes a Combinar (Orden de aparición):</label>
+                    <button type="button" onclick="app.swapCombineItems(0, 1)" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-sm">
+                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i> Intercambiar Orden (1 ⇄ 2)
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-400">💡 Usa los botones con flechas <span class="font-bold text-indigo-600">▲</span> y <span class="font-bold text-indigo-600">▼</span> para cambiar qué producto va primero en el nombre.</p>
+                <div id="combine-products-list" class="space-y-2 max-h-52 overflow-y-auto p-1">
                     <!-- Inyectado dinámicamente -->
                 </div>
             </div>
@@ -1819,18 +1825,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=4.6"></script>
-    <script src="js/db.js?v=4.6"></script>
-    <script src="js/vinilos.js?v=4.6"></script>
-    <script src="js/pdf-generator.js?v=4.6"></script>
-    <script src="js/cotizador.js?v=4.6"></script>
-    <script src="js/app.js?v=4.6"></script>
+    <script src="js/firebase-config.js?v=4.7"></script>
+    <script src="js/db.js?v=4.7"></script>
+    <script src="js/vinilos.js?v=4.7"></script>
+    <script src="js/pdf-generator.js?v=4.7"></script>
+    <script src="js/cotizador.js?v=4.7"></script>
+    <script src="js/app.js?v=4.7"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=4.6').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=4.7').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

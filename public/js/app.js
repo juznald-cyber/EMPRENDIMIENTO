@@ -1861,6 +1861,7 @@ class AppController {
     _renderCombineModalContent() {
         const products = this._combineSelectedProducts || [];
         const container = document.getElementById('combine-products-list');
+        if (!container) return;
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
@@ -1886,18 +1887,44 @@ class AppController {
                 if (images.length < 3) images.push(p.imageData);
             }
 
+            const isFirst = idx === 0;
+            const isLast = idx === products.length - 1;
+
             return `
-                <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <span class="w-5 h-5 bg-indigo-100 text-indigo-700 font-bold rounded-full flex items-center justify-center text-[10px] shrink-0">${idx + 1}</span>
+                <div class="p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 flex items-center justify-between gap-2.5 text-xs transition-all">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span class="w-6 h-6 bg-indigo-600 text-white font-black rounded-full flex items-center justify-center text-xs shrink-0 shadow-sm" title="Posición ${idx + 1}">
+                            ${idx + 1}
+                        </span>
                         <div class="truncate">
-                            <span class="font-bold text-slate-800">${this.escapeHTML(p.name)}</span>
+                            <span class="font-bold text-slate-800 text-xs block truncate">${this.escapeHTML(p.name)}</span>
                             <span class="text-[10px] text-slate-400 font-mono block">${p.sku || ''} · ${p.category || 'General'}</span>
                         </div>
                     </div>
-                    <div class="text-right shrink-0 font-mono">
-                        <div class="text-slate-500 text-[11px]">Costo: ${currency} ${window.formatMoney(unitCost)}</div>
-                        <div class="text-emerald-700 font-bold text-xs">Venta: ${currency} ${window.formatMoney(unitSalePrice)}</div>
+                    <div class="flex items-center gap-2.5 shrink-0">
+                        <div class="text-right font-mono hidden sm:block">
+                            <div class="text-slate-500 text-[10px]">Costo: ${currency} ${window.formatMoney(unitCost)}</div>
+                            <div class="text-emerald-700 font-bold text-xs">Venta: ${currency} ${window.formatMoney(unitSalePrice)}</div>
+                        </div>
+
+                        <!-- Botones de Reordenar Arriba / Abajo -->
+                        <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                            <button type="button" onclick="app.moveCombineItem(${idx}, -1)" ${isFirst ? 'disabled' : ''} 
+                                class="p-1 rounded-lg ${isFirst ? 'text-slate-300 opacity-30 cursor-not-allowed' : 'text-indigo-600 hover:bg-indigo-50 active:scale-95 cursor-pointer'} transition-all" 
+                                title="Mover hacia arriba (poner antes en el nombre)">
+                                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" onclick="app.moveCombineItem(${idx}, 1)" ${isLast ? 'disabled' : ''} 
+                                class="p-1 rounded-lg ${isLast ? 'text-slate-300 opacity-30 cursor-not-allowed' : 'text-indigo-600 hover:bg-indigo-50 active:scale-95 cursor-pointer'} transition-all" 
+                                title="Mover hacia abajo (poner después en el nombre)">
+                                <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        ${products.length > 2 ? `
+                        <button type="button" onclick="app.removeCombineItem(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Quitar de la combinación">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>` : ''}
                     </div>
                 </div>
             `;
@@ -1905,7 +1932,7 @@ class AppController {
 
         this._combineImages = images;
 
-        // Auto-generar nombre concatenando con +
+        // Auto-generar nombre concatenando con + en el orden exacto actual
         const combinedName = names.join(' + ');
         document.getElementById('combine-form-name').value = combinedName;
         document.getElementById('combine-form-sku').value = 'COMBO-' + Math.floor(Math.random() * 900 + 100);
@@ -1928,6 +1955,32 @@ class AppController {
         document.getElementById('combine-form-notes').value = notes;
         
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    moveCombineItem(index, direction) {
+        const newIdx = index + direction;
+        if (!this._combineSelectedProducts || newIdx < 0 || newIdx >= this._combineSelectedProducts.length) return;
+        const temp = this._combineSelectedProducts[index];
+        this._combineSelectedProducts[index] = this._combineSelectedProducts[newIdx];
+        this._combineSelectedProducts[newIdx] = temp;
+        this._renderCombineModalContent();
+    }
+
+    swapCombineItems(idx1 = 0, idx2 = 1) {
+        if (!this._combineSelectedProducts || this._combineSelectedProducts.length < 2) return;
+        const temp = this._combineSelectedProducts[idx1];
+        this._combineSelectedProducts[idx1] = this._combineSelectedProducts[idx2];
+        this._combineSelectedProducts[idx2] = temp;
+        this._renderCombineModalContent();
+    }
+
+    removeCombineItem(index) {
+        if (!this._combineSelectedProducts || this._combineSelectedProducts.length <= 2) {
+            this.showToast('Debes mantener al menos 2 productos para combinarlos.', 'warning');
+            return;
+        }
+        this._combineSelectedProducts.splice(index, 1);
+        this._renderCombineModalContent();
     }
 
     onCombineCostChange() {
