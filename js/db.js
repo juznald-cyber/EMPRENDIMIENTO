@@ -797,50 +797,174 @@ class Database {
     importProductsFromRows(rows) {
         if (!rows || rows.length < 2) throw new Error('El archivo Excel debe contener al menos una fila de encabezados y una de datos.');
 
-        const headers = rows[0].map(h => String(h || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+        const cleanHeader = (str) => {
+            return String(str || '')
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]/g, "_")
+                .replace(/_+/g, "_")
+                .replace(/^_|_$/g, "");
+        };
 
-        const idxSku = headers.findIndex(h => h.includes('sku') || h.includes('codigo') || h.includes('ref'));
-        const idxName = headers.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('insumo') || h.includes('descripcion'));
-        const idxSup = headers.findIndex(h => h.includes('proveedor') || h.includes('supplier'));
-        const idxCat = headers.findIndex(h => h.includes('categoria') || h.includes('rubro'));
-        const idxUnit = headers.findIndex(h => h.includes('unidad') || h.includes('unit') || h.includes('medida'));
-        const idxCost = headers.findIndex(h => (h.includes('costo') || h.includes('cost') || h.includes('precio')) && !h.includes('rango') && !h.includes('adicional') && !h.includes('escala'));
-        const idxMargin = headers.findIndex(h => h.includes('margen') || h.includes('ganancia') || h.includes('margin'));
-        const idxExtraCost = headers.findIndex(h => h.includes('adicional') || h.includes('extra_cost') || h.includes('estampado') || h.includes('sublimacion'));
-        const idxExtraLabel = headers.findIndex(h => h.includes('concepto') || h.includes('etiqueta_adicional') || h.includes('extra_label'));
-        const idxUrl = headers.findIndex(h => h.includes('url') || h.includes('enlace') || h.includes('link') || h.includes('web') || h.includes('pagina'));
-        const idxNotes = headers.findIndex(h => h.includes('nota') || h.includes('observacion') || h.includes('especificacion') || h.includes('detalle'));
-        const idxTiersText = headers.findIndex(h => h.includes('escalas') || h.includes('rangos') || h.includes('tiers'));
+        const headersClean = rows[0].map(cleanHeader);
 
-        // Detectar columnas de rangos numerados (ej: Rango1_Min, Rango1_Max, Rango1_Costo / Min_1, Max_1, Costo_1)
-        const rangeColumns = [];
-        for (let k = 1; k <= 10; k++) {
-            const minIdx = headers.findIndex(h => 
-                h === `rango${k}_min` || h === `rango_${k}_min` || h === `rango ${k} min` ||
-                h === `min_${k}` || h === `min${k}` || h === `min ${k}` || h === `desde_${k}` || h === `desde ${k}`
+        const idxSku = headersClean.findIndex(h => h.includes('sku') || h.includes('codigo') || h.includes('cod') || h.includes('ref'));
+        const idxName = headersClean.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('insumo') || h.includes('descripcion') || h.includes('articulo'));
+        const idxSup = headersClean.findIndex(h => h.includes('proveedor') || h.includes('supplier') || h.includes('distribuidor'));
+        const idxCat = headersClean.findIndex(h => h.includes('categoria') || h.includes('rubro') || h.includes('familia'));
+        const idxUnit = headersClean.findIndex(h => h.includes('unidad') || h.includes('unit') || h.includes('medida') || h.includes('uom'));
+        const idxCost = headersClean.findIndex(h => (h.includes('costo') || h.includes('cost') || h.includes('compra')) && !h.includes('rango') && !h.includes('escala') && !h.includes('adicional') && !h.match(/\d/));
+        const idxSalePrice = headersClean.findIndex(h => (h.includes('precio_venta') || h.includes('pvp') || (h.includes('precio') && !h.includes('costo') && !h.includes('compra'))) && !h.includes('rango') && !h.includes('escala') && !h.match(/\d/));
+        const idxMargin = headersClean.findIndex(h => (h.includes('margen') || h.includes('ganancia') || h.includes('margin') || h.includes('utilidad')) && !h.includes('rango') && !h.includes('escala') && !h.match(/\d/));
+        const idxExtraCost = headersClean.findIndex(h => h.includes('adicional') || h.includes('extra_cost') || h.includes('estampado') || h.includes('sublimacion'));
+        const idxExtraLabel = headersClean.findIndex(h => h.includes('concepto') || h.includes('etiqueta_adicional') || h.includes('extra_label'));
+        const idxUrl = headersClean.findIndex(h => h.includes('url') || h.includes('enlace') || h.includes('link') || h.includes('web') || h.includes('pagina'));
+        const idxNotes = headersClean.findIndex(h => h.includes('nota') || h.includes('observacion') || h.includes('especificacion') || h.includes('detalle'));
+        const idxTiersText = headersClean.findIndex(h => (h.includes('escalas') || h.includes('rangos') || h.includes('tiers') || h.includes('precios_volumen')) && !h.match(/\d/));
+
+        // 1. Columnas de rangos numerados (Rango1, Rango2, etc.)
+        const numberedRangeCols = [];
+        for (let k = 1; k <= 15; k++) {
+            const minIdx = headersClean.findIndex(h => 
+                h === `rango${k}_min` || h === `rango_${k}_min` || h === `rango_${k}_desde` || h === `rango${k}_desde` ||
+                h === `min_${k}` || h === `min${k}` || h === `desde_${k}` || h === `desde${k}` ||
+                h === `cant_${k}_min` || h === `cant${k}_min` || h === `cantidad_${k}_min` || h === `cantidad${k}_min` ||
+                h === `rango_${k}` || h === `rango${k}` || h === `escala_${k}` || h === `escala${k}`
             );
-            const maxIdx = headers.findIndex(h => 
-                h === `rango${k}_max` || h === `rango_${k}_max` || h === `rango ${k} max` ||
-                h === `max_${k}` || h === `max${k}` || h === `max ${k}` || h === `hasta_${k}` || h === `hasta ${k}`
+            const maxIdx = headersClean.findIndex(h => 
+                h === `rango${k}_max` || h === `rango_${k}_max` || h === `rango_${k}_hasta` || h === `rango${k}_hasta` ||
+                h === `max_${k}` || h === `max${k}` || h === `hasta_${k}` || h === `hasta${k}` ||
+                h === `cant_${k}_max` || h === `cant${k}_max` || h === `cantidad_${k}_max` || h === `cantidad${k}_max`
             );
-            const costIdx = headers.findIndex(h => 
-                h === `rango${k}_costo` || h === `rango_${k}_costo` || h === `rango ${k} costo` ||
-                h === `rango${k}_precio` || h === `costo_${k}` || h === `costo${k}` || h === `costo ${k}` ||
-                h === `precio_${k}` || h === `precio${k}` || h === `precio ${k}` || h === `costo_rango_${k}`
+            const costIdx = headersClean.findIndex(h => 
+                h === `rango${k}_costo` || h === `rango_${k}_costo` || h === `costo_${k}` || h === `costo${k}` ||
+                h === `costo_rango_${k}` || h === `costo_escala_${k}` || h === `costo_unitario_${k}` || h === `compra_${k}`
             );
-            if (minIdx !== -1 && costIdx !== -1) {
-                rangeColumns.push({ k, minIdx, maxIdx, costIdx });
+            const salePriceIdx = headersClean.findIndex(h => 
+                h === `rango${k}_precio` || h === `rango_${k}_precio` || h === `rango${k}_precio_venta` || h === `rango_${k}_precio_venta` ||
+                h === `rango${k}_venta` || h === `rango_${k}_venta` || h === `precio_${k}` || h === `precio${k}` ||
+                h === `precio_venta_${k}` || h === `precio_venta${k}` || h === `venta_${k}` || h === `venta${k}` ||
+                h === `pvp_${k}` || h === `pvp${k}`
+            );
+            const marginIdx = headersClean.findIndex(h => 
+                h === `rango${k}_margen` || h === `rango_${k}_margen` || h === `margen_${k}` || h === `margen${k}` ||
+                h === `margen_%_${k}` || h === `%_${k}` || h === `%${k}` || h === `ganancia_${k}` || h === `ganancia${k}`
+            );
+
+            if (minIdx !== -1 || costIdx !== -1 || salePriceIdx !== -1) {
+                numberedRangeCols.push({ k, minIdx, maxIdx, costIdx, salePriceIdx, marginIdx });
             }
         }
 
-        // Detectar columnas de escala por fila individual (formato multi-fila)
-        const idxRowMin = headers.findIndex(h => (h === 'min' || h === 'desde' || h === 'cant_min' || h === 'cantidad_min'));
-        const idxRowMax = headers.findIndex(h => (h === 'max' || h === 'hasta' || h === 'cant_max' || h === 'cantidad_max'));
-        const idxRowCost = headers.findIndex(h => (h === 'costo_escala' || h === 'costo_rango' || h === 'precio_escala' || h === 'precio_rango'));
+        // 2. Columnas con rango directo en el nombre del encabezado (ej: "1-12", "1 a 12", "13-50", "51+", "Precio 1-12", "Costo 1-12")
+        const directRangeCols = [];
+        headersClean.forEach((h, colIdx) => {
+            if ([idxSku, idxName, idxSup, idxCat, idxUnit, idxCost, idxSalePrice, idxMargin, idxExtraCost, idxExtraLabel, idxUrl, idxNotes, idxTiersText].includes(colIdx)) return;
+            if (numberedRangeCols.some(rc => [rc.minIdx, rc.maxIdx, rc.costIdx, rc.salePriceIdx, rc.marginIdx].includes(colIdx))) return;
+
+            const m = h.match(/^(?:precio_venta_|precio_|costo_|venta_|pvp_)?(?:de_)?(\d+)(?:_a_|_al_|_hasta_|_to_|_|-)(\d+|\+|mas|adelante)?(?:_unid|_unidades|_uds|_cant)?$/i) ||
+                      h.match(/^(?:precio_venta_|precio_|costo_|venta_|pvp_)?(\d+)(?:_?\+|_mas|_adelante)$/i);
+            if (m) {
+                const min = parseInt(m[1], 10);
+                const max = (m[2] && !m[2].includes('+') && !m[2].includes('mas') && !m[2].includes('adelante')) ? (parseInt(m[2], 10) || 999999) : 999999;
+                const isCost = h.includes('costo') || h.includes('compra');
+                const isMargin = h.includes('margen') || h.includes('ganancia') || h.includes('%');
+                directRangeCols.push({
+                    colIdx,
+                    min,
+                    max: max >= min ? max : min,
+                    isCost,
+                    isMargin,
+                    isSalePrice: !isCost && !isMargin
+                });
+            }
+        });
+
+        // 3. Columnas de escala por fila individual (formato multi-fila)
+        const idxRowMin = headersClean.findIndex(h => (h === 'min' || h === 'desde' || h === 'cant_min' || h === 'cantidad_min'));
+        const idxRowMax = headersClean.findIndex(h => (h === 'max' || h === 'hasta' || h === 'cant_max' || h === 'cantidad_max'));
+        const idxRowCost = headersClean.findIndex(h => (h === 'costo_escala' || h === 'costo_rango' || h === 'costo' || h === 'precio_costo'));
+        const idxRowSalePrice = headersClean.findIndex(h => (h === 'precio_escala' || h === 'precio_rango' || h === 'precio_venta' || h === 'venta'));
 
         if (idxName === -1 && idxSku === -1) {
             throw new Error('No se encontró la columna "Nombre" o "SKU" en el archivo Excel.');
         }
+
+        const parseBounds = (minRaw, maxRaw) => {
+            if (minRaw === undefined || minRaw === null) minRaw = '';
+            const minStr = String(minRaw).trim();
+            const maxStr = maxRaw !== undefined && maxRaw !== null ? String(maxRaw).trim() : '';
+
+            const rangeMatch = minStr.match(/(?:de\s*)?(\d+)\s*(?:-|a|al|hasta|to|:|\.{2})\s*(\d+|\+)?/i);
+            if (rangeMatch) {
+                const min = parseInt(rangeMatch[1], 10) || 1;
+                const max = rangeMatch[2] && rangeMatch[2] !== '+' ? (parseInt(rangeMatch[2], 10) || 999999) : 999999;
+                return { min, max: max >= min ? max : min };
+            }
+
+            if (minStr.includes('+') || minStr.toLowerCase().includes('mas') || minStr.includes('>')) {
+                const digits = minStr.match(/\d+/);
+                const min = digits ? parseInt(digits[0], 10) : 1;
+                return { min, max: 999999 };
+            }
+
+            const min = parseInt(minStr.replace(/[^\d]/g, ''), 10) || 1;
+            let max = 999999;
+            if (maxStr && maxStr !== '+' && !maxStr.toLowerCase().includes('mas')) {
+                const maxParsed = parseInt(maxStr.replace(/[^\d]/g, ''), 10);
+                if (!isNaN(maxParsed) && maxParsed > 0) {
+                    max = maxParsed;
+                }
+            }
+            return { min, max: max >= min ? max : min };
+        };
+
+        const buildTier = (min, max, costRaw, salePriceRaw, marginRaw, defaultMargin, extraCost, baseCost) => {
+            const rawCost = (costRaw !== undefined && costRaw !== null && String(costRaw).trim() !== '') ? window.parseMoney(costRaw) : null;
+            const rawSale = (salePriceRaw !== undefined && salePriceRaw !== null && String(salePriceRaw).trim() !== '') ? window.parseMoney(salePriceRaw) : null;
+            let rawMargin = null;
+            if (marginRaw !== undefined && marginRaw !== null && String(marginRaw).trim() !== '') {
+                const m = parseFloat(String(marginRaw).replace('%', '').replace(',', '.'));
+                if (!isNaN(m)) rawMargin = m;
+            }
+
+            if (rawCost === null && rawSale === null && rawMargin === null) return null;
+
+            let cost = 0;
+            let margin = defaultMargin;
+            let salePrice = 0;
+
+            if (rawCost !== null && rawSale !== null) {
+                cost = rawCost;
+                salePrice = rawSale;
+                const totalCost = cost + extraCost;
+                margin = totalCost > 0 ? Number((((salePrice / totalCost) - 1) * 100).toFixed(2)) : defaultMargin;
+            } else if (rawCost !== null && rawMargin !== null) {
+                cost = rawCost;
+                margin = rawMargin;
+                const totalCost = cost + extraCost;
+                salePrice = Number((totalCost * (1 + margin / 100)).toFixed(2));
+            } else if (rawCost !== null) {
+                cost = rawCost;
+                margin = defaultMargin;
+                const totalCost = cost + extraCost;
+                salePrice = Number((totalCost * (1 + defaultMargin / 100)).toFixed(2));
+            } else if (rawSale !== null) {
+                salePrice = rawSale;
+                margin = rawMargin !== null ? rawMargin : defaultMargin;
+                if (baseCost > 0) {
+                    cost = baseCost;
+                    const totalCost = cost + extraCost;
+                    margin = totalCost > 0 ? Number((((salePrice / totalCost) - 1) * 100).toFixed(2)) : defaultMargin;
+                } else {
+                    const totalCost = salePrice / (1 + margin / 100);
+                    cost = Math.max(0, Number((totalCost - extraCost).toFixed(2)));
+                }
+            }
+
+            return { min, max, cost, margin, salePrice };
+        };
 
         const suppliers = this.getSuppliers();
         const existingProducts = this.getProducts();
@@ -856,57 +980,89 @@ class Database {
 
             const productKey = (sku || name).toLowerCase();
 
-            // 1. Extraer rangos de columnas numeradas (Rango1, Rango2, etc.)
+            // Costo adicional (estampado / sublimación)
+            const extraCost = idxExtraCost !== -1 ? window.parseMoney(row[idxExtraCost]) : 0;
+            const extraCostLabel = idxExtraLabel !== -1 && row[idxExtraLabel] ? String(row[idxExtraLabel]).trim() : (extraCost > 0 ? 'Estampado' : '');
+
+            // Margen base
+            let defaultMargin = 50;
+            if (idxMargin !== -1 && row[idxMargin] !== undefined && row[idxMargin] !== null && String(row[idxMargin]).trim() !== '') {
+                const mVal = parseFloat(String(row[idxMargin]).replace('%', '').replace(',', '.'));
+                if (!isNaN(mVal)) defaultMargin = mVal;
+            }
+
+            // Costo base
+            let costPrice = idxCost !== -1 ? window.parseMoney(row[idxCost]) : 0;
+            let typedSalePrice = idxSalePrice !== -1 ? window.parseMoney(row[idxSalePrice]) : 0;
+
             const costTiers = [];
-            for (const rc of rangeColumns) {
-                const minRaw = row[rc.minIdx];
-                const costRaw = row[rc.costIdx];
-                if (minRaw !== undefined && minRaw !== null && String(minRaw).trim() !== '' &&
-                    costRaw !== undefined && costRaw !== null && String(costRaw).trim() !== '') {
-                    const min = parseInt(String(minRaw).replace(/\D/g, ''), 10) || 1;
-                    const maxRaw = rc.maxIdx !== -1 ? row[rc.maxIdx] : null;
-                    const max = (maxRaw !== undefined && maxRaw !== null && String(maxRaw).trim() !== '') 
-                        ? (parseInt(String(maxRaw).replace(/\D/g, ''), 10) || 999999) 
-                        : 999999;
-                    const cost = window.parseMoney(costRaw);
-                    if (!isNaN(cost) && cost >= 0) {
-                        costTiers.push({ min, max, cost });
-                    }
+
+            // 1. Extraer rangos de columnas numeradas (Rango1, Rango2, etc.)
+            for (const rc of numberedRangeCols) {
+                const minRaw = rc.minIdx !== -1 ? row[rc.minIdx] : (rc.k === 1 ? '1' : null);
+                const maxRaw = rc.maxIdx !== -1 ? row[rc.maxIdx] : null;
+                const costRaw = rc.costIdx !== -1 ? row[rc.costIdx] : null;
+                const salePriceRaw = rc.salePriceIdx !== -1 ? row[rc.salePriceIdx] : null;
+                const marginRaw = rc.marginIdx !== -1 ? row[rc.marginIdx] : null;
+
+                if ((costRaw !== null && String(costRaw).trim() !== '') ||
+                    (salePriceRaw !== null && String(salePriceRaw).trim() !== '') ||
+                    (marginRaw !== null && String(marginRaw).trim() !== '')) {
+                    const { min, max } = parseBounds(minRaw, maxRaw);
+                    const tier = buildTier(min, max, costRaw, salePriceRaw, marginRaw, defaultMargin, extraCost, costPrice);
+                    if (tier) costTiers.push(tier);
                 }
             }
 
-            // 2. Extraer rangos de formato multi-fila si existen
-            if (idxRowMin !== -1 && idxRowCost !== -1) {
+            // 2. Extraer rangos de columnas directas (ej: "1 a 12", "13-50", "51+")
+            for (const dc of directRangeCols) {
+                const valRaw = row[dc.colIdx];
+                if (valRaw !== undefined && valRaw !== null && String(valRaw).trim() !== '') {
+                    const costRaw = dc.isCost ? valRaw : null;
+                    const salePriceRaw = dc.isSalePrice ? valRaw : null;
+                    const marginRaw = dc.isMargin ? valRaw : null;
+                    const tier = buildTier(dc.min, dc.max, costRaw, salePriceRaw, marginRaw, defaultMargin, extraCost, costPrice);
+                    if (tier) costTiers.push(tier);
+                }
+            }
+
+            // 3. Extraer rangos de formato multi-fila si existen
+            if (idxRowMin !== -1 && (idxRowCost !== -1 || idxRowSalePrice !== -1)) {
                 const minRaw = row[idxRowMin];
-                const costRaw = row[idxRowCost];
-                if (minRaw !== undefined && String(minRaw).trim() !== '' && costRaw !== undefined && String(costRaw).trim() !== '') {
-                    const min = parseInt(String(minRaw).replace(/\D/g, ''), 10) || 1;
-                    const maxRaw = idxRowMax !== -1 ? row[idxRowMax] : null;
-                    const max = (maxRaw !== undefined && String(maxRaw).trim() !== '') ? (parseInt(String(maxRaw).replace(/\D/g, ''), 10) || 999999) : 999999;
-                    const cost = window.parseMoney(costRaw);
-                    if (!isNaN(cost) && cost >= 0) {
-                        costTiers.push({ min, max, cost });
-                    }
+                const maxRaw = idxRowMax !== -1 ? row[idxRowMax] : null;
+                const costRaw = idxRowCost !== -1 ? row[idxRowCost] : null;
+                const salePriceRaw = idxRowSalePrice !== -1 ? row[idxRowSalePrice] : null;
+                if (minRaw !== undefined && String(minRaw).trim() !== '') {
+                    const { min, max } = parseBounds(minRaw, maxRaw);
+                    const tier = buildTier(min, max, costRaw, salePriceRaw, null, defaultMargin, extraCost, costPrice);
+                    if (tier) costTiers.push(tier);
                 }
             }
 
-            // 3. Extraer rangos de columna de texto libre (ej: "1-10: 5000; 11-50: 4500; 51+: 4000")
+            // 4. Extraer rangos de columna de texto libre (ej: "1-10: 5000; 11-50: 4500; 51+: 4000")
             if (idxTiersText !== -1 && row[idxTiersText]) {
                 const text = String(row[idxTiersText]).trim();
-                const parts = text.split(/;|,|\|/);
+                const parts = text.split(/;|\n|\|/);
                 for (const part of parts) {
                     const trimmed = part.trim();
                     if (!trimmed) continue;
-                    const match = trimmed.match(/(\d+)\s*(?:-|a|\+)?\s*(\d+)?\s*(?::|=|\$)\s*([\d.,]+)/i);
+                    const match = trimmed.match(/(\d+)\s*(?:-|a|al|to|\+)?\s*(\d+|\+)?\s*(?::|=|\$|\->)?\s*([\d.,]+)(?:\s*\(([\d.,]+)%\))?/i);
                     if (match) {
-                        const min = parseInt(match[1], 10) || 1;
-                        const max = match[2] ? parseInt(match[2], 10) : 999999;
-                        const cost = window.parseMoney(match[3]);
-                        if (!isNaN(cost) && cost >= 0) {
-                            costTiers.push({ min, max, cost });
-                        }
+                        const { min, max } = parseBounds(match[1], match[2]);
+                        const val = window.parseMoney(match[3]);
+                        const marginVal = match[4] ? parseFloat(match[4].replace(',', '.')) : null;
+                        const tier = buildTier(min, max, val, null, marginVal, defaultMargin, extraCost, costPrice);
+                        if (tier) costTiers.push(tier);
                     }
                 }
+            }
+
+            // Si el costo base es 0 y tenemos rangos, tomar el costo del primer rango
+            if (costPrice === 0 && costTiers.length > 0) {
+                costPrice = costTiers[0].cost;
+            }
+            if (typedSalePrice === 0 && costTiers.length > 0 && costTiers[0].salePrice > 0) {
+                typedSalePrice = costTiers[0].salePrice;
             }
 
             // Si ya procesamos una fila de este mismo producto en esta carga masiva, combinar los rangos
@@ -928,29 +1084,15 @@ class Database {
 
             const category = idxCat !== -1 && row[idxCat] ? String(row[idxCat]).trim() : 'General';
             const unit = idxUnit !== -1 && row[idxUnit] ? String(row[idxUnit]).trim() : 'Unidad';
-
-            // Costo base
-            let costPrice = idxCost !== -1 ? window.parseMoney(row[idxCost]) : 0;
-            if (costPrice === 0 && costTiers.length > 0) {
-                costPrice = costTiers[0].cost;
-            }
-
-            // Margen
-            let defaultMargin = 50;
-            if (idxMargin !== -1 && row[idxMargin] !== undefined && row[idxMargin] !== null && String(row[idxMargin]).trim() !== '') {
-                const mVal = parseFloat(String(row[idxMargin]).replace('%', '').replace(',', '.'));
-                if (!isNaN(mVal)) defaultMargin = mVal;
-            }
-
-            // Costo Adicional (estampado / sublimación)
-            const extraCost = idxExtraCost !== -1 ? window.parseMoney(row[idxExtraCost]) : 0;
-            const extraCostLabel = idxExtraLabel !== -1 && row[idxExtraLabel] ? String(row[idxExtraLabel]).trim() : (extraCost > 0 ? 'Estampado' : '');
-
             const url = idxUrl !== -1 ? String(row[idxUrl] || '').trim() : '';
             const notes = idxNotes !== -1 ? String(row[idxNotes] || '').trim() : '';
 
-            // Verificar si el producto ya existe en la base de datos para conservar su ID
+            // Verificar si el producto ya existe en la base de datos para conservar su ID e imágenes
             const existingDbProd = existingProducts.find(p => (sku && p.sku && p.sku.toLowerCase() === sku.toLowerCase()) || (p.name && p.name.toLowerCase() === name.toLowerCase()));
+
+            if (costPrice === 0 && existingDbProd && existingDbProd.costPrice > 0) {
+                costPrice = existingDbProd.costPrice;
+            }
 
             const finalSku = sku || (existingDbProd ? existingDbProd.sku : ('PROD-' + Math.floor(Math.random() * 9000 + 1000)));
 
@@ -962,6 +1104,7 @@ class Database {
                 category,
                 unit,
                 costPrice,
+                salePrice: typedSalePrice > 0 ? typedSalePrice : undefined,
                 defaultMargin,
                 extraCost,
                 extraCostLabel,
@@ -1021,41 +1164,41 @@ class Database {
             [
                 "SKU", "Nombre", "Proveedor", "Categoria", "Unidad", 
                 "Costo_Base", "Margen_%", "Costo_Adicional", 
-                "Rango1_Min", "Rango1_Max", "Rango1_Costo", 
-                "Rango2_Min", "Rango2_Max", "Rango2_Costo", 
-                "Rango3_Min", "Rango3_Max", "Rango3_Costo", 
+                "Rango1_Min", "Rango1_Max", "Rango1_Costo", "Rango1_Precio_Venta",
+                "Rango2_Min", "Rango2_Max", "Rango2_Costo", "Rango2_Precio_Venta",
+                "Rango3_Min", "Rango3_Max", "Rango3_Costo", "Rango3_Precio_Venta",
                 "URL_Producto", "Notas"
             ],
             [
                 "POL-ALG-01", "Polera Algodón 24/1 Cuello Redondo", "Textiles & Confección Global", "Textil", "Unidad", 
                 5000, 50, 2000, 
-                1, 12, 5000, 
-                13, 50, 4500, 
-                51, 999999, 4000, 
+                1, 12, 5000, 10500, 
+                13, 50, 4500, 9750, 
+                51, 999999, 4000, 9000, 
                 "https://proveedor.com/polera", "Algodón peinado varios colores"
             ],
             [
                 "TAZ-CER-01", "Taza de Cerámica Blanca 11oz", "Insumos Tecnológicos UV", "Sublimación", "Unidad", 
                 1600, 50, 0, 
-                1, 24, 1600, 
-                25, 999999, 1300, 
-                "", "", "", 
+                1, 24, 1600, 2400, 
+                25, 999999, 1300, 1950, 
+                "", "", "", "", 
                 "https://proveedor.com/taza", "Con caja individual incluida"
             ],
             [
                 "GOR-TRU-01", "Gorra Camionera Trucker Lisa", "Textiles & Confección Global", "Textil", "Unidad", 
                 2200, 60, 0, 
-                1, 10, 2200, 
-                11, 50, 1900, 
-                51, 999999, 1600, 
+                1, 10, 2200, 3520, 
+                11, 50, 1900, 3040, 
+                51, 999999, 1600, 2560, 
                 "https://proveedor.com/gorra", "Frente acolchado poliéster"
             ],
             [
                 "VIN-ADH-BLA", "Bobina Vinilo Adhesivo Blanco (1.22m x 50m)", "Distribuidora Gráfica Nacional", "Vinilos", "Rollo", 
                 85000, 45, 0, 
-                "", "", "", 
-                "", "", "", 
-                "", "", "", 
+                "", "", "", "", 
+                "", "", "", "", 
+                "", "", "", "", 
                 "https://proveedor.com/vinilo", "Marca Oracal 651 exterior"
             ]
         ];
@@ -1080,11 +1223,11 @@ class Database {
 
     downloadProductsTemplateCSV() {
         const csvContent = "\uFEFF" + 
-            "SKU,Nombre,Proveedor,Categoria,Unidad,Costo_Base,Margen_%,Costo_Adicional,Rango1_Min,Rango1_Max,Rango1_Costo,Rango2_Min,Rango2_Max,Rango2_Costo,Rango3_Min,Rango3_Max,Rango3_Costo,URL_Producto,Notas\n" +
-            "POL-ALG-01,Polera Algodón 24/1 Cuello Redondo,Textiles & Confección Global,Textil,Unidad,5000,50,2000,1,12,5000,13,50,4500,51,999999,4000,https://proveedor.com/polera,Algodón peinado varios colores\n" +
-            "TAZ-CER-01,Taza de Cerámica Blanca 11oz,Insumos Tecnológicos UV,Sublimación,Unidad,1600,50,0,1,24,1600,25,999999,1300,,,,https://proveedor.com/taza,Con caja individual incluida\n" +
-            "GOR-TRU-01,Gorra Camionera Trucker Lisa,Textiles & Confección Global,Textil,Unidad,2200,60,0,1,10,2200,11,50,1900,51,999999,1600,https://proveedor.com/gorra,Frente acolchado poliéster\n" +
-            "VIN-ADH-BLA,Bobina Vinilo Adhesivo Blanco (1.22m x 50m),Distribuidora Gráfica Nacional,Vinilos,Rollo,85000,45,0,,,,,,,,,,https://proveedor.com/vinilo,Marca Oracal 651 exterior";
+            "SKU,Nombre,Proveedor,Categoria,Unidad,Costo_Base,Margen_%,Costo_Adicional,Rango1_Min,Rango1_Max,Rango1_Costo,Rango1_Precio_Venta,Rango2_Min,Rango2_Max,Rango2_Costo,Rango2_Precio_Venta,Rango3_Min,Rango3_Max,Rango3_Costo,Rango3_Precio_Venta,URL_Producto,Notas\n" +
+            "POL-ALG-01,Polera Algodón 24/1 Cuello Redondo,Textiles & Confección Global,Textil,Unidad,5000,50,2000,1,12,5000,10500,13,50,4500,9750,51,999999,4000,9000,https://proveedor.com/polera,Algodón peinado varios colores\n" +
+            "TAZ-CER-01,Taza de Cerámica Blanca 11oz,Insumos Tecnológicos UV,Sublimación,Unidad,1600,50,0,1,24,1600,2400,25,999999,1300,1950,,,,https://proveedor.com/taza,Con caja individual incluida\n" +
+            "GOR-TRU-01,Gorra Camionera Trucker Lisa,Textiles & Confección Global,Textil,Unidad,2200,60,0,1,10,2200,3520,11,50,1900,3040,51,999999,1600,2560,https://proveedor.com/gorra,Frente acolchado poliéster\n" +
+            "VIN-ADH-BLA,Bobina Vinilo Adhesivo Blanco (1.22m x 50m),Distribuidora Gráfica Nacional,Vinilos,Rollo,85000,45,0,,,,,,,,,,,,https://proveedor.com/vinilo,Marca Oracal 651 exterior";
         this.triggerDownloadCSV(csvContent, 'Plantilla_Importar_Productos_Con_Escalas.csv');
     }
 
