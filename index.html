@@ -1802,7 +1802,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-sm text-slate-800">Carga Masiva de Productos / Insumos (Excel / XLS)</h3>
-                        <p class="text-[11px] text-slate-400">Importa tus productos, costos, márgenes y URLs de proveedores</p>
+                        <p class="text-[11px] text-slate-400">Importa tus productos con costos, márgenes, costos adicionales y escalas/rangos de precios</p>
                     </div>
                 </div>
                 <button type="button" onclick="app.closeModal('modal-import-products')" class="p-1 text-slate-400 hover:text-slate-700">
@@ -1813,8 +1813,8 @@
             <div class="space-y-3">
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
                     <div>
-                        <h5 class="text-xs font-bold text-slate-700">Plantilla Excel Oficial</h5>
-                        <p class="text-[11px] text-slate-500">Descarga el archivo Excel (.xlsx) con columnas configuradas</p>
+                        <h5 class="text-xs font-bold text-slate-700">Plantilla Excel Oficial (Con Rangos de Precios)</h5>
+                        <p class="text-[11px] text-slate-500">Descarga la plantilla con columnas para escalas (Rango1, Rango2, etc.) y costo adicional</p>
                     </div>
                     <button type="button" onclick="app.downloadProductsTemplate()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 shadow-sm transition-all">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -1830,7 +1830,7 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">O vista previa de los datos detectados:</label>
-                    <textarea id="import-products-textarea" rows="5" placeholder="SKU, Nombre, Proveedor, Categoria, Unidad, Costo, Margen, URL_Producto, Notas..."
+                    <textarea id="import-products-textarea" rows="5" placeholder="SKU, Nombre, Proveedor, Categoria, Unidad, Costo, Margen, Costo_Adicional, Rango1_Min, Rango1_Max, Rango1_Costo, Rango2_Min, Rango2_Max, Rango2_Costo, URL_Producto, Notas..."
                         class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
                 </div>
             </div>
