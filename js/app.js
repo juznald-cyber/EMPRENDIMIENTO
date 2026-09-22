@@ -1331,7 +1331,7 @@ class AppController {
             const cost1u = window.db.getCostForQuantity(p, 1);
             const extraCost = parseFloat(p.extraCost) || 0;
             const totalCost1u = cost1u + extraCost;
-            const salePrice = totalCost1u * (1 + margin / 100);
+            const salePrice = window.db.getSalePriceForQuantity(p, 1);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
 
             // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
@@ -1481,7 +1481,7 @@ class AppController {
             const margin = window.db.getMarginForQuantity(p, 1);
             const extraCost = parseFloat(p.extraCost) || 0;
             const totalCost1u = cost1u + extraCost;
-            const salePrice = totalCost1u * (1 + margin / 100);
+            const salePrice = window.db.getSalePriceForQuantity(p, 1);
 
             return `
                 <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex items-center justify-between transition-colors">
