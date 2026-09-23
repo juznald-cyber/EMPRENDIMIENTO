@@ -840,9 +840,15 @@
                 
                 <!-- Sub-Tabs de Navegación + Botón de Gestionar Categorías -->
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <button onclick="app.switchCatalogSubTab('products')" id="subtab-btn-products" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white transition-all">
-                            📦 Catálogo de Insumos & Precios
+                            📦 Todos los Productos <span id="count-all-products" class="ml-1 opacity-80 text-[10px]"></span>
+                        </button>
+                        <button onclick="app.switchCatalogSubTab('single')" id="subtab-btn-single" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                            ✨ Individuales / Insumos <span id="count-single-products" class="ml-1 opacity-80 text-[10px]"></span>
+                        </button>
+                        <button onclick="app.switchCatalogSubTab('combos')" id="subtab-btn-combos" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
+                            🔥 Productos en Combo <span id="count-combos-products" class="ml-1 opacity-80 text-[10px]"></span>
                         </button>
                         <button onclick="app.switchCatalogSubTab('suppliers')" id="subtab-btn-suppliers" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
                             🏭 Base de Proveedores (con RUT)
@@ -1463,6 +1469,22 @@
                     <div id="cost-tiers-rows-container" class="space-y-2">
                         <!-- Filas de rangos inyectadas -->
                     </div>
+                </div>
+
+                <!-- Opciones de Producto: Combo y Anclado -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                        <input type="checkbox" id="prod-form-is-pinned" class="w-4 h-4 rounded text-amber-500 accent-amber-500 cursor-pointer" />
+                        <span class="inline-flex items-center gap-1.5 text-amber-700">
+                            📌 Anclar al inicio del catálogo
+                        </span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                        <input type="checkbox" id="prod-form-is-combo" class="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer" />
+                        <span class="inline-flex items-center gap-1.5 text-indigo-700">
+                            🔥 Es un Producto en Combo
+                        </span>
+                    </label>
                 </div>
 
                 <div>
