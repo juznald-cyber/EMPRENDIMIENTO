@@ -276,25 +276,57 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
+    isComboProduct(p) {
+        if (!p) return false;
+        if (p.isCombo === true || p.isCombo === 'true') return true;
+        const sku = (p.sku || '').toUpperCase();
+        if (sku.startsWith('COMBO')) return true;
+        const cat = (p.category || '').toLowerCase();
+        if (cat.includes('combo') || cat.includes('pack')) return true;
+        const name = (p.name || '').toLowerCase();
+        if (name.includes('combo ') || name.includes('+') || name.startsWith('combo')) return true;
+        return false;
+    }
+
+    togglePinProduct(productId) {
+        const products = window.db.getProducts();
+        const p = products.find(item => item.id === productId);
+        if (!p) return;
+
+        const nextState = !p.isPinned;
+        p.isPinned = nextState;
+        p.pinnedAt = nextState ? Date.now() : null;
+
+        window.db.saveProduct(p);
+        this.renderProducts();
+        this.showToast(nextState ? `📌 "${p.name}" anclado al inicio.` : `Desanclado "${p.name}".`, 'info');
+    }
+
     switchCatalogSubTab(subTab) {
         this.catalogSubTab = subTab;
-        const btnProd = document.getElementById('subtab-btn-products');
-        const btnSup = document.getElementById('subtab-btn-suppliers');
+        const btnProducts = document.getElementById('subtab-btn-products');
+        const btnSingle = document.getElementById('subtab-btn-single');
+        const btnCombos = document.getElementById('subtab-btn-combos');
+        const btnSuppliers = document.getElementById('subtab-btn-suppliers');
         const viewProd = document.getElementById('subtab-view-products');
         const viewSup = document.getElementById('subtab-view-suppliers');
 
-        if (subTab === 'products') {
-            btnProd.className = 'px-4 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white shadow-sm transition-all';
-            btnSup.className = 'px-4 py-2 text-xs font-bold rounded-full text-slate-600 hover:bg-slate-200 transition-all';
-            viewProd.classList.remove('hidden');
-            viewSup.classList.add('hidden');
-            this.renderProducts();
-        } else {
-            btnSup.className = 'px-4 py-2 text-xs font-bold rounded-full bg-indigo-600 text-white shadow-sm transition-all';
-            btnProd.className = 'px-4 py-2 text-xs font-bold rounded-full text-slate-600 hover:bg-slate-200 transition-all';
-            viewSup.classList.remove('hidden');
-            viewProd.classList.add('hidden');
+        const activeClass = 'px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm transition-all';
+        const inactiveClass = 'px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all';
+
+        if (btnProducts) btnProducts.className = subTab === 'products' ? activeClass : inactiveClass;
+        if (btnSingle) btnSingle.className = subTab === 'single' ? activeClass : inactiveClass;
+        if (btnCombos) btnCombos.className = subTab === 'combos' ? activeClass : inactiveClass;
+        if (btnSuppliers) btnSuppliers.className = subTab === 'suppliers' ? activeClass : inactiveClass;
+
+        if (subTab === 'suppliers') {
+            if (viewProd) viewProd.classList.add('hidden');
+            if (viewSup) viewSup.classList.remove('hidden');
             this.renderSuppliers();
+        } else {
+            if (viewSup) viewSup.classList.add('hidden');
+            if (viewProd) viewProd.classList.remove('hidden');
+            this.renderProducts();
         }
     }
 
@@ -1296,16 +1328,45 @@ class AppController {
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
+        // Actualizar badges de conteo en las pestañas del catálogo
+        const countAllEl = document.getElementById('count-all-products');
+        const countSingleEl = document.getElementById('count-single-products');
+        const countCombosEl = document.getElementById('count-combos-products');
+        const totalAll = products.length;
+        const totalCombos = products.filter(p => this.isComboProduct(p)).length;
+        const totalSingle = totalAll - totalCombos;
+
+        if (countAllEl) countAllEl.innerText = `(${totalAll})`;
+        if (countSingleEl) countSingleEl.innerText = `(${totalSingle})`;
+        if (countCombosEl) countCombosEl.innerText = `(${totalCombos})`;
+
         const query = (document.getElementById('products-search-input')?.value || '').toLowerCase();
         const catFilter = document.getElementById('products-category-filter')?.value || 'todas';
 
-        const filtered = products.filter(p => {
+        let filtered = products.filter(p => {
+            const isCombo = this.isComboProduct(p);
+            if (this.catalogSubTab === 'combos' && !isCombo) return false;
+            if (this.catalogSubTab === 'single' && isCombo) return false;
+
             const matchQ = !query ||
                 (p.name || '').toLowerCase().includes(query) ||
                 (p.sku || '').toLowerCase().includes(query) ||
                 (p.category || '').toLowerCase().includes(query);
             const matchC = catFilter === 'todas' || p.category === catFilter;
             return matchQ && matchC;
+        });
+
+        // Ordenar: Los productos anclados van primero (más recientemente anclados arriba)
+        filtered.sort((a, b) => {
+            const aPinned = a.isPinned ? 1 : 0;
+            const bPinned = b.isPinned ? 1 : 0;
+            if (bPinned !== aPinned) {
+                return bPinned - aPinned;
+            }
+            if (a.isPinned && b.isPinned) {
+                return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+            }
+            return 0;
         });
 
         const tbody = document.getElementById('products-tbody');
@@ -1333,6 +1394,8 @@ class AppController {
             const totalCost1u = cost1u + extraCost;
             const salePrice = window.db.getSalePriceForQuantity(p, 1);
             const hasTiers = p.costTiers && p.costTiers.length > 0;
+            const isCombo = this.isComboProduct(p);
+            const isPinned = !!p.isPinned;
 
             // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
             let imgs = [];
@@ -1351,16 +1414,25 @@ class AppController {
                 : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
 
             return `
-                <tr class="hover:bg-slate-50 transition-colors">
+                <tr class="hover:bg-slate-50 transition-colors ${isPinned ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : ''}">
                     <td class="py-3 px-3">
                         <input type="checkbox" class="product-row-check w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" data-id="${p.id}" onchange="app.onProductRowCheck()" />
                     </td>
-                    <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">${p.sku || '-'}</td>
+                    <td class="py-3 px-3 font-mono text-xs font-bold text-indigo-700">
+                        <div class="flex items-center gap-1.5">
+                            ${isPinned ? '<span title="Producto Anclado" class="text-amber-500">📌</span>' : ''}
+                            <span>${p.sku || '-'}</span>
+                        </div>
+                    </td>
                     <td class="py-3 px-3">
                         <div class="flex items-start gap-2.5">
                             <div class="flex gap-1 shrink-0">${imgThumbsHtml}</div>
                             <div>
-                                <div class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</span>
+                                    ${isCombo ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-extrabold bg-indigo-100 text-indigo-800 rounded-md border border-indigo-200">🔥 COMBO</span>' : ''}
+                                    ${isPinned ? '<span class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-800 rounded-md">ANCLADO</span>' : ''}
+                                </div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
@@ -1382,6 +1454,9 @@ class AppController {
                     <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
+                            <button type="button" onclick="app.togglePinProduct('${p.id}')" class="p-1.5 rounded-lg transition-colors ${isPinned ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}" title="${isPinned ? 'Desanclar del inicio' : 'Anclar al inicio'}">
+                                <i data-lucide="pin" class="w-4 h-4 ${isPinned ? 'fill-current' : ''}"></i>
+                            </button>
                             <button type="button" onclick="app.quickAddProductToQuote('${p.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Añadir a Cotización Actual">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                             </button>
@@ -1568,6 +1643,12 @@ class AppController {
             document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
 
+            // Opciones de Combo y Anclado
+            const pinnedEl = document.getElementById('prod-form-is-pinned');
+            if (pinnedEl) pinnedEl.checked = !!p.isPinned;
+            const comboEl = document.getElementById('prod-form-is-combo');
+            if (comboEl) comboEl.checked = this.isComboProduct(p);
+
             // Precio de venta calculado (incluye costo adicional + margen sobre el costo total)
             const cost1u      = parseFloat(String(p.costPrice).replace(',', '.')) || 0;
             const extra1u     = parseFloat(String(p.extraCost).replace(',', '.')) || 0;
@@ -1615,6 +1696,11 @@ class AppController {
             // Costo adicional - limpiar
             document.getElementById('prod-form-extra-cost').value = '0';
             document.getElementById('prod-form-extra-cost-label').value = '';
+            // Opciones de Combo y Anclado
+            const pinnedElNew = document.getElementById('prod-form-is-pinned');
+            if (pinnedElNew) pinnedElNew.checked = false;
+            const comboElNew = document.getElementById('prod-form-is-combo');
+            if (comboElNew) comboElNew.checked = (this.catalogSubTab === 'combos');
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
@@ -1832,6 +1918,11 @@ class AppController {
 
         window.db.saveCategory(category);
 
+        const isPinned = document.getElementById('prod-form-is-pinned')?.checked || false;
+        const isCombo = document.getElementById('prod-form-is-combo')?.checked || false;
+        const existingProd = id ? window.db.getProductById(id) : null;
+        const pinnedAt = isPinned ? (existingProd?.pinnedAt || Date.now()) : null;
+
         const product = {
             id: id ? id : ('prod_' + Date.now()),
             name,
@@ -1848,6 +1939,9 @@ class AppController {
             extraCostLabel: extraCostLabel || '',
             images: images || [],
             imageData: imageData || '',
+            isPinned,
+            pinnedAt,
+            isCombo,
             useGlobalTiers: true
         };
 
@@ -2453,6 +2547,7 @@ class AppController {
             extraCostLabel: '',
             images,
             imageData: images.length > 0 ? images[0] : '',
+            isCombo: true,
             useGlobalTiers: true
         };
 
