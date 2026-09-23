@@ -1482,13 +1482,15 @@ class AppController {
             const extraCost = parseFloat(p.extraCost) || 0;
             const totalCost1u = cost1u + extraCost;
             const salePrice = window.db.getSalePriceForQuantity(p, 1);
+            const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+            const netPrice = Number((salePrice / (1 + taxRate / 100)).toFixed(2));
 
             return `
                 <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex items-center justify-between transition-colors">
                     <div>
                         <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
                         <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Costo: ${currency} ${window.formatMoney(totalCost1u)} | Margen: +${window.formatNumber(margin, 2)}% | <span class="font-bold text-indigo-700">Venta: ${currency} ${window.formatMoney(salePrice)}</span></p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Venta: <span class="font-semibold text-slate-800">${currency} ${window.formatMoney(salePrice)}</span> (c/IVA) | <span class="font-bold text-indigo-700">Neto: ${currency} ${window.formatMoney(netPrice)}</span></p>
                     </div>
                     <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
                         + Agregar
