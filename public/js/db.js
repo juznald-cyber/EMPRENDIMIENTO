@@ -96,8 +96,8 @@ const DEFAULT_PROFILE = {
     email: 'contacto@miempresa.com',
     address: 'Av. Principal, Edificio Centro Empresarial, Local 4B',
     currency: '$',
-    currencyCode: 'USD',
-    taxRate: 16, // IVA 16% por defecto (configurable)
+    currencyCode: 'CLP',
+    taxRate: 19, // IVA 19% por defecto en Chile
     enableTax: true,
     logo: 'assets/logo.jpg', // Logo oficial de la aplicación
     bankDetails: 'Banco Nacional - Cta Corriente #0102-0000-00-0000000000\nPago Móvil / Zelle: pagos@miempresa.com',
@@ -583,7 +583,14 @@ class Database {
     // PERFIL DE LA EMPRESA
     // ==========================================
     getProfile() {
-        return this.get(DB_KEYS.PROFILE, DEFAULT_PROFILE);
+        const p = this.get(DB_KEYS.PROFILE, DEFAULT_PROFILE);
+        if (p.taxRate === undefined || p.taxRate === 16) {
+            p.taxRate = 19;
+        }
+        if (p.enableTax === undefined) {
+            p.enableTax = true;
+        }
+        return p;
     }
 
     saveProfile(profileData) {
