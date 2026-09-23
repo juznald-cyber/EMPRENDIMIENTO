@@ -80,19 +80,26 @@ class CotizadorManager {
         const extraCost = parseFloat(product.extraCost) || 0;
         const totalUnitCost = baseCost + extraCost;
 
-        let unitPrice;
+        const profile = window.db.getProfile();
+        const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+        const taxFactor = 1 + (taxRate / 100);
+
+        let grossUnitPrice;
         let margin;
         if (customMargin !== null && !isNaN(customMargin)) {
             margin = parseFloat(customMargin);
-            unitPrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
+            grossUnitPrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
         } else {
-            unitPrice = window.db.getSalePriceForQuantity(product, qty);
+            grossUnitPrice = window.db.getSalePriceForQuantity(product, qty);
             margin = totalUnitCost > 0
-                ? Number((((unitPrice / totalUnitCost) - 1) * 100).toFixed(2))
+                ? Number((((grossUnitPrice / totalUnitCost) - 1) * 100).toFixed(2))
                 : window.db.getMarginForQuantity(product, qty);
         }
 
-        const lineTotal = Number((unitPrice * qty).toFixed(2));
+        // El precio de venta registrado ya incluye IVA. 
+        // Se descuenta el IVA para dejar solo el valor NETO en el ítem de la cotización:
+        const netUnitPrice = Number((grossUnitPrice / taxFactor).toFixed(2));
+        const lineTotal = Number((netUnitPrice * qty).toFixed(2));
 
         const newItem = {
             id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -102,7 +109,8 @@ class CotizadorManager {
             costPrice: totalUnitCost,
             margin: margin,
             quantity: qty,
-            unitPrice: unitPrice,
+            grossUnitPrice: grossUnitPrice,
+            unitPrice: netUnitPrice,
             total: lineTotal,
             notes: product.notes || '',
             useGlobalTiers: product.useGlobalTiers
@@ -115,6 +123,19 @@ class CotizadorManager {
 
     addVinylItem(vinylItem) {
         if (!vinylItem) return false;
+
+        const profile = window.db.getProfile();
+        const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+        const taxFactor = 1 + (taxRate / 100);
+
+        // Si el ítem de vinilo tiene precio con IVA, descontamos para dejar precio neto unitario
+        if (vinylItem.unitPrice && !vinylItem.isNetCalculated) {
+            vinylItem.grossUnitPrice = vinylItem.unitPrice;
+            vinylItem.unitPrice = Number((vinylItem.unitPrice / taxFactor).toFixed(2));
+            vinylItem.total = Number((vinylItem.unitPrice * (vinylItem.quantity || 1)).toFixed(2));
+            vinylItem.isNetCalculated = true;
+        }
+
         this.currentQuote.items.push(vinylItem);
         this.recalculateTotals();
         return vinylItem;
@@ -124,8 +145,14 @@ class CotizadorManager {
         const qty = parseInt(quantity, 10) || 1;
         const cost = parseFloat(costPrice) || 0;
         const marg = parseFloat(margin) || 40;
-        const unitPrice = window.db.calculateSalePrice(cost, marg);
-        const lineTotal = Number((unitPrice * qty).toFixed(2));
+        const grossUnitPrice = window.db.calculateSalePrice(cost, marg);
+
+        const profile = window.db.getProfile();
+        const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+        const taxFactor = 1 + (taxRate / 100);
+
+        const netUnitPrice = Number((grossUnitPrice / taxFactor).toFixed(2));
+        const lineTotal = Number((netUnitPrice * qty).toFixed(2));
 
         const newItem = {
             id: 'custom_item_' + Date.now(),
@@ -135,7 +162,8 @@ class CotizadorManager {
             costPrice: cost,
             margin: marg,
             quantity: qty,
-            unitPrice: unitPrice,
+            grossUnitPrice: grossUnitPrice,
+            unitPrice: netUnitPrice,
             total: lineTotal,
             notes: notes
         };
@@ -152,15 +180,22 @@ class CotizadorManager {
         const qty = Math.max(1, parseInt(newQty, 10) || 1);
         item.quantity = qty;
 
+        const profile = window.db.getProfile();
+        const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+        const taxFactor = 1 + (taxRate / 100);
+
         if (item.productId) {
             const product = window.db.getProductById(item.productId);
             if (product) {
                 const baseCost = window.db.getCostForQuantity(product, qty);
                 const extraCost = parseFloat(product.extraCost) || 0;
                 item.costPrice = baseCost + extraCost;
-                item.unitPrice = window.db.getSalePriceForQuantity(product, qty);
+
+                const grossUnitPrice = window.db.getSalePriceForQuantity(product, qty);
+                item.grossUnitPrice = grossUnitPrice;
+                item.unitPrice = Number((grossUnitPrice / taxFactor).toFixed(2));
                 item.margin = item.costPrice > 0 
-                    ? Number((((item.unitPrice / item.costPrice) - 1) * 100).toFixed(2))
+                    ? Number((((grossUnitPrice / item.costPrice) - 1) * 100).toFixed(2))
                     : window.db.getMarginForQuantity(product, qty);
             }
         }
@@ -175,7 +210,14 @@ class CotizadorManager {
 
         const margin = parseFloat(newMargin) || 0;
         item.margin = margin;
-        item.unitPrice = window.db.calculateSalePrice(item.costPrice, margin);
+
+        const profile = window.db.getProfile();
+        const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
+        const taxFactor = 1 + (taxRate / 100);
+
+        const grossUnitPrice = window.db.calculateSalePrice(item.costPrice, margin);
+        item.grossUnitPrice = grossUnitPrice;
+        item.unitPrice = Number((grossUnitPrice / taxFactor).toFixed(2));
         item.total = Number((item.unitPrice * item.quantity).toFixed(2));
         this.recalculateTotals();
     }
@@ -211,16 +253,16 @@ class CotizadorManager {
         });
         this.currentQuote.subtotal = Number(subtotal.toFixed(2));
 
-        // Descuento
+        // Descuento sobre subtotal neto
         const discountPct = parseFloat(this.currentQuote.discountPercentage) || 0;
         const discountAmount = Number(((this.currentQuote.subtotal * discountPct) / 100).toFixed(2));
         this.currentQuote.discountAmount = discountAmount;
 
-        // Base Imponible
+        // Base Imponible (Neto)
         const taxableBase = Math.max(0, this.currentQuote.subtotal - discountAmount);
 
-        // Impuestos (IVA)
-        if (profile.enableTax) {
+        // Impuestos (IVA 19%) sumado en el total
+        if (profile.enableTax !== false) {
             const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
             const taxAmount = Number(((taxableBase * taxRate) / 100).toFixed(2));
             this.currentQuote.taxRate = taxRate;
