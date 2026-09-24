@@ -288,6 +288,41 @@ class AppController {
         return false;
     }
 
+    getProductComboCount(productId, allProducts = null) {
+        if (!productId) return 0;
+        const products = allProducts || window.db.getProducts();
+        const p = products.find(item => item.id === productId);
+        if (!p || this.isComboProduct(p)) return 0;
+
+        const combos = products.filter(item => this.isComboProduct(item));
+        let count = 0;
+        const pNameLower = (p.name || '').trim().toLowerCase();
+        const pSkuLower = (p.sku || '').trim().toLowerCase();
+
+        combos.forEach(combo => {
+            // 1. Verificación directa por ID si se guardó en componentProductIds
+            if (Array.isArray(combo.componentProductIds) && combo.componentProductIds.includes(productId)) {
+                count++;
+                return;
+            }
+            // 2. Verificación si el SKU está en componentSkus
+            if (pSkuLower && Array.isArray(combo.componentSkus) && combo.componentSkus.map(s => (s || '').toLowerCase()).includes(pSkuLower)) {
+                count++;
+                return;
+            }
+            // 3. Verificación heurística por notas ("Producto combinado formado por: • ...") o nombre ("Item1 + Item2")
+            if (pNameLower && pNameLower.length >= 3) {
+                const cNotes = (combo.notes || '').toLowerCase();
+                const cName = (combo.name || '').toLowerCase();
+                if (cNotes.includes(pNameLower) || cName.includes(pNameLower)) {
+                    count++;
+                }
+            }
+        });
+
+        return count;
+    }
+
     togglePinProduct(productId) {
         const products = window.db.getProducts();
         const p = products.find(item => item.id === productId);
@@ -1413,6 +1448,32 @@ class AppController {
                 ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openProductLightbox('${p.id}',${i})" onerror="this.style.display='none'" />`).join('')
                 : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
 
+            // Indicador de cuántas veces ha sido combinado (puntos según cantidad)
+            let comboIndicatorHtml = '';
+            if (!isCombo) {
+                const comboCount = this.getProductComboCount(p.id, products);
+                if (comboCount > 0) {
+                    const maxDotsToShow = Math.min(comboCount, 8);
+                    const dotsHtml = Array.from({ length: maxDotsToShow }, () => 
+                        `<span class="inline-block w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-400 ring-1 ring-white shadow-xs"></span>`
+                    ).join('');
+                    const extraPlus = comboCount > 8 ? `+${comboCount - 8}` : '';
+                    const timesText = comboCount === 1 ? '1 vez en combo' : `${comboCount} veces en combos`;
+
+                    comboIndicatorHtml = `
+                        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 shadow-xs cursor-help select-none" 
+                             title="Este producto ha sido combinado ${timesText}">
+                            <div class="flex items-center gap-1">
+                                ${dotsHtml}
+                            </div>
+                            <span class="text-[10px] font-black tracking-tight text-indigo-700">
+                                ${comboCount}${extraPlus} ${comboCount === 1 ? 'combo' : 'combos'}
+                            </span>
+                        </div>
+                    `;
+                }
+            }
+
             return `
                 <tr class="hover:bg-slate-50 transition-colors ${isPinned ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : ''}">
                     <td class="py-3 px-3">
@@ -1428,9 +1489,10 @@ class AppController {
                         <div class="flex items-start gap-2.5">
                             <div class="flex gap-1 shrink-0">${imgThumbsHtml}</div>
                             <div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</span>
                                     ${isCombo ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-extrabold bg-indigo-100 text-indigo-800 rounded-md border border-indigo-200">🔥 COMBO</span>' : ''}
+                                    ${comboIndicatorHtml}
                                     ${isPinned ? '<span class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-800 rounded-md">ANCLADO</span>' : ''}
                                 </div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
@@ -2548,6 +2610,8 @@ class AppController {
             images,
             imageData: images.length > 0 ? images[0] : '',
             isCombo: true,
+            componentProductIds: (this._combineSelectedProducts || []).map(cp => cp.id),
+            componentSkus: (this._combineSelectedProducts || []).map(cp => cp.sku).filter(Boolean),
             useGlobalTiers: true
         };
 
