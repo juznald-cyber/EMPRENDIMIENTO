@@ -514,9 +514,47 @@ class Database {
         }
     }
 
+    /** Devuelve la referencia a la subcolección de productos individuales del usuario en Firestore */
+    _userProductsColl() {
+        const uDoc = this._userDoc();
+        if (!uDoc) return null;
+        try {
+            return uDoc.collection('productos');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /** Guarda un producto específico como documento independiente en Firestore */
+    async _syncSingleProductToFirestore(product) {
+        const pColl = this._userProductsColl();
+        if (!pColl || !product || !product.id) return;
+        try {
+            const clean = JSON.parse(JSON.stringify(product));
+            clean.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+            await pColl.doc(product.id).set(clean, { merge: true });
+            console.log(`☁️ Producto [${product.name || product.id}] sincronizado en documento independiente.`);
+        } catch (err) {
+            console.warn(`Error al sincronizar producto individual ${product.id}:`, err.message);
+        }
+    }
+
+    /** Elimina el documento independiente de un producto en Firestore */
+    async _deleteSingleProductFromFirestore(productId) {
+        const pColl = this._userProductsColl();
+        if (!pColl || !productId) return;
+        try {
+            await pColl.doc(productId).delete();
+            console.log(`☁️ Producto [${productId}] eliminado de Firestore.`);
+        } catch (err) {
+            console.warn(`Error al eliminar producto de Firestore ${productId}:`, err.message);
+        }
+    }
+
     /**
      * Llamado desde app.js cuando el usuario inicia sesión.
      * Combina de forma segura los datos de Firestore con localStorage para evitar pérdidas.
+     * Ahora lee los productos desde la subcolección de documentos independientes ('productos/').
      */
     async syncFromFirestore(uid) {
         this._uid = uid;
@@ -541,16 +579,49 @@ class Database {
                     localStorage.setItem(DB_KEYS.SUPPLIERS, JSON.stringify(mergedSup));
                 }
 
-                // 2. Productos: merge seguro (NUNCA borrar productos creados localmente)
-                if (Array.isArray(data.products)) {
-                    const localProducts = this.get(DB_KEYS.PRODUCTS, []);
-                    const mergedProd = [...data.products];
-                    localProducts.forEach(lp => {
-                        if (lp && lp.id && !mergedProd.some(fp => fp.id === lp.id)) {
-                            mergedProd.push(lp);
+                // 2. Productos: merge con colección individual y documento principal
+                let cloudProducts = [];
+                // Cargar desde la subcolección de productos individuales ('usuarios/{uid}/productos')
+                const prodColl = this._userProductsColl();
+                if (prodColl) {
+                    try {
+                        const pSnap = await prodColl.get();
+                        if (!pSnap.empty) {
+                            pSnap.forEach(pDoc => {
+                                const pData = pDoc.data();
+                                if (pData && pData.id) {
+                                    cloudProducts.push(pData);
+                                }
+                            });
+                            console.log(`📦 Se cargaron ${cloudProducts.length} productos desde documentos individuales en Firestore.`);
+                        }
+                    } catch (collErr) {
+                        console.warn('Error leyendo subcolección productos:', collErr);
+                    }
+                }
+
+                // Si la subcolección estaba vacía, verificar si existían productos en el documento legacy
+                if (cloudProducts.length === 0 && Array.isArray(data.products)) {
+                    cloudProducts = [...data.products];
+                }
+
+                const localProducts = this.get(DB_KEYS.PRODUCTS, []);
+                const mergedProd = [...cloudProducts];
+                localProducts.forEach(lp => {
+                    if (lp && lp.id && !mergedProd.some(fp => fp.id === lp.id)) {
+                        mergedProd.push(lp);
+                    }
+                });
+                localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(mergedProd));
+
+                // Guardar las imágenes de los productos en IndexedDB local
+                if (window.imageDb) {
+                    mergedProd.forEach(p => {
+                        const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
+                        if (imgs.length > 0) {
+                            window.imageDb.saveImages(p.id, imgs);
                         }
                     });
-                    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(mergedProd));
                 }
 
                 // 3. Cotizaciones: merge seguro
@@ -571,7 +642,7 @@ class Database {
                 if (data.globalTiers !== undefined) localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
                 if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
 
-                // Sincronizar de vuelta a Firestore con la data combinada
+                // Sincronizar de vuelta a Firestore (subiendo cualquier producto local como documento independiente)
                 await this._pushAllToFirestore();
                 console.log('✅ Datos sincronizados y protegidos con Firestore.');
             } else {
@@ -646,6 +717,14 @@ class Database {
                 updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
             }));
             await docRef.set(cleanData, { merge: true });
+
+            // Sincronizar CADA producto como un documento independiente en 'usuarios/{uid}/productos/{id}'
+            const allLocalProds = this.getProducts();
+            for (const p of allLocalProds) {
+                if (p && p.id) {
+                    this._syncSingleProductToFirestore(p);
+                }
+            }
         } catch (e) {
             console.warn('Error subiendo a Firestore:', e.message);
         }
@@ -954,6 +1033,12 @@ class Database {
         }
 
         this.set(DB_KEYS.PRODUCTS, products);
+
+        // Sincronizar este producto directamente a su propio documento en Firestore
+        if (this._firestoreReady && this._uid) {
+            this._syncSingleProductToFirestore(product);
+        }
+
         return product;
     }
 
@@ -962,6 +1047,10 @@ class Database {
         this.set(DB_KEYS.PRODUCTS, products);
         if (window.imageDb) {
             window.imageDb.deleteImages(id);
+        }
+        // Eliminar también el documento independiente en Firestore
+        if (this._firestoreReady && this._uid) {
+            this._deleteSingleProductFromFirestore(id);
         }
         return true;
     }
