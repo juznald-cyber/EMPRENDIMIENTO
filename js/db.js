@@ -567,21 +567,13 @@ class Database {
             if (snap.exists) {
                 const data = snap.data();
                 
-                // 1. Proveedores: merge seguro
+                // 1. Proveedores
                 if (Array.isArray(data.suppliers)) {
-                    const localSuppliers = this.get(DB_KEYS.SUPPLIERS, []);
-                    const mergedSup = [...data.suppliers];
-                    localSuppliers.forEach(ls => {
-                        if (ls && ls.id && !mergedSup.some(fs => fs.id === ls.id)) {
-                            mergedSup.push(ls);
-                        }
-                    });
-                    localStorage.setItem(DB_KEYS.SUPPLIERS, JSON.stringify(mergedSup));
+                    localStorage.setItem(DB_KEYS.SUPPLIERS, JSON.stringify(data.suppliers));
                 }
 
-                // 2. Productos: merge con colección individual y documento principal
+                // 2. Productos: merge seguro entre subcolección individual y documento principal
                 let cloudProducts = [];
-                // Cargar desde la subcolección de productos individuales ('usuarios/{uid}/productos')
                 const prodColl = this._userProductsColl();
                 if (prodColl) {
                     try {
@@ -600,40 +592,48 @@ class Database {
                     }
                 }
 
-                // Si la subcolección estaba vacía, verificar si existían productos en el documento legacy
-                if (cloudProducts.length === 0 && Array.isArray(data.products)) {
-                    cloudProducts = [...data.products];
-                }
-
-                const localProducts = this.get(DB_KEYS.PRODUCTS, []);
-                const mergedProd = [...cloudProducts];
-                localProducts.forEach(lp => {
-                    if (lp && lp.id && !mergedProd.some(fp => fp.id === lp.id)) {
-                        mergedProd.push(lp);
+                // Si el documento principal también contiene la lista de productos:
+                if (Array.isArray(data.products) && data.products.length > 0) {
+                    if (cloudProducts.length === 0) {
+                        cloudProducts = [...data.products];
+                    } else {
+                        const subcollMap = new Map(cloudProducts.map(p => [p.id, p]));
+                        data.products.forEach(mainP => {
+                            if (mainP && mainP.id) {
+                                if (!subcollMap.has(mainP.id)) {
+                                    cloudProducts.push(mainP);
+                                } else {
+                                    // Sincronizar campos complementarios si hiciera falta
+                                    const subP = subcollMap.get(mainP.id);
+                                    if (mainP.salePrice !== undefined && subP.salePrice === undefined) {
+                                        subP.salePrice = mainP.salePrice;
+                                    }
+                                    if (Array.isArray(mainP.images) && mainP.images.length > 0 && (!Array.isArray(subP.images) || subP.images.length === 0)) {
+                                        subP.images = mainP.images;
+                                    }
+                                }
+                            }
+                        });
                     }
-                });
-                localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(mergedProd));
-
-                // Guardar las imágenes de los productos en IndexedDB local
-                if (window.imageDb) {
-                    mergedProd.forEach(p => {
-                        const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
-                        if (imgs.length > 0) {
-                            window.imageDb.saveImages(p.id, imgs);
-                        }
-                    });
                 }
 
-                // 3. Cotizaciones: merge seguro
+                if (cloudProducts.length > 0) {
+                    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(cloudProducts));
+
+                    // Guardar las imágenes de los productos en IndexedDB local
+                    if (window.imageDb) {
+                        cloudProducts.forEach(p => {
+                            const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
+                            if (imgs.length > 0) {
+                                window.imageDb.saveImages(p.id, imgs);
+                            }
+                        });
+                    }
+                }
+
+                // 3. Cotizaciones
                 if (Array.isArray(data.quotes)) {
-                    const localQuotes = this.get(DB_KEYS.QUOTES, []);
-                    const mergedQuotes = [...data.quotes];
-                    localQuotes.forEach(lq => {
-                        if (lq && lq.id && !mergedQuotes.some(fq => fq.id === lq.id)) {
-                            mergedQuotes.push(lq);
-                        }
-                    });
-                    localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(mergedQuotes));
+                    localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(data.quotes));
                 }
 
                 // 4. Categorías, Perfil, Vinilos, GlobalTiers
@@ -642,9 +642,7 @@ class Database {
                 if (data.globalTiers !== undefined) localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
                 if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
 
-                // Sincronizar de vuelta a Firestore (subiendo cualquier producto local como documento independiente)
-                await this._pushAllToFirestore();
-                console.log('✅ Datos sincronizados y protegidos con Firestore.');
+                console.log('✅ Datos sincronizados y actualizados con Firestore.');
             } else {
                 // Primera vez: subir lo que hay en localStorage a Firestore
                 await this._pushAllToFirestore();
@@ -652,6 +650,128 @@ class Database {
             }
         } catch (e) {
             console.warn('No se pudo sincronizar con Firestore (modo offline):', e.message);
+        }
+    }
+
+    /** Inicia la escucha en tiempo real de Firestore para sincronizar cambios entre múltiples dispositivos al instante */
+    setupRealtimeSync(onUpdateCallback = null) {
+        if (!this._uid || !this._firestoreReady) return;
+        const uDoc = this._userDoc();
+        if (!uDoc) return;
+
+        if (this._unsubscribeMainDoc) {
+            try { this._unsubscribeMainDoc(); } catch (e) {}
+            this._unsubscribeMainDoc = null;
+        }
+
+        try {
+            this._unsubscribeMainDoc = uDoc.onSnapshot((docSnap) => {
+                if (!docSnap || !docSnap.exists) return;
+                if (docSnap.metadata && docSnap.metadata.hasPendingWrites) return;
+
+                const data = docSnap.data();
+                let hasChanges = false;
+
+                if (Array.isArray(data.suppliers)) {
+                    localStorage.setItem(DB_KEYS.SUPPLIERS, JSON.stringify(data.suppliers));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.quotes)) {
+                    localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(data.quotes));
+                    hasChanges = true;
+                }
+                if (data.categories !== undefined) {
+                    localStorage.setItem(DB_KEYS.CATEGORIES, JSON.stringify(data.categories));
+                    hasChanges = true;
+                }
+                if (data.profile !== undefined) {
+                    localStorage.setItem(DB_KEYS.PROFILE, JSON.stringify(data.profile));
+                    hasChanges = true;
+                }
+                if (data.globalTiers !== undefined) {
+                    localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
+                    hasChanges = true;
+                }
+                if (data.vinyls !== undefined) {
+                    localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.products) && data.products.length > 0) {
+                    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(data.products));
+                    if (window.imageDb) {
+                        data.products.forEach(p => {
+                            const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
+                            if (imgs.length > 0) window.imageDb.saveImages(p.id, imgs);
+                        });
+                    }
+                    hasChanges = true;
+                }
+
+                if (hasChanges && typeof onUpdateCallback === 'function') {
+                    console.log('🔄 Cambios remotos recibidos en tiempo real (documento principal).');
+                    onUpdateCallback();
+                }
+            }, (err) => {
+                console.warn('Realtime listener Firestore doc principal:', err.message);
+            });
+        } catch (e) {
+            console.warn('Error configurando realtime listener:', e.message);
+        }
+    }
+
+    /** Inicia la escucha en tiempo real de la subcolección de productos */
+    setupProductsRealtimeSync(onUpdateCallback = null) {
+        if (!this._uid || !this._firestoreReady) return;
+        const pColl = this._userProductsColl();
+        if (!pColl) return;
+
+        if (this._unsubscribeProdColl) {
+            try { this._unsubscribeProdColl(); } catch (e) {}
+            this._unsubscribeProdColl = null;
+        }
+
+        try {
+            this._unsubscribeProdColl = pColl.onSnapshot((querySnap) => {
+                if (!querySnap) return;
+                if (querySnap.metadata && querySnap.metadata.hasPendingWrites) return;
+
+                if (!querySnap.empty) {
+                    const cloudProducts = [];
+                    querySnap.forEach(doc => {
+                        const p = doc.data();
+                        if (p && p.id) cloudProducts.push(p);
+                    });
+
+                    if (cloudProducts.length > 0) {
+                        localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(cloudProducts));
+                        if (window.imageDb) {
+                            cloudProducts.forEach(p => {
+                                const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
+                                if (imgs.length > 0) window.imageDb.saveImages(p.id, imgs);
+                            });
+                        }
+                        if (typeof onUpdateCallback === 'function') {
+                            console.log('🔄 Cambios remotos recibidos en subcolección productos.');
+                            onUpdateCallback();
+                        }
+                    }
+                }
+            }, (err) => {
+                console.warn('Realtime listener subcolección productos:', err.message);
+            });
+        } catch (e) {
+            console.warn('Error configurando subcollection realtime listener:', e.message);
+        }
+    }
+
+    stopRealtimeSync() {
+        if (this._unsubscribeMainDoc) {
+            try { this._unsubscribeMainDoc(); } catch (e) {}
+            this._unsubscribeMainDoc = null;
+        }
+        if (this._unsubscribeProdColl) {
+            try { this._unsubscribeProdColl(); } catch (e) {}
+            this._unsubscribeProdColl = null;
         }
     }
 

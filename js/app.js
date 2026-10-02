@@ -61,6 +61,9 @@ class AppController {
                         await window.db.syncFromFirestore(user.uid);
                         // Re-renderizar la app con los datos recién cargados de la nube
                         this.renderAll();
+                        // Activar listeners en tiempo real para sincronización instantánea entre múltiples dispositivos
+                        window.db.setupRealtimeSync(() => this.renderAll());
+                        window.db.setupProductsRealtimeSync(() => this.renderProducts());
                     }
                 } else {
                     if (authScreen) {
@@ -68,8 +71,14 @@ class AppController {
                         authScreen.classList.remove('hidden');
                     }
                     if (sidebarUserName) sidebarUserName.innerText = 'Sin Sesión';
-                    // Limpiar UID al cerrar sesión
-                    if (window.db) { window.db._uid = null; window.db._firestoreReady = false; }
+                    // Limpiar UID y listeners al cerrar sesión
+                    if (window.db) {
+                        window.db._uid = null;
+                        window.db._firestoreReady = false;
+                        if (typeof window.db.stopRealtimeSync === 'function') {
+                            window.db.stopRealtimeSync();
+                        }
+                    }
                 }
             });
         }
@@ -2012,6 +2021,8 @@ class AppController {
         const existingProd = id ? window.db.getProductById(id) : null;
         const pinnedAt = isPinned ? (existingProd?.pinnedAt || Date.now()) : null;
 
+        const calculatedSalePrice = typedSalePrice > 0 ? typedSalePrice : (totalUnitCost > 0 ? Number((totalUnitCost * (1 + defaultMargin / 100)).toFixed(2)) : 0);
+
         const product = {
             id: id ? id : ('prod_' + Date.now()),
             name,
@@ -2020,6 +2031,7 @@ class AppController {
             category: category || 'General',
             unit: unit || 'Unidad',
             costPrice: costPrice || 0,
+            salePrice: calculatedSalePrice,
             costTiers: costTiers || [],
             defaultMargin: defaultMargin,
             url: url || '',
