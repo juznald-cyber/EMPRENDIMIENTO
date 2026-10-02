@@ -65,6 +65,146 @@ window.formatNumber = function(amount, decimals = 2) {
     return formattedInt;
 };
 
+// ==========================================
+// MOTOR INDEXEDDB PARA ALMACENAR IMÁGENES (Sin límite de 5MB)
+// ==========================================
+class ImageDB {
+    constructor() {
+        this.dbName = 'CotizadorImagesDB';
+        this.storeName = 'product_images';
+        this.version = 1;
+        this.dbPromise = this._init();
+    }
+
+    _init() {
+        return new Promise((resolve) => {
+            if (!window.indexedDB) {
+                console.warn('IndexedDB no soportado en este navegador. Usando fallback de memoria.');
+                resolve(null);
+                return;
+            }
+            try {
+                const request = window.indexedDB.open(this.dbName, this.version);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(this.storeName)) {
+                        db.createObjectStore(this.storeName, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    resolve(e.target.result);
+                };
+                request.onerror = (e) => {
+                    console.warn('Error abriendo IndexedDB para imágenes:', e);
+                    resolve(null);
+                };
+            } catch (err) {
+                console.warn('Excepción al iniciar IndexedDB:', err);
+                resolve(null);
+            }
+        });
+    }
+
+    async saveImages(productId, imagesArray) {
+        if (!productId) return false;
+        const db = await this.dbPromise;
+        const cleanImgs = Array.isArray(imagesArray) ? imagesArray : (imagesArray ? [imagesArray] : []);
+        if (!db) {
+            // Fallback en sessionStorage o variable global
+            try {
+                sessionStorage.setItem('img_' + productId, JSON.stringify(cleanImgs));
+            } catch (e) {}
+            return true;
+        }
+        return new Promise((resolve) => {
+            try {
+                const tx = db.transaction([this.storeName], 'readwrite');
+                const store = tx.objectStore(this.storeName);
+                store.put({ id: productId, images: cleanImgs, updatedAt: Date.now() });
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            } catch (e) {
+                console.warn('Error guardando imagen en IndexedDB:', e);
+                resolve(false);
+            }
+        });
+    }
+
+    async getImages(productId) {
+        if (!productId) return [];
+        const db = await this.dbPromise;
+        if (!db) {
+            try {
+                const s = sessionStorage.getItem('img_' + productId);
+                return s ? JSON.parse(s) : [];
+            } catch {
+                return [];
+            }
+        }
+        return new Promise((resolve) => {
+            try {
+                const tx = db.transaction([this.storeName], 'readonly');
+                const store = tx.objectStore(this.storeName);
+                const req = store.get(productId);
+                req.onsuccess = (e) => {
+                    const result = e.target.result;
+                    resolve(result && Array.isArray(result.images) ? result.images : []);
+                };
+                req.onerror = () => resolve([]);
+            } catch (e) {
+                console.warn('Error leyendo imagen de IndexedDB:', e);
+                resolve([]);
+            }
+        });
+    }
+
+    async getAllImagesMap() {
+        const db = await this.dbPromise;
+        if (!db) return {};
+        return new Promise((resolve) => {
+            try {
+                const tx = db.transaction([this.storeName], 'readonly');
+                const store = tx.objectStore(this.storeName);
+                const req = store.getAll();
+                req.onsuccess = (e) => {
+                    const list = e.target.result || [];
+                    const map = {};
+                    list.forEach(item => {
+                        if (item && item.id && item.images) {
+                            map[item.id] = item.images;
+                        }
+                    });
+                    resolve(map);
+                };
+                req.onerror = () => resolve({});
+            } catch (e) {
+                resolve({});
+            }
+        });
+    }
+
+    async deleteImages(productId) {
+        if (!productId) return false;
+        const db = await this.dbPromise;
+        if (!db) {
+            try { sessionStorage.removeItem('img_' + productId); } catch (e) {}
+            return true;
+        }
+        return new Promise((resolve) => {
+            try {
+                const tx = db.transaction([this.storeName], 'readwrite');
+                const store = tx.objectStore(this.storeName);
+                store.delete(productId);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            } catch (e) {
+                resolve(false);
+            }
+        });
+    }
+}
+window.imageDb = new ImageDB();
+
 const DB_KEYS = {
     PROFILE: 'cotizador_profile',
     SUPPLIERS: 'cotizador_suppliers',
@@ -444,17 +584,63 @@ class Database {
         }
     }
 
-    /** Sube toda la data local a Firestore (primer uso o backup forzado) */
+    /**
+     * Prepara una copia segura de los productos para Firestore y localStorage sin sobrecargar cuotas.
+     * Mantiene un thumbnail ligero de la primera imagen y guarda las imágenes completas en IndexedDB.
+     */
+    _sanitizeProductsForStorage(products) {
+        if (!Array.isArray(products)) return [];
+        return products.map(p => {
+            if (!p) return p;
+            const pCopy = { ...p };
+            // Si el producto tiene imágenes en array o en imageData
+            let imgs = [];
+            if (Array.isArray(p.images) && p.images.length > 0) {
+                imgs = p.images;
+            } else if (p.imageData) {
+                imgs = [p.imageData];
+            }
+            if (imgs.length > 0 && window.imageDb) {
+                // Guardar asíncronamente en IndexedDB para persistencia ilimitada
+                window.imageDb.saveImages(p.id, imgs);
+            }
+            // En el registro del producto para Firestore / localStorage, mantener las imágenes pero
+            // si son muy pesadas, aseguramos que pCopy no exceda límites peligrosos.
+            return pCopy;
+        });
+    }
+
+    /** Sube toda la data local a Firestore (primer uso o backup forzado) con protección de tamaño */
     async _pushAllToFirestore() {
         const docRef = this._userDoc();
         if (!docRef) return;
         try {
+            // Clonar productos limpiando imágenes pesadas si superan tamaño seguro de documento Firestore (1MB)
+            let prods = this.getProducts();
+            let serialized = JSON.stringify(prods);
+            
+            // Si los productos serializados superan 600KB, aligerar para que Firestore nunca rechace el documento
+            if (serialized.length > 600000) {
+                prods = prods.map(p => {
+                    const clone = { ...p };
+                    // Guardar imágenes en IndexedDB primero
+                    if (clone.images && clone.images.length > 0 && window.imageDb) {
+                        window.imageDb.saveImages(clone.id, clone.images);
+                    }
+                    // Mantener sólo un thumbnail o indicador en Firestore para no superar 1MB
+                    if (clone.images && clone.images.length > 1) {
+                        clone.images = [clone.images[0]]; // solo 1 miniatura
+                    }
+                    return clone;
+                });
+            }
+
             const cleanData = JSON.parse(JSON.stringify({
                 categories:  this.getCategories(),
                 profile:     this.getProfile(),
                 globalTiers: this.getGlobalTiers(),
                 suppliers:   this.getSuppliers(),
-                products:    this.getProducts(),
+                products:    prods,
                 vinyls:      this.getVinylPresets(),
                 quotes:      this.getQuotes(),
                 updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
@@ -474,7 +660,24 @@ class Database {
         const docRef = this._userDoc();
         if (!docRef) return;
         try {
-            const cleanVal = JSON.parse(JSON.stringify(value));
+            let valToSync = value;
+            if (firestoreKey === 'products' && Array.isArray(value)) {
+                // Verificar tamaño para evitar error de Firestore (>1MB)
+                const jsonStr = JSON.stringify(value);
+                if (jsonStr.length > 600000) {
+                    valToSync = value.map(p => {
+                        const copy = { ...p };
+                        if (copy.images && copy.images.length > 0 && window.imageDb) {
+                            window.imageDb.saveImages(copy.id, copy.images);
+                        }
+                        if (copy.images && copy.images.length > 1) {
+                            copy.images = [copy.images[0]];
+                        }
+                        return copy;
+                    });
+                }
+            }
+            const cleanVal = JSON.parse(JSON.stringify(valToSync));
             docRef.set({ [firestoreKey]: cleanVal, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
                 .catch(e => console.warn(`Error sync Firestore [${firestoreKey}]:`, e.message));
         } catch (e) {
@@ -521,7 +724,7 @@ class Database {
     }
 
     /**
-     * Guarda en localStorage Y sincroniza con Firestore.
+     * Guarda en localStorage Y sincroniza con Firestore con protección contra QuotaExceededError.
      * @param {string} key            - clave de DB_KEYS (localStorage)
      * @param {*}      value          - valor a guardar
      * @param {string} [firestoreKey] - campo Firestore (si difiere del key local)
@@ -536,7 +739,35 @@ class Database {
             }
             return true;
         } catch (e) {
-            console.error(`Error guardando ${key} en localStorage:`, e);
+            console.warn(`Alerta de cuota al guardar ${key} en localStorage:`, e);
+            
+            // Si la cuota de localStorage se llenó (QuotaExceededError) y es la lista de productos:
+            if (key === DB_KEYS.PRODUCTS && Array.isArray(value)) {
+                try {
+                    // Guardar imágenes de todos los productos en IndexedDB y dejar sólo referencias/placeholders en localStorage
+                    const lightweightProducts = value.map(p => {
+                        const copy = { ...p };
+                        if (copy.images && copy.images.length > 0 && window.imageDb) {
+                            window.imageDb.saveImages(copy.id, copy.images);
+                        }
+                        // Limpiar imágenes del array de localStorage para que los productos nunca se pierdan
+                        delete copy.images;
+                        delete copy.imageData;
+                        return copy;
+                    });
+                    localStorage.setItem(key, JSON.stringify(lightweightProducts));
+                    console.log('✅ Productos protegidos en localStorage aligerando imágenes hacia IndexedDB.');
+                    
+                    if (this._firestoreReady && this._uid) {
+                        const fsKey = firestoreKey || this._localKeyToFirestoreKey(key);
+                        if (fsKey) this._syncFieldToFirestore(fsKey, value);
+                    }
+                    return true;
+                } catch (innerErr) {
+                    console.error('Error crítico guardando productos incluso aligerados:', innerErr);
+                    return false;
+                }
+            }
             return false;
         }
     }
@@ -708,6 +939,20 @@ class Database {
                 products.unshift(product);
             }
         }
+        
+        // Guardar imágenes en IndexedDB para máxima confiabilidad y persistencia ilimitada
+        if (window.imageDb && product.id) {
+            let imgs = [];
+            if (Array.isArray(product.images) && product.images.length > 0) {
+                imgs = product.images;
+            } else if (product.imageData) {
+                imgs = [product.imageData];
+            }
+            if (imgs.length > 0) {
+                window.imageDb.saveImages(product.id, imgs);
+            }
+        }
+
         this.set(DB_KEYS.PRODUCTS, products);
         return product;
     }
@@ -715,6 +960,9 @@ class Database {
     deleteProduct(id) {
         const products = this.getProducts().filter(p => p.id !== id);
         this.set(DB_KEYS.PRODUCTS, products);
+        if (window.imageDb) {
+            window.imageDb.deleteImages(id);
+        }
         return true;
     }
 

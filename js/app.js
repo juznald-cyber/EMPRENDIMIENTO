@@ -1404,6 +1404,17 @@ class AppController {
             return 0;
         });
 
+        // Si aún no hemos cargado el mapa de imágenes de IndexedDB, disparar carga en segundo plano
+        if (!this._indexedDbImagesMap && window.imageDb) {
+            window.imageDb.getAllImagesMap().then(map => {
+                this._indexedDbImagesMap = map || {};
+                // Si encontramos imágenes en IndexedDB, refrescar la tabla suavemente
+                if (map && Object.keys(map).length > 0) {
+                    this.renderProducts();
+                }
+            }).catch(() => {});
+        }
+
         const tbody = document.getElementById('products-tbody');
         if (!tbody) return;
 
@@ -1432,9 +1443,11 @@ class AppController {
             const isCombo = this.isComboProduct(p);
             const isPinned = !!p.isPinned;
 
-            // Normalizar imágenes: soporta string (1 imagen) o array (hasta 3)
+            // Normalizar imágenes: soporta IndexedDB (persistente ilimitado), string (1 imagen) o array (hasta 3)
             let imgs = [];
-            if (Array.isArray(p.images) && p.images.length > 0) {
+            if (this._indexedDbImagesMap && this._indexedDbImagesMap[p.id] && this._indexedDbImagesMap[p.id].length > 0) {
+                imgs = this._indexedDbImagesMap[p.id].slice(0, 3);
+            } else if (Array.isArray(p.images) && p.images.length > 0) {
                 imgs = p.images.slice(0, 3);
             } else if (p.imageData) {
                 imgs = [p.imageData];
@@ -1719,9 +1732,11 @@ class AppController {
             const spEl = document.getElementById('prod-form-sale-price');
             if (spEl) spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
 
-            // Imágenes: soporta array (nuevo) o string (viejo)
+            // Imágenes: soporta IndexedDB (nuevo), array o string (viejo)
             let loadImgs = [];
-            if (Array.isArray(p.images) && p.images.length > 0) {
+            if (this._indexedDbImagesMap && this._indexedDbImagesMap[p.id] && this._indexedDbImagesMap[p.id].length > 0) {
+                loadImgs = this._indexedDbImagesMap[p.id];
+            } else if (Array.isArray(p.images) && p.images.length > 0) {
                 loadImgs = p.images;
             } else if (p.imageData) {
                 loadImgs = [p.imageData];
@@ -1729,6 +1744,18 @@ class AppController {
             document.getElementById('prod-form-image-data').value = loadImgs.length ? JSON.stringify(loadImgs) : '';
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs(loadImgs);
+
+            // Si no estaban en memoria, consultar a IndexedDB asíncronamente para cargarlas en el modal
+            if (loadImgs.length === 0 && window.imageDb) {
+                window.imageDb.getImages(p.id).then(storedImgs => {
+                    if (storedImgs && storedImgs.length > 0) {
+                        if (!this._indexedDbImagesMap) this._indexedDbImagesMap = {};
+                        this._indexedDbImagesMap[p.id] = storedImgs;
+                        document.getElementById('prod-form-image-data').value = JSON.stringify(storedImgs);
+                        this._renderProductImageThumbs(storedImgs);
+                    }
+                }).catch(() => {});
+            }
 
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => {
@@ -2007,6 +2034,13 @@ class AppController {
             useGlobalTiers: true
         };
 
+        // Actualizar cache local de imágenes en memoria e IndexedDB de inmediato
+        if (!this._indexedDbImagesMap) this._indexedDbImagesMap = {};
+        this._indexedDbImagesMap[product.id] = images;
+        if (window.imageDb) {
+            window.imageDb.saveImages(product.id, images);
+        }
+
         window.db.saveProduct(product);
         this.renderCategoriesDataLists();
         this.renderProducts();
@@ -2017,6 +2051,12 @@ class AppController {
     deleteProduct(id) {
         if (confirm('¿Deseas eliminar este producto del catálogo?')) {
             window.db.deleteProduct(id);
+            if (this._indexedDbImagesMap && this._indexedDbImagesMap[id]) {
+                delete this._indexedDbImagesMap[id];
+            }
+            if (this._productImgCache && this._productImgCache[id]) {
+                delete this._productImgCache[id];
+            }
             this.renderProducts();
             this.showToast('Producto eliminado.', 'info');
         }
@@ -2615,6 +2655,14 @@ class AppController {
             useGlobalTiers: true
         };
 
+        if (images.length > 0) {
+            if (!this._indexedDbImagesMap) this._indexedDbImagesMap = {};
+            this._indexedDbImagesMap[newProduct.id] = images;
+            if (window.imageDb) {
+                window.imageDb.saveImages(newProduct.id, images);
+            }
+        }
+
         window.db.saveProduct(newProduct);
         this.renderCategoriesDataLists();
         this.renderProducts();
@@ -2755,8 +2803,8 @@ class AppController {
         this._processProductImageFile(file, file.name);
     }
 
-    /** Redimensiona y comprime una imagen a un tamaño ligero para Firestore y LocalStorage */
-    _compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.75) {
+    /** Redimensiona y comprime una imagen a un tamaño ligero para Firestore, LocalStorage e IndexedDB */
+    _compressImage(file, maxWidth = 500, maxHeight = 500, quality = 0.65) {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => {
