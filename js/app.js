@@ -1520,8 +1520,9 @@ class AppController {
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
-                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                    ${p.url && !isCombo ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
                                 </div>
+                                ${isCombo ? this._renderComboComponentsChips(p) : ''}
                             </div>
                         </div>
                     </td>
@@ -1557,6 +1558,80 @@ class AppController {
         }).join('');
 
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    _renderComboComponentsChips(combo) {
+        // Obtener la lista de productos componentes
+        let components = [];
+        if (Array.isArray(combo.componentDetails) && combo.componentDetails.length > 0) {
+            components = combo.componentDetails.map(cd => {
+                const live = window.db.getProductById(cd.id);
+                return {
+                    id: cd.id,
+                    name: live ? live.name : cd.name,
+                    sku: live ? (live.sku || cd.sku) : cd.sku,
+                    url: (live && live.url) ? live.url : (cd.url || '')
+                };
+            });
+        } else if (Array.isArray(combo.componentProductIds) && combo.componentProductIds.length > 0) {
+            components = combo.componentProductIds.map(id => {
+                const prod = window.db.getProductById(id);
+                return prod ? { id: prod.id, name: prod.name, sku: prod.sku, url: prod.url || '' } : null;
+            }).filter(Boolean);
+        }
+
+        if (components.length === 0) return '';
+
+        const chipsHtml = components.map(c => {
+            const safeName = this.escapeHTML(c.name);
+            const safeSku = c.sku ? `(${this.escapeHTML(c.sku)})` : '';
+            const webLinkHtml = c.url 
+                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-200 px-1 py-0.5 rounded text-[9px] font-bold inline-flex items-center gap-0.5 transition-colors" title="Abrir link de compra de este producto">🔗 Link Web</a>` 
+                : '';
+
+            return `
+                <div class="inline-flex items-center gap-1.5 bg-slate-100/90 hover:bg-indigo-50/80 border border-slate-200 hover:border-indigo-300 rounded-lg px-2 py-0.5 text-[10px] transition-all">
+                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="font-bold text-slate-700 hover:text-indigo-700 flex items-center gap-1 text-left cursor-pointer" title="Haga clic para ver / editar el producto raíz">
+                        <i data-lucide="corner-down-right" class="w-3 h-3 text-indigo-500 shrink-0"></i>
+                        <span>${safeName} ${safeSku}</span>
+                        <span class="text-[9px] text-indigo-600 font-extrabold bg-indigo-100/70 px-1 rounded ml-0.5">Raíz ↗</span>
+                    </button>
+                    ${webLinkHtml}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <i data-lucide="layers" class="w-3 h-3 text-indigo-500"></i> Componentes:
+                </span>
+                ${chipsHtml}
+            </div>
+        `;
+    }
+
+    openRootProduct(productId) {
+        if (!productId) return;
+        const prod = window.db.getProductById(productId);
+        if (!prod) {
+            this.showToast('El producto raíz original ya no existe en el catálogo.', 'warning');
+            return;
+        }
+
+        // Si estamos en la pestaña combos, cambiamos a "single" (individuales) para localizarlo
+        this.switchCatalogSubTab('single');
+
+        // Limpiar o poner el SKU en el buscador para enfocarlo fácilmente
+        const searchInput = document.getElementById('products-search-input');
+        if (searchInput) {
+            searchInput.value = prod.name;
+            this.renderProducts();
+        }
+
+        // Abrir directamente la ventana modal para ver y editar el producto raíz
+        this.openProductModal(productId);
+        this.showToast(`Visualizando producto raíz: "${prod.name}"`, 'info');
     }
 
 
@@ -2219,11 +2294,21 @@ class AppController {
             totalSalePrice += unitSalePrice;
             names.push(p.name);
 
-            if (Array.isArray(p.images) && p.images.length > 0) {
-                p.images.forEach(img => { if (images.length < 3 && !images.includes(img)) images.push(img); });
-            } else if (p.imageData && !images.includes(p.imageData)) {
-                if (images.length < 3) images.push(p.imageData);
+            // Anexar todas las fotos de cada producto (desde IndexedDB o propiedad images/imageData)
+            let pImgs = [];
+            if (this._indexedDbImagesMap && this._indexedDbImagesMap[p.id] && this._indexedDbImagesMap[p.id].length > 0) {
+                pImgs = this._indexedDbImagesMap[p.id];
+            } else if (Array.isArray(p.images) && p.images.length > 0) {
+                pImgs = p.images;
+            } else if (p.imageData) {
+                pImgs = [p.imageData];
             }
+
+            pImgs.forEach(img => {
+                if (img && !images.includes(img)) {
+                    images.push(img);
+                }
+            });
 
             const isFirst = idx === 0;
             const isLast = idx === products.length - 1;
@@ -2236,7 +2321,10 @@ class AppController {
                         </span>
                         <div class="truncate">
                             <span class="font-bold text-slate-800 text-xs block truncate">${this.escapeHTML(p.name)}</span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${p.sku || ''} · ${p.category || 'General'}</span>
+                            <span class="text-[10px] text-slate-400 font-mono block">
+                                ${p.sku || ''} · ${p.category || 'General'}
+                                ${p.url ? `· <a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">🔗 Link</a>` : ''}
+                            </span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 shrink-0">
@@ -2270,6 +2358,25 @@ class AppController {
 
         this._combineImages = images;
 
+        // Renderizar previsualización de imágenes anexadas
+        const previewContainer = document.getElementById('combine-images-preview-list');
+        const counterEl = document.getElementById('combine-images-counter');
+        if (counterEl) {
+            counterEl.innerText = `${images.length} ${images.length === 1 ? 'foto' : 'fotos'}`;
+        }
+        if (previewContainer) {
+            if (images.length === 0) {
+                previewContainer.innerHTML = `<span class="text-xs text-slate-400 italic">Los productos seleccionados no tienen fotos cargadas.</span>`;
+            } else {
+                previewContainer.innerHTML = images.map((src, i) => `
+                    <div class="relative group w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-xs shrink-0">
+                        <img src="${this.escapeHTML(src)}" alt="Foto ${i + 1}" class="w-full h-full object-cover" />
+                        <span class="absolute bottom-0 inset-x-0 bg-slate-900/60 text-white text-[8px] text-center font-bold py-0.5">#${i + 1}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
         // Auto-generar nombre concatenando con + en el orden exacto actual
         const combinedName = names.join(' + ');
         document.getElementById('combine-form-name').value = combinedName;
@@ -2286,7 +2393,8 @@ class AppController {
 
         const notes = 'Producto combinado formado por:\n' + products.map(p => {
             const sp = window.db.getSalePriceForQuantity(p, 1);
-            return `• ${p.name} (Venta: ${currency} ${window.formatMoney(sp)})`;
+            const linkStr = p.url ? ` | Link: ${p.url}` : '';
+            return `• ${p.name} (Venta: ${currency} ${window.formatMoney(sp)})${linkStr}`;
         }).join('\n');
         document.getElementById('combine-form-notes').value = notes;
         
@@ -2644,6 +2752,26 @@ class AppController {
 
         window.db.saveCategory(category);
 
+        const componentDetails = (this._combineSelectedProducts || []).map(cp => {
+            let cpImgs = [];
+            if (this._indexedDbImagesMap && this._indexedDbImagesMap[cp.id]) {
+                cpImgs = this._indexedDbImagesMap[cp.id];
+            } else if (Array.isArray(cp.images)) {
+                cpImgs = cp.images;
+            } else if (cp.imageData) {
+                cpImgs = [cp.imageData];
+            }
+            return {
+                id: cp.id,
+                name: cp.name,
+                sku: cp.sku || '',
+                url: cp.url || '',
+                image: cpImgs[0] || ''
+            };
+        });
+
+        const componentUrls = componentDetails.map(c => c.url).filter(Boolean);
+
         const newProduct = {
             id: 'prod_' + Date.now(),
             name,
@@ -2655,7 +2783,7 @@ class AppController {
             salePrice: typedSalePrice > 0 ? typedSalePrice : Number((costPrice * (1 + defaultMargin / 100)).toFixed(2)),
             costTiers: costTiers || [],
             defaultMargin,
-            url: '',
+            url: componentUrls[0] || '',
             notes,
             extraCost: 0,
             extraCostLabel: '',
@@ -2664,6 +2792,8 @@ class AppController {
             isCombo: true,
             componentProductIds: (this._combineSelectedProducts || []).map(cp => cp.id),
             componentSkus: (this._combineSelectedProducts || []).map(cp => cp.sku).filter(Boolean),
+            componentDetails,
+            componentUrls,
             useGlobalTiers: true
         };
 

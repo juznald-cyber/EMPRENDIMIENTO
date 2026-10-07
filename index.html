@@ -1672,6 +1672,21 @@
                     </div>
                 </div>
 
+                <!-- Previsualización de Fotos Combinadas y Enlaces -->
+                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <i data-lucide="images" class="w-4 h-4 text-indigo-600"></i>
+                            Fotos Combinadas Anexadas
+                        </label>
+                        <span id="combine-images-counter" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">0 fotos</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Se adjuntan automáticamente las fotos de todos los productos seleccionados para el nuevo combo.</p>
+                    <div id="combine-images-preview-list" class="flex flex-wrap gap-2 pt-1 min-h-[44px] items-center">
+                        <!-- Thumbs inyectados dinámicamente -->
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalle de Componentes</label>
                     <textarea id="combine-form-notes" rows="2" placeholder="Opcional..." 
@@ -1890,18 +1905,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=5.3"></script>
-    <script src="js/db.js?v=5.3"></script>
-    <script src="js/vinilos.js?v=5.3"></script>
-    <script src="js/pdf-generator.js?v=5.3"></script>
-    <script src="js/cotizador.js?v=5.3"></script>
-    <script src="js/app.js?v=5.3"></script>
+    <script src="js/firebase-config.js?v=5.4"></script>
+    <script src="js/db.js?v=5.4"></script>
+    <script src="js/vinilos.js?v=5.4"></script>
+    <script src="js/pdf-generator.js?v=5.4"></script>
+    <script src="js/cotizador.js?v=5.4"></script>
+    <script src="js/app.js?v=5.4"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=5.3').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=5.4').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
