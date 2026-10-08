@@ -1521,8 +1521,8 @@ class AppController {
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
                                     ${p.url && !isCombo ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                    ${isCombo ? this._renderComboComponentsChips(p) : ''}
                                 </div>
-                                ${isCombo ? this._renderComboComponentsChips(p) : ''}
                             </div>
                         </div>
                     </td>
@@ -1582,32 +1582,22 @@ class AppController {
 
         if (components.length === 0) return '';
 
-        const chipsHtml = components.map(c => {
+        return components.map(c => {
             const safeName = this.escapeHTML(c.name);
-            const safeSku = c.sku ? `(${this.escapeHTML(c.sku)})` : '';
             const webLinkHtml = c.url 
-                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 hover:underline p-0.5" title="Abrir link del proveedor de ${safeName}"><i data-lucide="external-link" class="w-3 h-3"></i></a>` 
+                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 ml-1 inline-flex items-center" title="Abrir link del proveedor de ${safeName}"><i data-lucide="external-link" class="w-3 h-3"></i></a>` 
                 : '';
 
             return `
-                <span class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-md px-1.5 py-0.5 text-slate-700 transition-colors">
-                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="font-medium text-slate-700 hover:text-indigo-700 inline-flex items-center gap-1 text-left cursor-pointer" title="Ver producto raíz original: ${safeName}">
-                        <span>${safeName}</span>
-                        <span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200">Raíz ↗</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-slate-100 hover:bg-indigo-50/70 border border-slate-200 rounded-md transition-colors" title="Componente: ${safeName}">
+                    <span class="font-medium text-slate-700 truncate max-w-[150px]">${safeName}</span>
+                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded px-1 py-0.2 ml-0.5 inline-flex items-center gap-0.5 cursor-pointer" title="Ver producto raíz original: ${safeName}">
+                        Raíz ↗
                     </button>
                     ${webLinkHtml}
                 </span>
             `;
         }).join('');
-
-        return `
-            <div class="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
-                <span class="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-                    <i data-lucide="layers" class="w-3 h-3 text-indigo-500"></i> Componentes:
-                </span>
-                ${chipsHtml}
-            </div>
-        `;
     }
 
     openRootProduct(productId) {
