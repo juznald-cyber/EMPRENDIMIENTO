@@ -1521,7 +1521,6 @@ class AppController {
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
                                     ${p.url && !isCombo ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
-                                    ${isCombo ? this._renderComboComponentsChips(p) : ''}
                                 </div>
                             </div>
                         </div>
@@ -1536,7 +1535,10 @@ class AppController {
                     <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${window.formatNumber(margin, 2)}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">
+                        <div>${currency} ${window.formatMoney(salePrice)}</div>
+                        ${isCombo ? this._renderComboComponentsChips(p) : ''}
+                    </td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.togglePinProduct('${p.id}')" class="p-1.5 rounded-lg transition-colors ${isPinned ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}" title="${isPinned ? 'Desanclar del inicio' : 'Anclar al inicio'}">
@@ -1582,22 +1584,28 @@ class AppController {
 
         if (components.length === 0) return '';
 
-        return components.map(c => {
+        const itemsHtml = components.map(c => {
             const safeName = this.escapeHTML(c.name);
             const webLinkHtml = c.url 
-                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 ml-1 inline-flex items-center" title="Abrir link del proveedor de ${safeName}"><i data-lucide="external-link" class="w-3 h-3"></i></a>` 
+                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 p-0.5 inline-flex items-center" title="Link proveedor de ${safeName}"><i data-lucide="external-link" class="w-2.5 h-2.5"></i></a>` 
                 : '';
 
             return `
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-slate-100 hover:bg-indigo-50/70 border border-slate-200 rounded-md transition-colors" title="Componente: ${safeName}">
-                    <span class="font-medium text-slate-700 truncate max-w-[150px]">${safeName}</span>
-                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded px-1 py-0.2 ml-0.5 inline-flex items-center gap-0.5 cursor-pointer" title="Ver producto raíz original: ${safeName}">
+                <div class="inline-flex items-center justify-end gap-1 text-[10px] text-slate-500 font-sans">
+                    <span class="truncate max-w-[120px] text-slate-600 font-normal" title="${safeName}">• ${safeName}</span>
+                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded px-1 py-0.2 cursor-pointer" title="Ver producto raíz: ${safeName}">
                         Raíz ↗
                     </button>
                     ${webLinkHtml}
-                </span>
+                </div>
             `;
         }).join('');
+
+        return `
+            <div class="flex flex-col items-end gap-0.5 mt-1 pt-1 border-t border-slate-100">
+                ${itemsHtml}
+            </div>
+        `;
     }
 
     openRootProduct(productId) {
