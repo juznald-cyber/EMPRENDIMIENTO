@@ -1586,24 +1586,23 @@ class AppController {
             const safeName = this.escapeHTML(c.name);
             const safeSku = c.sku ? `(${this.escapeHTML(c.sku)})` : '';
             const webLinkHtml = c.url 
-                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-200 px-1 py-0.5 rounded text-[9px] font-bold inline-flex items-center gap-0.5 transition-colors" title="Abrir link de compra de este producto">🔗 Link Web</a>` 
+                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 hover:underline p-0.5" title="Abrir link del proveedor de ${safeName}"><i data-lucide="external-link" class="w-3 h-3"></i></a>` 
                 : '';
 
             return `
-                <div class="inline-flex items-center gap-1.5 bg-slate-100/90 hover:bg-indigo-50/80 border border-slate-200 hover:border-indigo-300 rounded-lg px-2 py-0.5 text-[10px] transition-all">
-                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="font-bold text-slate-700 hover:text-indigo-700 flex items-center gap-1 text-left cursor-pointer" title="Haga clic para ver / editar el producto raíz">
-                        <i data-lucide="corner-down-right" class="w-3 h-3 text-indigo-500 shrink-0"></i>
-                        <span>${safeName} ${safeSku}</span>
-                        <span class="text-[9px] text-indigo-600 font-extrabold bg-indigo-100/70 px-1 rounded ml-0.5">Raíz ↗</span>
+                <span class="inline-flex items-center gap-1 text-[11px] bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-md px-1.5 py-0.5 text-slate-700 transition-colors">
+                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="font-medium text-slate-700 hover:text-indigo-700 inline-flex items-center gap-1 text-left cursor-pointer" title="Ver producto raíz original: ${safeName}">
+                        <span>${safeName}</span>
+                        <span class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200">Raíz ↗</span>
                     </button>
                     ${webLinkHtml}
-                </div>
+                </span>
             `;
         }).join('');
 
         return `
-            <div class="mt-1.5 pt-1.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                <span class="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
                     <i data-lucide="layers" class="w-3 h-3 text-indigo-500"></i> Componentes:
                 </span>
                 ${chipsHtml}
