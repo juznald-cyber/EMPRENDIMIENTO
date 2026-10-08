@@ -1535,10 +1535,7 @@ class AppController {
                     <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${window.formatNumber(margin, 2)}%</span>
                     </td>
-                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">
-                        <div>${currency} ${window.formatMoney(salePrice)}</div>
-                        ${isCombo ? this._renderComboComponentsChips(p) : ''}
-                    </td>
+                    <td class="py-3 px-3 text-right font-mono font-black text-sm text-emerald-700 price-col">${currency} ${window.formatMoney(salePrice)}</td>
                     <td class="py-3 px-3 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button type="button" onclick="app.togglePinProduct('${p.id}')" class="p-1.5 rounded-lg transition-colors ${isPinned ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}" title="${isPinned ? 'Desanclar del inicio' : 'Anclar al inicio'}">
@@ -1846,6 +1843,8 @@ class AppController {
                     this.addCostTierRow(t.min, t.max, tierCost, tierMargin, tierSalePrice);
                 });
             }
+            // Componentes del combo adentro del modal de edición
+            this._renderProductModalComboComponents(p);
         } else {
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Nuevo Producto / Insumo';
@@ -1875,9 +1874,81 @@ class AppController {
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs([]);
+            this._renderProductModalComboComponents(null);
         }
         this._initProductImagePaste();
         this.openModal('modal-edit-product');
+    }
+
+    _renderProductModalComboComponents(p) {
+        const container = document.getElementById('prod-form-combo-components-container');
+        const list = document.getElementById('prod-form-combo-components-list');
+        const countEl = document.getElementById('prod-form-combo-components-count');
+        if (!container || !list) return;
+
+        if (!p || !this.isComboProduct(p)) {
+            container.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        let components = [];
+        if (Array.isArray(p.componentDetails) && p.componentDetails.length > 0) {
+            components = p.componentDetails.map(cd => {
+                const live = window.db.getProductById(cd.id);
+                return {
+                    id: cd.id,
+                    name: live ? live.name : cd.name,
+                    sku: live ? (live.sku || cd.sku) : cd.sku,
+                    url: (live && live.url) ? live.url : (cd.url || '')
+                };
+            });
+        } else if (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0) {
+            components = p.componentProductIds.map(id => {
+                const prod = window.db.getProductById(id);
+                return prod ? { id: prod.id, name: prod.name, sku: prod.sku, url: prod.url || '' } : null;
+            }).filter(Boolean);
+        }
+
+        if (components.length === 0) {
+            container.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove('hidden');
+        if (countEl) countEl.innerText = `${components.length} ${components.length === 1 ? 'producto' : 'productos'}`;
+
+        list.innerHTML = components.map((c, idx) => {
+            const safeName = this.escapeHTML(c.name);
+            const safeSku = c.sku ? `(${this.escapeHTML(c.sku)})` : '';
+            const webLinkHtml = c.url 
+                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg shadow-xs transition-colors"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Link Web Proveedor</a>` 
+                : '<span class="text-[11px] text-slate-400 italic">Sin enlace</span>';
+
+            return `
+                <div class="p-2.5 bg-white rounded-xl border border-indigo-100 flex items-center justify-between gap-3 shadow-xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                            ${idx + 1}
+                        </span>
+                        <div class="truncate">
+                            <span class="font-bold text-xs text-slate-800 block truncate">${safeName}</span>
+                            <span class="text-[10px] font-mono text-slate-400 block">${safeSku}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="app.closeModal('modal-edit-product'); app.openRootProduct('${c.id}');" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 rounded-lg transition-colors cursor-pointer" title="Cerrar este combo y abrir el producto raíz original">
+                            <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-600"></i>
+                            Ver Producto Raíz ↗
+                        </button>
+                        ${webLinkHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     addCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '') {
