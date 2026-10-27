@@ -3013,6 +3013,28 @@ class AppController {
         this._processProductImageFile(file, file.name);
     }
 
+    /** Flujo rápido: tomar foto primero y luego completar los datos del nuevo producto */
+    async onQuickPhotoProduct(event) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            this.showToast('Solo se aceptan archivos de imagen.', 'warning');
+            return;
+        }
+        // Abrir el formulario de nuevo producto y adjuntar la foto tomada
+        this.openProductModal();
+        await this._processProductImageFile(file, file.name);
+        const camInput = document.getElementById('prod-form-camera-file');
+        if (camInput) camInput.value = '';
+        // Enfocar el nombre para empezar a completar los datos
+        setTimeout(() => {
+            const nameEl = document.getElementById('prod-form-name');
+            if (nameEl) nameEl.focus();
+        }, 150);
+        this.showToast('📸 Foto lista. Ahora completa el nombre, precio y demás datos.', 'info');
+    }
+
     /** Redimensiona y comprime una imagen a un tamaño ligero para Firestore, LocalStorage e IndexedDB */
     _compressImage(file, maxWidth = 500, maxHeight = 500, quality = 0.65) {
         return new Promise((resolve) => {
@@ -3070,7 +3092,7 @@ class AppController {
             document.getElementById('prod-form-image-data').value = JSON.stringify(imgs);
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs(imgs);
-            this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success');
+            this.showToast(`Imagen ${imgs.length}/3 agregada ✓`, 'success'); const camFileEl = document.getElementById('prod-form-camera-file'); if (camFileEl) camFileEl.value = '';
         } catch (err) {
             this.showToast('Error al procesar la imagen.', 'error');
         }
