@@ -1431,6 +1431,63 @@ class AppController {
     // ==========================================
     // CATÁLOGO DE PRODUCTOS & PROVEEDORES
     // ==========================================
+    sortProductsBy(field) {
+        if (this._productSortField === field) {
+            this._productSortDir = this._productSortDir === 'desc' ? 'asc' : 'desc';
+        } else {
+            this._productSortField = field;
+            this._productSortDir = 'desc';
+        }
+        ['sku', 'name', 'supplier', 'unit', 'cost', 'margin', 'salePrice'].forEach(col => {
+            const el = document.getElementById(`sort-ind-${col}`);
+            if (!el) return;
+            if (col === this._productSortField) {
+                el.innerText = this._productSortDir === 'desc' ? '↓' : '↑';
+                el.className = 'text-[11px] font-black text-indigo-600';
+            } else {
+                el.innerText = '↕';
+                el.className = 'text-[10px] text-slate-300';
+            }
+        });
+        this.renderProducts();
+    }
+
+    _compareProductSort(a, b, suppliers) {
+        if (!this._productSortField) return 0;
+        const dir = this._productSortDir === 'asc' ? 1 : -1;
+        const f = this._productSortField;
+        if (f === 'cost') {
+            const va = (window.db.getCostForQuantity(a, 1) || 0) + (parseFloat(a.extraCost) || 0);
+            const vb = (window.db.getCostForQuantity(b, 1) || 0) + (parseFloat(b.extraCost) || 0);
+            return (va - vb) * dir;
+        }
+        if (f === 'margin') {
+            const va = window.db.getMarginForQuantity(a, 1) || 0;
+            const vb = window.db.getMarginForQuantity(b, 1) || 0;
+            return (va - vb) * dir;
+        }
+        if (f === 'salePrice') {
+            const va = window.db.getSalePriceForQuantity(a, 1) || 0;
+            const vb = window.db.getSalePriceForQuantity(b, 1) || 0;
+            return (va - vb) * dir;
+        }
+        if (f === 'supplier') {
+            const sa = suppliers.find(s => s.id === a.supplierId || s.name === a.supplierId)?.name || '';
+            const sb = suppliers.find(s => s.id === b.supplierId || s.name === b.supplierId)?.name || '';
+            return sa.localeCompare(sb, 'es', { numeric: true, sensitivity: 'base' }) * dir;
+        }
+        if (f === 'unit') {
+            return (a.unit || '').localeCompare(b.unit || '', 'es', { numeric: true, sensitivity: 'base' }) * dir;
+        }
+        if (f === 'sku') {
+            return (a.sku || '').localeCompare(b.sku || '', 'es', { numeric: true, sensitivity: 'base' }) * dir;
+        }
+        if (f === 'name') {
+            return (a.name || '').localeCompare(b.name || '', 'es', { numeric: true, sensitivity: 'base' }) * dir;
+        }
+        return 0;
+    }
+
     renderProducts() {
         const products = window.db.getProducts();
         const suppliers = window.db.getSuppliers();
@@ -1473,9 +1530,9 @@ class AppController {
                 return bPinned - aPinned;
             }
             if (a.isPinned && b.isPinned) {
-                return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+                return this._compareProductSort(a, b, suppliers) || ((b.pinnedAt || 0) - (a.pinnedAt || 0));
             }
-            return 0;
+            return this._compareProductSort(a, b, suppliers);
         });
 
         // Si aún no hemos cargado el mapa de imágenes de IndexedDB, disparar carga en segundo plano

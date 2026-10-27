@@ -919,13 +919,13 @@
                                         <th class="py-3 px-3 w-8">
                                             <input type="checkbox" id="products-select-all" onchange="app.toggleSelectAllProducts(this.checked)" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" title="Seleccionar todos">
                                         </th>
-                                        <th class="py-3 px-3 w-28">Código</th>
-                                        <th class="py-3 px-3">Producto / Insumo</th>
-                                        <th class="py-3 px-3 w-36">Proveedor</th>
-                                        <th class="py-3 px-3 w-24 text-center">Unidad</th>
-                                        <th class="py-3 px-3 w-32 text-right price-col">Costo Prov.</th>
-                                        <th class="py-3 px-3 w-24 text-center price-col">Margen</th>
-                                        <th class="py-3 px-3 w-32 text-right price-col">Precio Venta (1u)</th>
+                                        <th onclick="app.sortProductsBy('sku')" class="py-3 px-3 w-28 cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Código"><span class="inline-flex items-center gap-1">Código <span id="sort-ind-sku" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('name')" class="py-3 px-3 cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Nombre"><span class="inline-flex items-center gap-1">Producto / Insumo <span id="sort-ind-name" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('supplier')" class="py-3 px-3 w-36 cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Proveedor"><span class="inline-flex items-center gap-1">Proveedor <span id="sort-ind-supplier" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('unit')" class="py-3 px-3 w-24 text-center cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Unidad"><span class="inline-flex items-center justify-center gap-1">Unidad <span id="sort-ind-unit" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('cost')" class="py-3 px-3 w-32 text-right price-col cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Costo"><span class="inline-flex items-center justify-end gap-1">Costo Prov. <span id="sort-ind-cost" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('margin')" class="py-3 px-3 w-24 text-center price-col cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Margen"><span class="inline-flex items-center justify-center gap-1">Margen <span id="sort-ind-margin" class="text-[10px] text-slate-300">↕</span></span></th>
+                                        <th onclick="app.sortProductsBy('salePrice')" class="py-3 px-3 w-32 text-right price-col cursor-pointer hover:text-indigo-600 select-none transition-colors" title="Clic para ordenar por Precio de Venta"><span class="inline-flex items-center justify-end gap-1">Precio Venta (1u) <span id="sort-ind-salePrice" class="text-[10px] text-slate-300">↕</span></span></th>
                                         <th class="py-3 px-3 w-28 text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -1924,18 +1924,18 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=6.0"></script>
-    <script src="js/db.js?v=6.0"></script>
-    <script src="js/vinilos.js?v=6.0"></script>
-    <script src="js/pdf-generator.js?v=6.0"></script>
-    <script src="js/cotizador.js?v=6.0"></script>
-    <script src="js/app.js?v=6.0"></script>
+    <script src="js/firebase-config.js?v=6.1"></script>
+    <script src="js/db.js?v=6.1"></script>
+    <script src="js/vinilos.js?v=6.1"></script>
+    <script src="js/pdf-generator.js?v=6.1"></script>
+    <script src="js/cotizador.js?v=6.1"></script>
+    <script src="js/app.js?v=6.1"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6.0').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=6.1').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
