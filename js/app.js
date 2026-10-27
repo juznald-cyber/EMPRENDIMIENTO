@@ -484,11 +484,13 @@ class AppController {
             const filtered = q 
                 ? suppliers.filter(s => (s.name || '').toLowerCase().includes(q) || (s.rut || '').toLowerCase().includes(q) || (s.category || '').toLowerCase().includes(q))
                 : suppliers;
+            const qRaw = filterText.trim() || currentValue; const exactMatch = qRaw && suppliers.some(s => (s.name || '').toLowerCase() === qRaw.toLowerCase()); const safeTyped = this.escapeHTML(qRaw); const createActionHtml = (qRaw && !exactMatch) ? `<div class="p-2 bg-indigo-50/70 border-b border-indigo-100 flex flex-col gap-1"><button type="button" onclick="app.quickCreateSupplierFromDropdown('${safeTyped}')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-700 hover:bg-indigo-100 rounded-lg flex items-center justify-between transition-colors cursor-pointer"><span class="truncate">➕ Agregar proveedor "${safeTyped}"</span><span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold shrink-0 ml-2">Rápido</span></button><button type="button" onclick="app.openNewSupplierFromProductModal('${safeTyped}')" class="w-full px-2.5 py-1 text-left text-[11px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-white rounded-lg flex items-center gap-1 transition-colors cursor-pointer"><i data-lucide="file-plus" class="w-3 h-3"></i> Completar RUT y más datos...</button></div>` : `<div class="p-1.5 bg-slate-50 border-b border-slate-100"><button type="button" onclick="app.openNewSupplierFromProductModal('')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Crear nuevo proveedor...</button></div>`;
 
             if (filtered.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay proveedores coincidentes. Escribe para usar uno nuevo.</div>`;
+            const qRaw = filterText.trim() || currentValue; const exactMatch = qRaw && suppliers.some(s => (s.name || '').toLowerCase() === qRaw.toLowerCase()); const safeTyped = this.escapeHTML(qRaw); const createActionHtml = (qRaw && !exactMatch) ? `<div class="p-2 bg-indigo-50/70 border-b border-indigo-100 flex flex-col gap-1"><button type="button" onclick="app.quickCreateSupplierFromDropdown('${safeTyped}')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-700 hover:bg-indigo-100 rounded-lg flex items-center justify-between transition-colors cursor-pointer"><span class="truncate">➕ Agregar proveedor "${safeTyped}"</span><span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold shrink-0 ml-2">Rápido</span></button><button type="button" onclick="app.openNewSupplierFromProductModal('${safeTyped}')" class="w-full px-2.5 py-1 text-left text-[11px] font-semibold text-slate-600 hover:text-indigo-700 hover:bg-white rounded-lg flex items-center gap-1 transition-colors cursor-pointer"><i data-lucide="file-plus" class="w-3 h-3"></i> Completar RUT y más datos...</button></div>` : `<div class="p-1.5 bg-slate-50 border-b border-slate-100"><button type="button" onclick="app.openNewSupplierFromProductModal('')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Crear nuevo proveedor...</button></div>`;
+                dropdown.innerHTML = createActionHtml + `<div class="p-3 text-xs text-slate-400 text-center">No hay proveedores coincidentes. Escribe para usar uno nuevo.</div>`;
             } else {
-                dropdown.innerHTML = filtered.map(s => {
+                dropdown.innerHTML = createActionHtml + filtered.map(s => {
                     const isSelected = s.name.toLowerCase() === currentValue.toLowerCase();
                     return `
                         <div onclick="app.selectCustomOption('supplier', '${this.escapeHTML(s.name)}')"
@@ -507,11 +509,12 @@ class AppController {
             const categories = window.db.getCategories();
             const q = filterText.toLowerCase().trim();
             const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+            const qRawCat = filterText.trim() || currentValue; const exactMatchCat = qRawCat && categories.some(c => c.toLowerCase() === qRawCat.toLowerCase()); const safeTypedCat = this.escapeHTML(qRawCat); const createCatHtml = (qRawCat && !exactMatchCat) ? `<div class="p-2 bg-indigo-50/70 border-b border-indigo-100"><button type="button" onclick="app.quickCreateCategoryFromDropdown('${type}', '${safeTypedCat}')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-700 hover:bg-indigo-100 rounded-lg flex items-center justify-between transition-colors cursor-pointer"><span class="truncate">➕ Crear categoría "${safeTypedCat}"</span><span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold shrink-0 ml-2">Guardar</span></button></div>` : `<div class="p-1.5 bg-slate-50 border-b border-slate-100"><button type="button" onclick="app.promptQuickNewCategory()" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Crear nueva categoría...</button></div>`;
 
             if (filtered.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+                dropdown.innerHTML = createCatHtml + `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes.</div>`;
             } else {
-                dropdown.innerHTML = filtered.map(c => {
+                dropdown.innerHTML = createCatHtml + filtered.map(c => {
                     const isSelected = c.toLowerCase() === currentValue.toLowerCase();
                     return `
                         <div onclick="app.selectCustomOption('category', '${this.escapeHTML(c)}')"
@@ -527,11 +530,12 @@ class AppController {
             const categories = window.db.getCategories();
             const q = filterText.toLowerCase().trim();
             const filtered = q ? categories.filter(c => c.toLowerCase().includes(q)) : categories;
+            const qRawCat = filterText.trim() || currentValue; const exactMatchCat = qRawCat && categories.some(c => c.toLowerCase() === qRawCat.toLowerCase()); const safeTypedCat = this.escapeHTML(qRawCat); const createCatHtml = (qRawCat && !exactMatchCat) ? `<div class="p-2 bg-indigo-50/70 border-b border-indigo-100"><button type="button" onclick="app.quickCreateCategoryFromDropdown('${type}', '${safeTypedCat}')" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-700 hover:bg-indigo-100 rounded-lg flex items-center justify-between transition-colors cursor-pointer"><span class="truncate">➕ Crear categoría "${safeTypedCat}"</span><span class="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-extrabold shrink-0 ml-2">Guardar</span></button></div>` : `<div class="p-1.5 bg-slate-50 border-b border-slate-100"><button type="button" onclick="app.promptQuickNewCategory()" class="w-full px-2.5 py-1.5 text-left text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Crear nueva categoría...</button></div>`;
 
             if (filtered.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes. Escribe para crear una nueva.</div>`;
+                dropdown.innerHTML = createCatHtml + `<div class="p-3 text-xs text-slate-400 text-center">No hay categorías coincidentes.</div>`;
             } else {
-                dropdown.innerHTML = filtered.map(c => {
+                dropdown.innerHTML = createCatHtml + filtered.map(c => {
                     const isSelected = c.toLowerCase() === currentValue.toLowerCase();
                     return `
                         <div onclick="app.selectCustomOption('sup-category', '${this.escapeHTML(c)}')"
@@ -554,6 +558,7 @@ class AppController {
                     }
                 }
             });
+            const createCatHtml = '';
             const clients = Array.from(clientsMap.values());
             const q = filterText.toLowerCase().trim();
             const filtered = q 
@@ -563,7 +568,7 @@ class AppController {
             if (filtered.length === 0) {
                 dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">No hay clientes anteriores guardados. Escribe los datos para este cliente.</div>`;
             } else {
-                dropdown.innerHTML = filtered.map(c => {
+                dropdown.innerHTML = createCatHtml + filtered.map(c => {
                     const isSelected = c.name.toLowerCase() === currentValue.toLowerCase();
                     const safeName = this.escapeHTML(c.name || '');
                     const safeRut = this.escapeHTML(c.rut || '');
@@ -595,6 +600,66 @@ class AppController {
 
     filterCustomDropdown(type, query) {
         this.openCustomDropdown(type, query);
+    }
+
+    quickCreateSupplierFromDropdown(name) {
+        const cleanName = (name || '').trim();
+        if (!cleanName) return;
+        const catVal = (document.getElementById('prod-form-category-input')?.value || '').trim() || 'General';
+        const saved = window.db.saveSupplier({ name: cleanName, rut: '', contact: '', phone: '', email: '', address: '', category: catVal, notes: '' });
+        this.renderSuppliersDataList();
+        this.renderSuppliers();
+        const input = document.getElementById('prod-form-supplier-input');
+        if (input) input.value = saved.name;
+        this.closeCustomDropdown('supplier');
+        this.showToast(`Proveedor "${saved.name}" creado y seleccionado ✓`, 'success');
+    }
+
+    openNewSupplierFromProductModal(prefillName = '') {
+        this.closeCustomDropdown('supplier');
+        this._openingSupplierFromProduct = true;
+        this.openSupplierModal();
+        const cleanName = (prefillName || '').trim();
+        if (cleanName) {
+            const nameInput = document.getElementById('sup-form-name');
+            if (nameInput) nameInput.value = cleanName;
+        }
+        const prodCat = (document.getElementById('prod-form-category-input')?.value || '').trim();
+        if (prodCat) {
+            const supCat = document.getElementById('sup-form-category');
+            if (supCat && !supCat.value) supCat.value = prodCat;
+        }
+    }
+
+    quickCreateCategoryFromDropdown(type, name) {
+        const cleanName = (name || '').trim();
+        if (!cleanName) return;
+        window.db.saveCategory(cleanName);
+        this.renderCategoriesDataLists();
+        const inputId = type === 'sup-category' ? 'sup-form-category' : 'prod-form-category-input';
+        const input = document.getElementById(inputId);
+        if (input) input.value = cleanName;
+        this.closeCustomDropdown(type);
+        this.showToast(`Categoría "${cleanName}" creada y seleccionada ✓`, 'success');
+    }
+
+    promptQuickNewCategory() {
+        this.closeCustomDropdown('category');
+        const currentInput = (document.getElementById('prod-form-category-input')?.value || '').trim();
+        const categories = window.db.getCategories();
+        const defaultPrompt = (currentInput && !categories.some(c => c.toLowerCase() === currentInput.toLowerCase())) ? currentInput : '';
+        const newCat = prompt('Escribe el nombre de la nueva categoría:', defaultPrompt);
+        if (newCat && newCat.trim()) {
+            const clean = newCat.trim();
+            window.db.saveCategory(clean);
+            this.renderCategoriesDataLists();
+            const input = document.getElementById('prod-form-category-input');
+            if (input) input.value = clean;
+            this.showToast(`Categoría "${clean}" creada y seleccionada ✓`, 'success');
+        }
+    }
+    // Fin de helpers de creación rápida en dropdowns
+    _cleanDropdownState() {
     }
 
     selectCustomOption(type, value) {
@@ -2126,7 +2191,7 @@ class AppController {
         }
 
         const suppliers = window.db.getSuppliers();
-        const matchedSup = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+        const matchedSup = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase()) || (supplierName ? window.db.saveSupplier({ name: supplierName, rut: '', contact: '', phone: '', email: '', address: '', category: category || 'General', notes: '' }) : null);
         const supplierId = matchedSup ? matchedSup.id : (supplierName || 'sup_1');
 
         const costTiers = [];
@@ -3413,7 +3478,7 @@ class AppController {
             notes
         };
 
-        window.db.saveSupplier(supplier);
+        window.db.saveSupplier(supplier); const prodSupEl = document.getElementById('prod-form-supplier-input'); if (prodSupEl && this._openingSupplierFromProduct) { prodSupEl.value = name; this._openingSupplierFromProduct = false; }
         this.renderSuppliersDataList();
         this.renderSuppliers();
         this.closeModal('modal-edit-supplier');
