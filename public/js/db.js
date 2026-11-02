@@ -213,7 +213,9 @@ const DB_KEYS = {
     VINYLS: 'cotizador_vinyls',
     QUOTES: 'cotizador_quotes',
     GLOBAL_TIERS: 'cotizador_global_tiers',
-    SETTINGS: 'cotizador_settings'
+    SETTINGS: 'cotizador_settings',
+    STOCK_MOVEMENTS: 'cotizador_stock_movements',
+    STOCK_DISPATCHES: 'cotizador_stock_dispatches'
 };
 
 // Categorías Iniciales
@@ -636,11 +638,13 @@ class Database {
                     localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(data.quotes));
                 }
 
-                // 4. Categorías, Perfil, Vinilos, GlobalTiers
+                // 4. Categorías, Perfil, Vinilos, GlobalTiers, Stock & Hojas de Salida
                 if (data.categories !== undefined) localStorage.setItem(DB_KEYS.CATEGORIES, JSON.stringify(data.categories));
                 if (data.profile !== undefined) localStorage.setItem(DB_KEYS.PROFILE, JSON.stringify(data.profile));
                 if (data.globalTiers !== undefined) localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
                 if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
+                if (Array.isArray(data.stockMovements)) localStorage.setItem(DB_KEYS.STOCK_MOVEMENTS, JSON.stringify(data.stockMovements));
+                if (Array.isArray(data.stockDispatches)) localStorage.setItem(DB_KEYS.STOCK_DISPATCHES, JSON.stringify(data.stockDispatches));
 
                 console.log('✅ Datos sincronizados y actualizados con Firestore.');
             } else {
@@ -694,6 +698,14 @@ class Database {
                 }
                 if (data.vinyls !== undefined) {
                     localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.stockMovements)) {
+                    localStorage.setItem(DB_KEYS.STOCK_MOVEMENTS, JSON.stringify(data.stockMovements));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.stockDispatches)) {
+                    localStorage.setItem(DB_KEYS.STOCK_DISPATCHES, JSON.stringify(data.stockDispatches));
                     hasChanges = true;
                 }
                 if (Array.isArray(data.products) && data.products.length > 0) {
@@ -833,8 +845,10 @@ class Database {
                 suppliers:   this.getSuppliers(),
                 products:    prods,
                 vinyls:      this.getVinylPresets(),
-                quotes:      this.getQuotes(),
-                updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+                quotes:          this.getQuotes(),
+                stockMovements:  this.getStockMovements(),
+                stockDispatches: this.getStockDispatches(),
+                updatedAt:       firebase.firestore.FieldValue.serverTimestamp(),
             }));
             await docRef.set(cleanData, { merge: true });
 
@@ -979,8 +993,10 @@ class Database {
             [DB_KEYS.GLOBAL_TIERS]: 'globalTiers',
             [DB_KEYS.SUPPLIERS]:    'suppliers',
             [DB_KEYS.PRODUCTS]:     'products',
-            [DB_KEYS.VINYLS]:       'vinyls',
-            [DB_KEYS.QUOTES]:       'quotes',
+            [DB_KEYS.VINYLS]:           'vinyls',
+            [DB_KEYS.QUOTES]:           'quotes',
+            [DB_KEYS.STOCK_MOVEMENTS]:  'stockMovements',
+            [DB_KEYS.STOCK_DISPATCHES]: 'stockDispatches',
         };
         return map[localKey] || null;
     }
@@ -1840,6 +1856,280 @@ class Database {
     }
 
     // ==========================================
+    // MÓDULO DE STOCK / INVENTARIO / HOJAS DE SALIDA
+    // ==========================================
+    getStockMovements() {
+        return this.get(DB_KEYS.STOCK_MOVEMENTS, []);
+    }
+
+    saveStockMovements(movements) {
+        this.set(DB_KEYS.STOCK_MOVEMENTS, movements);
+        return movements;
+    }
+
+    addStockMovement(movement) {
+        const movements = this.getStockMovements();
+        const mov = {
+            id: movement.id || ('mov_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+            date: movement.date || new Date().toISOString(),
+            createdAt: movement.createdAt || Date.now(),
+            productId: movement.productId || '',
+            productSku: movement.productSku || '',
+            productName: movement.productName || '',
+            type: movement.type || 'adjustment', // 'entry' | 'manual_exit' | 'dispatch' | 'adjustment'
+            quantity: Number(movement.quantity) || 0,
+            previousStock: Number(movement.previousStock) || 0,
+            newStock: Number(movement.newStock) || 0,
+            reason: movement.reason || '',
+            reference: movement.reference || '',
+            recipient: movement.recipient || '',
+            cost: (movement.cost !== undefined && movement.cost !== null) ? Number(movement.cost) : null,
+            notes: movement.notes || ''
+        };
+        movements.unshift(mov);
+        if (movements.length > 2000) {
+            movements.length = 2000;
+        }
+        this.saveStockMovements(movements);
+        return mov;
+    }
+
+    getStockDispatches() {
+        return this.get(DB_KEYS.STOCK_DISPATCHES, []);
+    }
+
+    saveStockDispatches(dispatches) {
+        this.set(DB_KEYS.STOCK_DISPATCHES, dispatches);
+        return dispatches;
+    }
+
+    getDispatchById(id) {
+        return this.getStockDispatches().find(d => d.id === id || d.dispatchNumber === id);
+    }
+
+    getNextDispatchNumber() {
+        const dispatches = this.getStockDispatches();
+        let maxNum = 0;
+        dispatches.forEach(d => {
+            const match = d.dispatchNumber?.match(/HS-(\d+)/i);
+            if (match) {
+                const n = parseInt(match[1], 10);
+                if (n > maxNum) maxNum = n;
+            }
+        });
+        const next = maxNum + 1;
+        return `HS-${String(next).padStart(4, '0')}`;
+    }
+
+    /**
+     * Procesa y registra una Hoja de Salida (descontando stock de cada producto involucrado)
+     */
+    createDispatch(dispatchData) {
+        const dispatches = this.getStockDispatches();
+        const dispatchNumber = dispatchData.dispatchNumber || this.getNextDispatchNumber();
+        const now = new Date();
+        const dateStr = dispatchData.date || now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const products = this.getProducts();
+        const processedItems = [];
+
+        (dispatchData.items || []).forEach(item => {
+            const qty = Math.max(0, parseFloat(item.quantity) || 0);
+            if (qty <= 0) return;
+
+            const prodIndex = products.findIndex(p => p.id === item.productId);
+            let prevStock = 0;
+            let newStock = 0;
+            let prodName = item.productName || '';
+            let prodSku = item.productSku || '';
+            let prodUnit = item.unit || 'Unidad';
+
+            if (prodIndex !== -1) {
+                const p = products[prodIndex];
+                prevStock = (p.stock !== undefined && p.stock !== null) ? Number(p.stock) : 0;
+                newStock = Math.max(0, prevStock - qty);
+                p.stock = newStock;
+                prodName = p.name;
+                prodSku = p.sku;
+                prodUnit = p.unit || prodUnit;
+
+                // Sincronizar doc individual si aplica
+                if (this._firestoreReady && this._uid) {
+                    this._syncSingleProductToFirestore(p);
+                }
+            }
+
+            processedItems.push({
+                productId: item.productId,
+                productSku: prodSku,
+                productName: prodName,
+                unit: prodUnit,
+                quantity: qty,
+                previousStock: prevStock,
+                newStock: newStock,
+                notes: item.notes || ''
+            });
+
+            // Registrar movimiento en Kardex
+            this.addStockMovement({
+                date: `${dateStr} ${timeStr}`,
+                productId: item.productId,
+                productSku: prodSku,
+                productName: prodName,
+                type: 'dispatch',
+                quantity: -qty,
+                previousStock: prevStock,
+                newStock: newStock,
+                reason: dispatchData.destination || 'Despacho Hoja de Salida',
+                reference: dispatchNumber,
+                recipient: dispatchData.recipient || '',
+                notes: item.notes || dispatchData.notes || ''
+            });
+        });
+
+        // Guardar todos los productos actualizados
+        this.set(DB_KEYS.PRODUCTS, products);
+
+        const newDispatch = {
+            id: 'disp_' + Date.now(),
+            dispatchNumber,
+            date: dateStr,
+            time: timeStr,
+            createdAt: Date.now(),
+            destination: dispatchData.destination || 'Producción / Taller',
+            reference: dispatchData.reference || '',
+            deliveredBy: dispatchData.deliveredBy || '',
+            recipient: dispatchData.recipient || '',
+            notes: dispatchData.notes || '',
+            items: processedItems,
+            totalUnits: processedItems.reduce((acc, it) => acc + it.quantity, 0),
+            status: 'Procesada'
+        };
+
+        dispatches.unshift(newDispatch);
+        this.saveStockDispatches(dispatches);
+        return newDispatch;
+    }
+
+    /**
+     * Entrada de stock (compras, carga inicial, devoluciones)
+     */
+    addStockToProduct(productId, quantityToAdd, reason = 'Compra a Proveedor', reference = '', cost = null, notes = '') {
+        const qty = parseFloat(quantityToAdd) || 0;
+        if (qty <= 0) return null;
+
+        const products = this.getProducts();
+        const p = products.find(item => item.id === productId);
+        if (!p) return null;
+
+        const prevStock = (p.stock !== undefined && p.stock !== null) ? Number(p.stock) : 0;
+        const newStock = prevStock + qty;
+        p.stock = newStock;
+        if (cost !== null && !isNaN(cost) && cost > 0) {
+            p.costPrice = Number(cost);
+        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        this.addStockMovement({
+            date: `${dateStr} ${timeStr}`,
+            productId: p.id,
+            productSku: p.sku,
+            productName: p.name,
+            type: 'entry',
+            quantity: qty,
+            previousStock: prevStock,
+            newStock: newStock,
+            reason: reason || 'Ingreso de Stock',
+            reference: reference || '',
+            cost: (cost !== null && cost > 0) ? cost : p.costPrice,
+            notes: notes || ''
+        });
+
+        this.saveProduct(p);
+        return p;
+    }
+
+    /**
+     * Salida manual rápida de stock (mermas, muestras, consumo directo de taller)
+     */
+    reduceStockFromProduct(productId, quantityToReduce, reason = 'Merma / Taller', reference = '', notes = '', recipient = '') {
+        const qty = parseFloat(quantityToReduce) || 0;
+        if (qty <= 0) return null;
+
+        const products = this.getProducts();
+        const p = products.find(item => item.id === productId);
+        if (!p) return null;
+
+        const prevStock = (p.stock !== undefined && p.stock !== null) ? Number(p.stock) : 0;
+        const newStock = Math.max(0, prevStock - qty);
+        p.stock = newStock;
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        this.addStockMovement({
+            date: `${dateStr} ${timeStr}`,
+            productId: p.id,
+            productSku: p.sku,
+            productName: p.name,
+            type: 'manual_exit',
+            quantity: -qty,
+            previousStock: prevStock,
+            newStock: newStock,
+            reason: reason || 'Salida Manual',
+            reference: reference || '',
+            recipient: recipient || '',
+            notes: notes || ''
+        });
+
+        this.saveProduct(p);
+        return p;
+    }
+
+    /**
+     * Ajuste físico directo de stock (inventario físico, corrección)
+     */
+    adjustProductStock(productId, exactNewStock, minStock = null, reason = 'Ajuste de Inventario Físico', notes = '') {
+        const newStockNum = Math.max(0, parseFloat(exactNewStock) || 0);
+        const products = this.getProducts();
+        const p = products.find(item => item.id === productId);
+        if (!p) return null;
+
+        const prevStock = (p.stock !== undefined && p.stock !== null) ? Number(p.stock) : 0;
+        const diff = newStockNum - prevStock;
+        p.stock = newStockNum;
+        if (minStock !== null && !isNaN(minStock) && minStock >= 0) {
+            p.minStock = Number(minStock);
+        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        this.addStockMovement({
+            date: `${dateStr} ${timeStr}`,
+            productId: p.id,
+            productSku: p.sku,
+            productName: p.name,
+            type: 'adjustment',
+            quantity: diff,
+            previousStock: prevStock,
+            newStock: newStockNum,
+            reason: reason || 'Ajuste Físico',
+            reference: 'Ajuste Manual',
+            notes: notes || ''
+        });
+
+        this.saveProduct(p);
+        return p;
+    }
+
+    // ==========================================
     // RESPALDO Y RESTAURACIÓN
     // ==========================================
     exportAllData() {
@@ -1852,7 +2142,9 @@ class Database {
             suppliers: this.getSuppliers(),
             products: this.getProducts(),
             vinyls: this.getVinylPresets(),
-            quotes: this.getQuotes()
+            quotes: this.getQuotes(),
+            stockMovements: this.getStockMovements(),
+            stockDispatches: this.getStockDispatches()
         };
     }
 
@@ -1867,6 +2159,8 @@ class Database {
         if (jsonData.products) this.set(DB_KEYS.PRODUCTS, jsonData.products);
         if (jsonData.vinyls) this.set(DB_KEYS.VINYLS, jsonData.vinyls);
         if (jsonData.quotes) this.set(DB_KEYS.QUOTES, jsonData.quotes);
+        if (jsonData.stockMovements) this.set(DB_KEYS.STOCK_MOVEMENTS, jsonData.stockMovements);
+        if (jsonData.stockDispatches) this.set(DB_KEYS.STOCK_DISPATCHES, jsonData.stockDispatches);
         return true;
     }
 
@@ -1878,6 +2172,8 @@ class Database {
         this.set(DB_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
         this.set(DB_KEYS.VINYLS, DEFAULT_VINYLS);
         this.set(DB_KEYS.QUOTES, DEFAULT_QUOTES);
+        this.set(DB_KEYS.STOCK_MOVEMENTS, []);
+        this.set(DB_KEYS.STOCK_DISPATCHES, []);
         return true;
     }
 }

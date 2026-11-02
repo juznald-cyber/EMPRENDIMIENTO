@@ -599,10 +599,11 @@ html.dark .product-img-thumb {
     body * {
         visibility: hidden;
     }
-    #pdf-container-doc, #pdf-container-doc * {
+    #pdf-container-doc, #pdf-container-doc *,
+    #dispatch-voucher-doc, #dispatch-voucher-doc * {
         visibility: visible;
     }
-    #pdf-container-doc {
+    #pdf-container-doc, #dispatch-voucher-doc {
         position: absolute;
         left: 0;
         top: 0;

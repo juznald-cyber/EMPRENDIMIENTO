@@ -179,6 +179,12 @@
                 <span>Proveedores & Precios</span>
             </button>
 
+            <button onclick="app.switchTab('tab-inventario')" data-nav-tab="tab-inventario" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="package" class="w-5 h-5 text-slate-400 group-hover:text-amber-400 transition-colors"></i>
+                <span>Control de Stock</span>
+                <span id="low-stock-alert-badge" class="hidden ml-auto bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full">0</span>
+            </button>
+
             <button onclick="app.switchTab('tab-ajustes')" data-nav-tab="tab-ajustes" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
                 <i data-lucide="settings" class="w-5 h-5 text-slate-400 group-hover:text-purple-400 transition-colors"></i>
                 <span>Configuración & Logo</span>
@@ -963,6 +969,218 @@
             </div>
 
             <!-- ============================================================== -->
+            <!-- TAB: CONTROL DE STOCK & INVENTARIO                             -->
+            <!-- ============================================================== -->
+            <div id="tab-inventario" class="tab-content space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Barra de Sub-Navegación & Acciones Rápidas -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="inventario.switchSubTab('inventory')" id="subtab-stock-btn-inventory" class="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 text-white transition-all flex items-center gap-2">
+                            <i data-lucide="package" class="w-4 h-4"></i>
+                            <span>Existencias & Stock</span>
+                        </button>
+                        <button onclick="inventario.switchSubTab('dispatches')" id="subtab-stock-btn-dispatches" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2">
+                            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                            <span>Hojas de Salida</span>
+                        </button>
+                        <button onclick="inventario.switchSubTab('movements')" id="subtab-stock-btn-movements" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-2">
+                            <i data-lucide="history" class="w-4 h-4"></i>
+                            <span>Historial / Kardex</span>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="inventario.openQuickEntryModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>+ Ingreso Stock</span>
+                        </button>
+                        <button onclick="inventario.openQuickExitModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-sm transition-all">
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                            <span>- Salida Manual</span>
+                        </button>
+                        <button onclick="inventario.openNewDispatchModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-md shadow-amber-600/20 transition-all">
+                            <i data-lucide="file-plus" class="w-4 h-4"></i>
+                            <span>Nueva Hoja de Salida</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumen de Indicadores Clave (KPIs) -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+                    <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Insumos</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="kpi-stock-total-products" class="text-2xl font-black text-slate-800">0</span>
+                            <i data-lucide="boxes" class="w-5 h-5 text-slate-300"></i>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Unidades en Stock</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="kpi-stock-total-units" class="text-2xl font-black text-emerald-600">0</span>
+                            <i data-lucide="package-check" class="w-5 h-5 text-emerald-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition-colors">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-amber-700">Stock Bajo / Crítico</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="kpi-stock-low-count" class="text-2xl font-black text-amber-600">0</span>
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Valorización Stock</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="kpi-stock-valuation" class="text-xl font-black text-indigo-700">$ 0</span>
+                            <i data-lucide="circle-dollar-sign" class="w-5 h-5 text-indigo-300"></i>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Hojas de Salida</span>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <span id="kpi-stock-dispatches-count" class="text-2xl font-black text-slate-800">0</span>
+                            <i data-lucide="clipboard-check" class="w-5 h-5 text-slate-300"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-VISTA 1: EXISTENCIAS / INVENTARIO -->
+                <div id="subtab-stock-view-inventory" class="space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div class="relative w-full sm:w-80">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                                <input type="text" id="stock-search-input" placeholder="Buscar por nombre, SKU o categoría..." 
+                                    class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-amber-500 outline-none" />
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="stock-category-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                    <option value="ALL">Todas las Categorías</option>
+                                </select>
+                                <select id="stock-level-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                    <option value="ALL">Todos los Estados</option>
+                                    <option value="IN_STOCK">Con Stock Disponible</option>
+                                    <option value="LOW">Stock Bajo (<= Mínimo)</option>
+                                    <option value="OUT">Agotados (Stock 0)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Existencias -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[750px]">
+                                <thead>
+                                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                        <th class="py-3 px-3">Producto / Insumo</th>
+                                        <th class="py-3 px-3">Categoría</th>
+                                        <th class="py-3 px-3 text-center">Estado de Stock</th>
+                                        <th class="py-3 px-3 text-center" title="Nivel de alerta para reposición">Stock Mín.</th>
+                                        <th class="py-3 px-3 text-center">Unidad</th>
+                                        <th class="py-3 px-3 text-right">Costo Unit.</th>
+                                        <th class="py-3 px-3 text-right">Valorización</th>
+                                        <th class="py-3 px-3 text-right">Acciones Rápidas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-table-body" class="divide-y divide-slate-100">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-VISTA 2: HOJAS DE SALIDA -->
+                <div id="subtab-stock-view-dispatches" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800">Historial de Hojas de Salida (Despachos a Taller / Producción)</h3>
+                                <p class="text-[11px] text-slate-400">Vales formales que rebajaron stock por entrega a taller, pedidos o clientes</p>
+                            </div>
+                            <button onclick="inventario.openNewDispatchModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-sm transition-all">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                Nueva Hoja de Salida
+                            </button>
+                        </div>
+
+                        <!-- Tabla de Hojas de Salida -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                        <th class="py-3 px-3">Folio</th>
+                                        <th class="py-3 px-3">Fecha y Hora</th>
+                                        <th class="py-3 px-3">Destino / Referencia</th>
+                                        <th class="py-3 px-3">Recibido por</th>
+                                        <th class="py-3 px-3 text-center">Total Unid.</th>
+                                        <th class="py-3 px-3">Resumen Insumos</th>
+                                        <th class="py-3 px-3 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-dispatches-table-body" class="divide-y divide-slate-100">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-VISTA 3: MOVIMIENTOS / KARDEX -->
+                <div id="subtab-stock-view-movements" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div class="relative w-full sm:w-80">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                                <input type="text" id="kardex-search-input" placeholder="Buscar por producto, SKU, motivo o folio..." 
+                                    class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-amber-500 outline-none" />
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="kardex-type-filter" class="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                    <option value="ALL">Todos los Movimientos</option>
+                                    <option value="entry">Entradas (+)</option>
+                                    <option value="manual_exit">Salidas Manuales (-)</option>
+                                    <option value="dispatch">Hojas de Salida (-)</option>
+                                    <option value="adjustment">Ajustes de Inventario</option>
+                                </select>
+                                <button onclick="inventario.exportKardexToExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                                    Exportar a Excel (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Kardex -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[750px]">
+                                <thead>
+                                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                                        <th class="py-2.5 px-3">Fecha y Hora</th>
+                                        <th class="py-2.5 px-3">Tipo</th>
+                                        <th class="py-2.5 px-3">Producto / SKU</th>
+                                        <th class="py-2.5 px-3 text-center">Cantidad</th>
+                                        <th class="py-2.5 px-3 text-center">Stock Ant ➔ Nuevo</th>
+                                        <th class="py-2.5 px-3">Motivo / Folio</th>
+                                        <th class="py-2.5 px-3">Notas / Responsable</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-movements-table-body" class="divide-y divide-slate-100">
+                                    <!-- Inyectado dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
             <!-- TAB 5: CONFIGURACIÓN & PERFIL DE EMPRESA                       -->
             <!-- ============================================================== -->
             <div id="tab-ajustes" class="tab-content space-y-6 max-w-5xl mx-auto">
@@ -1120,6 +1338,10 @@
         <button onclick="app.switchTab('tab-catalogo')" data-mobile-nav="tab-catalogo" class="flex flex-col items-center gap-1 text-slate-400">
             <i data-lucide="boxes" class="w-5 h-5"></i>
             <span class="text-[10px] font-bold">Precios</span>
+        </button>
+        <button onclick="app.switchTab('tab-inventario')" data-mobile-nav="tab-inventario" class="flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="package" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold">Stock</span>
         </button>
     </nav>
 
@@ -1418,6 +1640,29 @@
                             oninput="app.onProductSalePriceChange()"
                             placeholder="Auto"
                             class="w-full px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <!-- Control de Inventario y Stock -->
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="package" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <label class="text-xs font-bold text-slate-800">Control de Stock e Inventario</label>
+                        </div>
+                        <span class="text-[10px] text-slate-500 font-medium">Rebajas automáticas por Hojas de Salida o manuales</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Stock Actual / Inicial (Unidades)</label>
+                            <input type="number" id="prod-form-stock" step="any" min="0" value="0"
+                                class="w-full px-3 py-2 text-xs font-bold text-emerald-700 bg-white border border-slate-200 rounded-xl focus:border-amber-500 outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Stock Mínimo de Alerta</label>
+                            <input type="number" id="prod-form-min-stock" step="any" min="0" value="5"
+                                class="w-full px-3 py-2 text-xs font-bold text-amber-700 bg-white border border-slate-200 rounded-xl focus:border-amber-500 outline-none text-center" />
+                        </div>
                     </div>
                 </div>
 
@@ -1923,19 +2168,398 @@
         </div>
     </div>
 
+    <!-- ============================================================== -->
+    <!-- MODALES DE CONTROL DE STOCK & HOJAS DE SALIDA                  -->
+    <!-- ============================================================== -->
+
+    <!-- Modal: Nueva Hoja de Salida de Materiales / Despacho a Producción -->
+    <div id="modal-create-dispatch" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Nueva Hoja de Salida de Materiales</h3>
+                        <p class="text-[11px] text-slate-400">Rebaja automáticamente los insumos seleccionados del inventario</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-create-dispatch')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Datos Generales del Despacho -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-amber-800 mb-1">Folio Hoja de Salida</label>
+                        <input type="text" id="dispatch-form-folio" readonly
+                            class="w-full px-3 py-2 text-xs font-black font-mono bg-amber-50 text-amber-700 border border-amber-200 rounded-xl outline-none text-center" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Fecha de Salida *</label>
+                        <input type="date" id="dispatch-form-date" 
+                            class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Destino / Uso *</label>
+                        <input type="text" id="dispatch-form-destination" placeholder="Ej. Taller de Estampado / Producción" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Referencia / Pedido / Cliente</label>
+                        <input type="text" id="dispatch-form-reference" placeholder="Ej. Orden #102 - Juan Pérez" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Entregado por (Bodega)</label>
+                        <input type="text" id="dispatch-form-delivered-by" placeholder="Ej. Carlos Bodega" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Recibido por (Operador/Cliente)</label>
+                        <input type="text" id="dispatch-form-recipient" placeholder="Ej. María Taller Textil" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <!-- Lista de Insumos a Retirar -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Insumos y Materiales a Retirar</label>
+                        <button type="button" onclick="inventario.addDispatchItemRow()" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            Agregar otro insumo
+                        </button>
+                    </div>
+
+                    <div id="dispatch-items-container" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                        <!-- Inyectado dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Observaciones Generales</label>
+                    <textarea id="dispatch-form-notes" rows="2" placeholder="Notas sobre el estado del material, indicaciones especiales..."
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Totales y Botones -->
+                <div class="p-3 bg-amber-50/60 rounded-2xl border border-amber-200 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-amber-900 font-bold">Total productos a rebajar: <span id="dispatch-draft-total-items" class="text-sm font-black">0</span></span>
+                        <span class="text-xs text-slate-500 ml-2">Total unidades: <strong id="dispatch-draft-total-units" class="text-amber-800">0</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="app.closeModal('modal-create-dispatch')" class="px-4 py-2 text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">Cancelar</button>
+                        <button type="button" onclick="inventario.submitDispatch()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-amber-600 text-white rounded-xl hover:bg-amber-700 shadow-sm transition-all">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            Procesar y Rebajar Stock
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Vista e Impresión de Hoja de Salida -->
+    <div id="modal-view-dispatch" class="modal-overlay fixed inset-0 z-50 bg-black/50 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-black/5">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-amber-100 text-amber-800 rounded-xl">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-800">Comprobante Oficial de Hoja de Salida</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="inventario.printCurrentDispatch()" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-sm transition-all">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        Imprimir / Guardar PDF
+                    </button>
+                    <button type="button" onclick="app.closeModal('modal-view-dispatch')" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-100/50">
+                <div id="dispatch-preview-render-area">
+                    <!-- Inyectado dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ingreso Rápido de Stock (+) -->
+    <div id="modal-stock-entry" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Ingreso de Stock (+)</h3>
+                        <p class="text-[11px] text-slate-400">Sumar existencias por compra, carga inicial o devolución</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-stock-entry')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Producto / Insumo *</label>
+                    <select id="entry-stock-product-select" onchange="inventario.onEntryProductChange(this.value)" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-700 mb-1">Cantidad a Ingresar *</label>
+                        <input type="number" id="entry-stock-quantity" step="any" min="1" value="1" 
+                            class="w-full px-3 py-2 text-sm font-black text-center text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl outline-none focus:bg-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Costo Unitario ($) (Opcional)</label>
+                        <input type="number" id="entry-stock-cost" step="any" min="0" placeholder="Mantener actual" 
+                            class="w-full px-3 py-2 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Motivo / Concepto del Ingreso</label>
+                    <select id="entry-stock-reason" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                        <option value="Compra a Proveedor">Compra a Proveedor</option>
+                        <option value="Carga Inicial de Inventario">Carga Inicial de Inventario</option>
+                        <option value="Devolución de Cliente / Sobrante">Devolución de Cliente / Sobrante de Taller</option>
+                        <option value="Ajuste Positivo de Inventario">Ajuste Positivo de Inventario</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">N° Factura / Guía / Orden de Compra</label>
+                    <input type="text" id="entry-stock-ref" placeholder="Ej. Factura #4058" 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Observaciones</label>
+                    <input type="text" id="entry-stock-notes" placeholder="Detalles de la compra, proveedor, lote..." 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="app.closeModal('modal-stock-entry')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="inventario.submitQuickEntry()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-sm transition-all">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Confirmar Ingreso
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Salida Manual Rápida de Stock (-) -->
+    <div id="modal-stock-exit" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                        <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Salida Manual de Stock (-)</h3>
+                        <p class="text-[11px] text-slate-400">Rebajar stock por merma, prueba, muestra o consumo interno</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-stock-exit')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-bold text-slate-600">Producto / Insumo *</label>
+                        <span class="text-[11px] text-slate-500">Stock Actual: <strong id="exit-stock-current-display" class="text-slate-800">0</strong></span>
+                    </div>
+                    <select id="exit-stock-product-select" onchange="inventario.onExitProductChange(this.value)" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-rose-700 mb-1">Cantidad a Rebajar *</label>
+                        <input type="number" id="exit-stock-quantity" step="any" min="1" value="1" 
+                            class="w-full px-3 py-2 text-sm font-black text-center text-rose-700 bg-rose-50 border border-rose-200 rounded-xl outline-none focus:bg-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Responsable</label>
+                        <input type="text" id="exit-stock-recipient" placeholder="Ej. Operador taller" 
+                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Motivo de la Salida / Rebaja</label>
+                    <select id="exit-stock-reason" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                        <option value="Merma / Error de Estampado o Impresión">Merma / Error de Estampado o Impresión</option>
+                        <option value="Consumo Interno / Uso en Taller">Consumo Interno / Uso en Taller</option>
+                        <option value="Muestra a Cliente / Exhibición">Muestra a Cliente / Exhibición</option>
+                        <option value="Producto Dañado / Roto / Vencido">Producto Dañado / Roto / Vencido</option>
+                        <option value="Ajuste Negativo de Inventario">Ajuste Negativo de Inventario</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Referencia / Pedido / Orden</label>
+                    <input type="text" id="exit-stock-ref" placeholder="Ej. Prueba cliente X / Taller" 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Observaciones / Detalle</label>
+                    <input type="text" id="exit-stock-notes" placeholder="Causa del error o detalle de la salida..." 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="app.closeModal('modal-stock-exit')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="inventario.submitQuickExit()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700 shadow-sm transition-all">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Confirmar Rebaja
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ajuste Físico de Inventario -->
+    <div id="modal-stock-adjust" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                        <i data-lucide="sliders" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Ajuste Físico de Inventario</h3>
+                        <p class="text-[11px] text-slate-400">Fija el stock exacto según conteo físico en bodega</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-stock-adjust')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="adjust-stock-product-id" />
+
+            <div class="space-y-3">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="text-[11px] font-bold text-slate-400 block mb-0.5">Producto Seleccionado:</span>
+                    <h4 id="adjust-stock-product-name" class="font-bold text-xs text-slate-800"></h4>
+                    <p class="text-[11px] text-slate-500 mt-1">Stock Registrado Actual: <strong id="adjust-stock-current" class="text-slate-800"></strong></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-purple-700 mb-1">Nuevo Stock Físico Real *</label>
+                        <input type="number" id="adjust-stock-exact-qty" step="any" min="0" value="0" 
+                            class="w-full px-3 py-2 text-sm font-black text-center text-purple-700 bg-purple-50 border border-purple-200 rounded-xl outline-none focus:bg-white" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Stock Mínimo Alerta</label>
+                        <input type="number" id="adjust-stock-min-qty" step="any" min="0" value="5" 
+                            class="w-full px-3 py-2 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Motivo del Ajuste</label>
+                    <input type="text" id="adjust-stock-reason" value="Conteo / Inventario Físico" 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Observaciones / Justificación</label>
+                    <input type="text" id="adjust-stock-notes" placeholder="Razón de la discrepancia de inventario..." 
+                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="app.closeModal('modal-stock-adjust')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="inventario.submitAdjustStock()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-700 shadow-sm transition-all">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Guardar Ajuste
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Historial / Kardex de un Producto -->
+    <div id="modal-product-kardex" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                        <i data-lucide="history" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800" id="product-kardex-modal-title">Historial de Producto</h3>
+                        <p class="text-[11px] text-slate-400">Stock actual: <strong id="product-kardex-current-stock" class="text-slate-800">0</strong></p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-product-kardex')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 bg-slate-50/50 sticky top-0">
+                            <th class="py-2.5 px-3">Fecha</th>
+                            <th class="py-2.5 px-3">Tipo</th>
+                            <th class="py-2.5 px-3 text-center">Cantidad</th>
+                            <th class="py-2.5 px-3 text-center">Stock Ant ➔ Nuevo</th>
+                            <th class="py-2.5 px-3">Motivo / Folio</th>
+                            <th class="py-2.5 px-3">Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-kardex-table-body" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100 shrink-0">
+                <button type="button" onclick="app.closeModal('modal-product-kardex')" class="px-5 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=6.1"></script>
-    <script src="js/db.js?v=6.1"></script>
-    <script src="js/vinilos.js?v=6.1"></script>
-    <script src="js/pdf-generator.js?v=6.1"></script>
-    <script src="js/cotizador.js?v=6.1"></script>
-    <script src="js/app.js?v=6.1"></script>
+    <script src="js/firebase-config.js?v=6.2"></script>
+    <script src="js/db.js?v=6.2"></script>
+    <script src="js/vinilos.js?v=6.2"></script>
+    <script src="js/pdf-generator.js?v=6.2"></script>
+    <script src="js/inventario.js?v=6.2"></script>
+    <script src="js/cotizador.js?v=6.2"></script>
+    <script src="js/app.js?v=6.2"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6.1').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=6.2').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

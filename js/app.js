@@ -21,6 +21,9 @@ class AppController {
 
         this.renderAll();
         this.bindEvents();
+        if (window.inventario) {
+            window.inventario.init();
+        }
 
         console.log('Cotizador Pro App Inicializada Correctamente.');
     }
@@ -37,6 +40,9 @@ class AppController {
         this.renderHistory();
         this.renderProducts();
         this.renderSuppliers();
+        if (window.inventario) {
+            window.inventario.render();
+        }
     }
 
     // ==========================================
@@ -274,6 +280,7 @@ class AppController {
             'tab-vinilos': { title: 'Calculadora de Vinilos por m²', sub: 'Corte, UV y Textil' },
             'tab-historial': { title: 'Historial de Cotizaciones', sub: 'Gestión y Seguimiento' },
             'tab-catalogo': { title: 'Catálogo de Precios & Proveedores', sub: 'Costos y Márgenes' },
+            'tab-inventario': { title: 'Control de Stock & Inventario', sub: 'Existencias, Hojas de Salida y Kardex' },
             'tab-ajustes': { title: 'Configuración & Identidad', sub: 'Logotipo y Empresa' }
         };
 
@@ -281,6 +288,10 @@ class AppController {
         const pageSub = document.getElementById('page-current-subtitle');
         if (pageTitle && titleMap[tabId]) pageTitle.innerText = titleMap[tabId].title;
         if (pageSub && titleMap[tabId]) pageSub.innerText = titleMap[tabId].sub;
+
+        if (tabId === 'tab-inventario' && window.inventario) {
+            window.inventario.render();
+        }
 
         if (window.lucide) window.lucide.createIcons();
     }
@@ -1918,6 +1929,12 @@ class AppController {
             document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
 
+            // Stock y Stock Mínimo
+            const stockInput = document.getElementById('prod-form-stock');
+            if (stockInput) stockInput.value = (p.stock !== undefined && p.stock !== null) ? p.stock : 0;
+            const minStockInput = document.getElementById('prod-form-min-stock');
+            if (minStockInput) minStockInput.value = (p.minStock !== undefined && p.minStock !== null) ? p.minStock : 5;
+
             // Opciones de Combo y Anclado
             const pinnedEl = document.getElementById('prod-form-is-pinned');
             if (pinnedEl) pinnedEl.checked = !!p.isPinned;
@@ -1987,6 +2004,11 @@ class AppController {
             // Costo adicional - limpiar
             document.getElementById('prod-form-extra-cost').value = '0';
             document.getElementById('prod-form-extra-cost-label').value = '';
+            // Stock y Stock Mínimo para nuevo producto
+            const stockInputNew = document.getElementById('prod-form-stock');
+            if (stockInputNew) stockInputNew.value = '0';
+            const minStockInputNew = document.getElementById('prod-form-min-stock');
+            if (minStockInputNew) minStockInputNew.value = '5';
             // Opciones de Combo y Anclado
             const pinnedElNew = document.getElementById('prod-form-is-pinned');
             if (pinnedElNew) pinnedElNew.checked = false;
@@ -2288,6 +2310,11 @@ class AppController {
 
         const calculatedSalePrice = typedSalePrice > 0 ? typedSalePrice : (totalUnitCost > 0 ? Number((totalUnitCost * (1 + defaultMargin / 100)).toFixed(2)) : 0);
 
+        const stockInput = document.getElementById('prod-form-stock');
+        const minStockInput = document.getElementById('prod-form-min-stock');
+        const stock = (stockInput && stockInput.value !== '' && !isNaN(parseFloat(stockInput.value))) ? parseFloat(stockInput.value) : (existingProd?.stock ?? 0);
+        const minStock = (minStockInput && minStockInput.value !== '' && !isNaN(parseFloat(minStockInput.value))) ? parseFloat(minStockInput.value) : (existingProd?.minStock ?? 5);
+
         const product = {
             id: id ? id : ('prod_' + Date.now()),
             name,
@@ -2297,6 +2324,8 @@ class AppController {
             unit: unit || 'Unidad',
             costPrice: costPrice || 0,
             salePrice: calculatedSalePrice,
+            stock,
+            minStock,
             costTiers: costTiers || [],
             defaultMargin: defaultMargin,
             url: url || '',
@@ -2321,6 +2350,9 @@ class AppController {
         window.db.saveProduct(product);
         this.renderCategoriesDataLists();
         this.renderProducts();
+        if (window.inventario) {
+            window.inventario.render();
+        }
         this.closeModal('modal-edit-product');
         this.showToast('Producto guardado correctamente.', 'success');
     }
