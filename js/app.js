@@ -1667,8 +1667,20 @@ class AppController {
                         ${sup ? `<span class="font-semibold text-slate-800">${this.escapeHTML(sup.name)}</span> ${sup.rut ? `<span class="block text-[10px] text-slate-400">RUT: ${this.escapeHTML(sup.rut)}</span>` : ''}` : '<span class="text-slate-400">Sin Asignar</span>'}
                     </td>
                     <td class="py-3 px-3 text-center text-xs text-slate-600">${p.unit || 'Unidad'}</td>
-                    <td class="py-3 px-3 text-right font-mono font-bold text-xs text-slate-700 price-col">
-                        ${currency} ${window.formatMoney(cost1u)}
+                    <td class="py-3 px-3 text-right font-mono text-xs text-slate-700 price-col">
+                        ${extraCost > 0 ? `
+                            <div class="font-black text-slate-800 text-xs leading-tight" title="Costo Total = Costo Base (${currency} ${window.formatMoney(cost1u)}) + ${this.escapeHTML(p.extraCostLabel || 'Costo Adicional')} (${currency} ${window.formatMoney(extraCost)})">
+                                ${currency} ${window.formatMoney(totalCost1u)}
+                            </div>
+                            <div class="text-[10px] leading-tight text-slate-400 font-sans mt-0.5 flex flex-col items-end gap-0.5">
+                                <span>Base: <strong class="font-mono text-slate-500">${currency} ${window.formatMoney(cost1u)}</strong></span>
+                                <span class="extra-cost-pill inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 font-mono font-bold" title="${this.escapeHTML(p.extraCostLabel || 'Costo Adicional')}">
+                                    +${currency} ${window.formatMoney(extraCost)}${p.extraCostLabel ? ` (${this.escapeHTML(p.extraCostLabel)})` : ' (Adic.)'}
+                                </span>
+                            </div>
+                        ` : `
+                            <span class="font-bold">${currency} ${window.formatMoney(cost1u)}</span>
+                        `}
                     </td>
                     <td class="py-3 px-3 text-center price-col">
                         <span class="px-2 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">+${window.formatNumber(margin, 2)}%</span>
@@ -2025,6 +2037,7 @@ class AppController {
             this._renderProductImageThumbs([]);
             this._renderProductModalComboComponents(null);
         }
+        this._updateProductTotalCostSummary();
         this._initProductImagePaste();
         this.openModal('modal-edit-product');
     }
@@ -2382,12 +2395,14 @@ class AppController {
 
     /** Recalcula precio de venta cuando cambia el costo o el costo adicional */
     onProductCostChange() {
+        this._updateProductTotalCostSummary();
         const margin = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.'));
         if (!isNaN(margin)) this._recalcSalePrice();
     }
 
     /** Cuando el usuario cambia el % margen → actualiza el precio de venta */
     onProductMarginChange() {
+        this._updateProductTotalCostSummary();
         this._recalcSalePrice();
     }
 
@@ -2397,6 +2412,7 @@ class AppController {
      * Margen = ((precio_venta / costo_total) - 1) * 100
      */
     onProductSalePriceChange() {
+        this._updateProductTotalCostSummary();
         const cost      = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
         const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
         const totalCost = cost + extraCost;
@@ -2405,6 +2421,22 @@ class AppController {
         if (!marginInp || salePrice <= 0 || totalCost <= 0) return;
         const margin = ((salePrice / totalCost) - 1) * 100;
         marginInp.value = Number(margin.toFixed(2));
+    }
+
+    /** Actualiza el resumen visual de Costo Base + Costo Adicional = Costo Total en el modal */
+    _updateProductTotalCostSummary() {
+        const cost      = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
+        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const totalCost = cost + extraCost;
+        const currency  = window.db?.getProfile()?.currency || '$';
+
+        const elBase  = document.getElementById('prod-summary-base-cost');
+        const elExtra = document.getElementById('prod-summary-extra-cost');
+        const elTotal = document.getElementById('prod-summary-total-cost');
+
+        if (elBase)  elBase.textContent  = `${currency} ${window.formatMoney(cost)}`;
+        if (elExtra) elExtra.textContent = `+${currency} ${window.formatMoney(extraCost)}`;
+        if (elTotal) elTotal.textContent = `${currency} ${window.formatMoney(totalCost)}`;
     }
 
     /**

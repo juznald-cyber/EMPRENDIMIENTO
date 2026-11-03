@@ -1030,6 +1030,27 @@ html.dark #modal-edit-product .bg-slate-50 {
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
+/* Costo Adicional y Resumen de Costo Total en Modo Oscuro */
+html.dark .extra-cost-pill {
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+html.dark #modal-edit-product #prod-form-total-cost-summary {
+    border-top-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+html.dark #modal-edit-product #prod-form-total-cost-summary span {
+    color: #fde68a !important;
+}
+
+html.dark #modal-edit-product #prod-summary-total-badge {
+    background: rgba(245, 158, 11, 0.25) !important;
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    color: #ffffff !important;
+}
+
 html.dark #modal-combine-products h3,
 html.dark #modal-combine-products h4,
 html.dark #modal-combine-products label,
@@ -1901,6 +1922,11 @@ html.dark .combine-tier-row button:hover {
     .cost-tier-row > div:first-child,
     .combine-tier-row > div:first-child {
         grid-column: 1 / -1 !important;
+    }
+
+    /* Alinear el desglose de costo adicional a la izquierda en tarjetas móviles */
+    #products-tbody > tr > td:nth-child(6) .items-end {
+        align-items: flex-start !important;
     }
 }
 

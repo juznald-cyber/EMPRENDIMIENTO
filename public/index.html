@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=6.3">
+    <link rel="stylesheet" href="css/styles.css?v=6.4">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1700,6 +1700,15 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Resumen en vivo de Costo Base + Costo Adicional = Costo Total -->
+                    <div id="prod-form-total-cost-summary" class="pt-2.5 mt-1 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span class="text-amber-800 font-medium text-[11px]">
+                            Costo Base (<strong id="prod-summary-base-cost" class="font-mono">$ 0</strong>) + Adicional (<strong id="prod-summary-extra-cost" class="font-mono">+$ 0</strong>):
+                        </span>
+                        <span id="prod-summary-total-badge" class="px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-950 font-black font-mono text-xs">
+                            Costo Total: <span id="prod-summary-total-cost">$ 0</span>
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Escala de Precios y Costos por Cantidad (Volumen / Mayorista) -->
@@ -2557,19 +2566,19 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=6.3"></script>
-    <script src="js/db.js?v=6.3"></script>
-    <script src="js/vinilos.js?v=6.3"></script>
-    <script src="js/pdf-generator.js?v=6.3"></script>
-    <script src="js/inventario.js?v=6.3"></script>
-    <script src="js/cotizador.js?v=6.3"></script>
-    <script src="js/app.js?v=6.3"></script>
+    <script src="js/firebase-config.js?v=6.4"></script>
+    <script src="js/db.js?v=6.4"></script>
+    <script src="js/vinilos.js?v=6.4"></script>
+    <script src="js/pdf-generator.js?v=6.4"></script>
+    <script src="js/inventario.js?v=6.4"></script>
+    <script src="js/cotizador.js?v=6.4"></script>
+    <script src="js/app.js?v=6.4"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6.3').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=6.4').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
