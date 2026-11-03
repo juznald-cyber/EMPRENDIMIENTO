@@ -1928,6 +1928,58 @@ html.dark .combine-tier-row button:hover {
     #products-tbody > tr > td:nth-child(6) .items-end {
         align-items: flex-start !important;
     }
+
+    /* Ajustes móviles para Costos & Maquinaria */
+    #tab-costos #costos-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+    #tab-costos #composer-items-list {
+        max-height: 280px !important;
+    }
 }
+
+/* ============================================================== */
+/* MÓDULO COSTOS & MAQUINARIA - MODO OSCURO Y ESTILOS             */
+/* ============================================================== */
+html.dark #tab-costos .bg-white,
+html.dark #modal-cost-item .bg-white,
+html.dark #modal-pick-extra-costs .bg-white {
+    background-color: rgba(28, 28, 30, 0.94) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark #tab-costos .bg-slate-50,
+html.dark #tab-costos .bg-slate-50\/80,
+html.dark #modal-cost-item .bg-slate-50,
+html.dark #modal-pick-extra-costs .bg-slate-50 {
+    background-color: rgba(44, 44, 46, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark #tab-costos .bg-amber-50\/80,
+html.dark #modal-cost-item .bg-amber-50\/60,
+html.dark #modal-pick-extra-costs .bg-amber-50\/60 {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+html.dark #tab-costos .bg-emerald-50\/70,
+html.dark #modal-cost-item .bg-emerald-50\/50 {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+html.dark #tab-costos .bg-sky-50\/70,
+html.dark #modal-cost-item .bg-sky-50\/50 {
+    background-color: rgba(14, 165, 233, 0.12) !important;
+    border-color: rgba(14, 165, 233, 0.3) !important;
+}
+
+html.dark #tab-costos .bg-violet-50\/70,
+html.dark #modal-cost-item .bg-violet-50\/50 {
+    background-color: rgba(139, 92, 246, 0.12) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
 
 

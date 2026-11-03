@@ -24,6 +24,9 @@ class AppController {
         if (window.inventario) {
             window.inventario.init();
         }
+        if (window.costos) {
+            window.costos.init();
+        }
 
         console.log('Cotizador Pro App Inicializada Correctamente.');
     }
@@ -42,6 +45,9 @@ class AppController {
         this.renderSuppliers();
         if (window.inventario) {
             window.inventario.render();
+        }
+        if (window.costos) {
+            window.costos.render();
         }
     }
 
@@ -280,6 +286,7 @@ class AppController {
             'tab-vinilos': { title: 'Calculadora de Vinilos por m²', sub: 'Corte, UV y Textil' },
             'tab-historial': { title: 'Historial de Cotizaciones', sub: 'Gestión y Seguimiento' },
             'tab-catalogo': { title: 'Catálogo de Precios & Proveedores', sub: 'Costos y Márgenes' },
+            'tab-costos': { title: 'Costos Operativos & Maquinaria', sub: 'Insumos, Depreciación, Alcancía y Electricidad' },
             'tab-inventario': { title: 'Control de Stock & Inventario', sub: 'Existencias, Hojas de Salida y Kardex' },
             'tab-ajustes': { title: 'Configuración & Identidad', sub: 'Logotipo y Empresa' }
         };
@@ -296,6 +303,9 @@ class AppController {
 
         if (tabId === 'tab-inventario' && window.inventario) {
             window.inventario.render();
+        }
+        if (tabId === 'tab-costos' && window.costos) {
+            window.costos.render();
         }
 
         if (window.lucide) window.lucide.createIcons();
@@ -1137,7 +1147,41 @@ class AppController {
                     badgeCount.innerText = q.items.length;
                 }
 
-                tbody.innerHTML = q.items.map((item, idx) => `
+                tbody.innerHTML = q.items.map((item, idx) => {
+                    const linkedProd = item.productId ? window.db.getProductById(item.productId) : null;
+                    const extraAmt = parseFloat(linkedProd?.extraCost ?? item.extraCostAmount) || 0;
+                    const extraLbl = (linkedProd?.extraCostLabel || item.extraCostLabel || 'Costo Adicional').trim();
+                    const hasExtraOption = extraAmt > 0;
+                    const isExtraActive = hasExtraOption && (item.includeExtraCost !== false);
+
+                    let extraToggleHtml = '';
+                    if (hasExtraOption) {
+                        if (isExtraActive) {
+                            extraToggleHtml = `
+                                <div class="mt-1">
+                                    <button type="button" onclick="app.toggleQuoteItemExtraCost(${idx})" 
+                                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-700 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer"
+                                        title="Haz clic para quitar el costo adicional y cotizar solo el producto base">
+                                        <span>⚡ Con ${this.escapeHTML(extraLbl)} (+${currency} ${window.formatMoney(extraAmt)}/u)</span>
+                                        <span class="px-1.5 py-0.2 rounded bg-white/80 text-slate-700 font-extrabold text-[9px] border border-amber-300">Quitar Adic.</span>
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            extraToggleHtml = `
+                                <div class="mt-1">
+                                    <button type="button" onclick="app.toggleQuoteItemExtraCost(${idx})" 
+                                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 transition-all cursor-pointer"
+                                        title="Haz clic para cargar este producto con su costo adicional">
+                                        <span>🏷️ Sin Costo Adicional (Solo Base)</span>
+                                        <span class="px-1.5 py-0.2 rounded bg-amber-500 text-white font-extrabold text-[9px]">+ Con ${this.escapeHTML(extraLbl)}</span>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    return `
                     <tr class="hover:bg-slate-50/70 transition-colors">
                         <td class="py-3 px-3 text-center font-bold text-slate-400 text-xs">${idx + 1}</td>
                         <td class="py-3 px-3">
@@ -1146,6 +1190,7 @@ class AppController {
                                 ${this.escapeHTML(item.name)}
                             </div>
                             ${item.notes ? `<div class="text-xs text-slate-400 mt-0.5">${this.escapeHTML(item.notes)}</div>` : ''}
+                            ${extraToggleHtml}
                         </td>
                         <td class="py-3 px-3 text-center">
                             <div class="inline-flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
@@ -1171,7 +1216,8 @@ class AppController {
                             </button>
                         </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             }
         }
 
@@ -1233,6 +1279,18 @@ class AppController {
         this.renderQuoteDraft();
     }
 
+    toggleQuoteItemExtraCost(index) {
+        const updated = window.cotizador.toggleItemExtraCost(index);
+        if (updated) {
+            this.renderQuoteDraft();
+            if (updated.includeExtraCost) {
+                this.showToast(`⚡ "${updated.name}" ahora incluye ${updated.extraCostLabel || 'Costo Adicional'}.`, 'success');
+            } else {
+                this.showToast(`🏷️ "${updated.name}" cargado SIN costo adicional (solo precio base).`, 'info');
+            }
+        }
+    }
+
     removeQuoteItem(index) {
         window.cotizador.removeItem(index);
         this.renderQuoteDraft();
@@ -1255,6 +1313,9 @@ class AppController {
 
         const saved = window.cotizador.saveCurrentQuote();
         this.renderHistory();
+        if (window.costos) {
+            window.costos.render();
+        }
         if (showToastAlert) {
             this.showToast(`Cotización ${saved.quoteNumber} guardada exitosamente.`, 'success');
             if (window.confetti && saved.status === 'Aprobada') {
@@ -1856,33 +1917,62 @@ class AppController {
 
         container.innerHTML = filtered.map(p => {
             const cost1u = window.db.getCostForQuantity(p, 1);
-            const margin = window.db.getMarginForQuantity(p, 1);
             const extraCost = parseFloat(p.extraCost) || 0;
-            const totalCost1u = cost1u + extraCost;
-            const salePrice = window.db.getSalePriceForQuantity(p, 1);
+            const salePriceWithExtra = window.db.getSalePriceForQuantity(p, 1, true);
+            const salePriceBaseOnly = window.db.getSalePriceForQuantity(p, 1, false);
             const taxRate = parseFloat(profile.taxRate !== undefined ? profile.taxRate : 19) || 19;
-            const netPrice = Number((salePrice / (1 + taxRate / 100)).toFixed(2));
+            const netPrice = Number((salePriceWithExtra / (1 + taxRate / 100)).toFixed(2));
+            const extraLbl = this.escapeHTML(p.extraCostLabel || 'Costo Adicional');
+
+            const actionsHtml = extraCost > 0 ? `
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="app.addProductFromModal('${p.id}', true)" 
+                        class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm flex items-center justify-center gap-1 cursor-pointer"
+                        title="Cargar con ${extraLbl} (+${currency}${window.formatMoney(extraCost)})">
+                        <span>⚡ Con Adicional</span>
+                        <span class="font-mono text-[10px] bg-white/20 px-1.5 py-0.2 rounded">${currency}${window.formatMoney(salePriceWithExtra)}</span>
+                    </button>
+                    <button type="button" onclick="app.addProductFromModal('${p.id}', false)" 
+                        class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-200 text-slate-800 hover:bg-slate-300 flex items-center justify-center gap-1 cursor-pointer"
+                        title="Cargar solo el producto base sin costo adicional">
+                        <span>🏷️ Sin Adicional</span>
+                        <span class="font-mono text-[10px] bg-white/80 px-1.5 py-0.2 rounded">${currency}${window.formatMoney(salePriceBaseOnly)}</span>
+                    </button>
+                </div>
+            ` : `
+                <button type="button" onclick="app.addProductFromModal('${p.id}', true)" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shrink-0 cursor-pointer">
+                    + Agregar
+                </button>
+            `;
 
             return `
-                <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex items-center justify-between transition-colors">
-                    <div>
-                        <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
-                        <h5 class="text-xs font-bold text-slate-800">${this.escapeHTML(p.name)}</h5>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Venta: <span class="font-semibold text-slate-800">${currency} ${window.formatMoney(salePrice)}</span> (c/IVA) | <span class="font-bold text-indigo-700">Neto: ${currency} ${window.formatMoney(netPrice)}</span></p>
+                <div class="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-mono text-[10px] font-bold text-indigo-600">${p.sku || 'N/A'}</span>
+                            ${extraCost > 0 ? `<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">+${currency}${window.formatMoney(extraCost)} (${extraLbl})</span>` : ''}
+                        </div>
+                        <h5 class="text-xs font-bold text-slate-800 truncate">${this.escapeHTML(p.name)}</h5>
+                        <p class="text-[11px] text-slate-500 mt-0.5">
+                            Venta: <span class="font-semibold text-slate-800">${currency} ${window.formatMoney(salePriceWithExtra)}</span> (c/IVA) | <span class="font-bold text-indigo-700">Neto: ${currency} ${window.formatMoney(netPrice)}</span>
+                            ${extraCost > 0 ? `<span class="text-slate-400"> · Sin Adic.: ${currency} ${window.formatMoney(salePriceBaseOnly)}</span>` : ''}
+                        </p>
                     </div>
-                    <button type="button" onclick="app.addProductFromModal('${p.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm">
-                        + Agregar
-                    </button>
+                    ${actionsHtml}
                 </div>
             `;
         }).join('');
     }
 
-    addProductFromModal(productId) {
-        window.cotizador.addProductItem(productId, 1);
+    addProductFromModal(productId, includeExtraCost = true) {
+        const added = window.cotizador.addProductItem(productId, 1, null, includeExtraCost);
         this.renderQuoteDraft();
         this.closeModal('modal-add-product');
-        this.showToast('Producto agregado a la cotización.', 'success');
+        if (added && added.hasProductExtraCost) {
+            this.showToast(includeExtraCost ? `⚡ Producto agregado CON costo adicional.` : `🏷️ Producto agregado SIN costo adicional (solo base).`, 'success');
+        } else {
+            this.showToast('Producto agregado a la cotización.', 'success');
+        }
     }
 
     openAddCustomItemModal() {
@@ -1945,6 +2035,7 @@ class AppController {
             // Costo adicional (estampado, sublimación, etc.)
             document.getElementById('prod-form-extra-cost').value = p.extraCost || 0;
             document.getElementById('prod-form-extra-cost-label').value = p.extraCostLabel || '';
+            this._currentProductExtraCostItems = Array.isArray(p.extraCostItems) ? [...p.extraCostItems] : [];
 
             // Stock y Stock Mínimo
             const stockInput = document.getElementById('prod-form-stock');
@@ -2021,6 +2112,7 @@ class AppController {
             // Costo adicional - limpiar
             document.getElementById('prod-form-extra-cost').value = '0';
             document.getElementById('prod-form-extra-cost-label').value = '';
+            this._currentProductExtraCostItems = [];
             // Stock y Stock Mínimo para nuevo producto
             const stockInputNew = document.getElementById('prod-form-stock');
             if (stockInputNew) stockInputNew.value = '0';
@@ -2350,6 +2442,7 @@ class AppController {
             notes: notes || '',
             extraCost: extraCost || 0,
             extraCostLabel: extraCostLabel || '',
+            extraCostItems: (extraCost > 0 && Array.isArray(this._currentProductExtraCostItems)) ? this._currentProductExtraCostItems : [],
             images: images || [],
             imageData: imageData || '',
             isPinned,

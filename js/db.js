@@ -215,8 +215,140 @@ const DB_KEYS = {
     GLOBAL_TIERS: 'cotizador_global_tiers',
     SETTINGS: 'cotizador_settings',
     STOCK_MOVEMENTS: 'cotizador_stock_movements',
-    STOCK_DISPATCHES: 'cotizador_stock_dispatches'
+    STOCK_DISPATCHES: 'cotizador_stock_dispatches',
+    OPERATIONAL_COSTS: 'cotizador_operational_costs',
+    COST_SETTINGS: 'cotizador_cost_settings'
 };
+
+const DEFAULT_COST_SETTINGS = {
+    kwhPrice: 220, // Tarifa eléctrica referencial por kWh ($)
+    operatorHourlyRate: 4500 // Valor hora referencial de mano de obra ($)
+};
+
+const DEFAULT_OPERATIONAL_COSTS = [
+    {
+        id: 'op_tinta_sub',
+        category: 'insumo', // 'insumo' | 'maquinaria' | 'electricidad' | 'operativo'
+        name: 'Tinta de Sublimación CMYK (Juego 4 Botellas)',
+        unitLabel: 'impresión',
+        purchaseCost: 18000,
+        yieldUnits: 600,
+        notes: 'Juego de tintas CMYK de 100ml c/u. Rinde aprox. 600 impresiones A4.'
+    },
+    {
+        id: 'op_papel_sub',
+        category: 'insumo',
+        name: 'Papel de Sublimación A4 (Resma 100 hojas)',
+        unitLabel: 'hoja',
+        purchaseCost: 4500,
+        yieldUnits: 100,
+        notes: 'Paquete de 100 hojas A4 secado rápido.'
+    },
+    {
+        id: 'op_cinta_termica',
+        category: 'insumo',
+        name: 'Cinta Térmica Adhesiva (Rollo 33m)',
+        unitLabel: 'prenda',
+        purchaseCost: 2000,
+        yieldUnits: 200,
+        notes: 'Fijación del papel al sublimar prendas o tazas.'
+    },
+    {
+        id: 'op_plancha_38',
+        category: 'maquinaria',
+        name: 'Plancha Transfer Sublimación 38x38cm',
+        unitLabel: 'prenda',
+        purchaseCost: 180000,
+        salvageValue: 0,
+        lifespanUses: 15000,
+        usedCount: 0,
+        autoTrackOnExtraCost: true,
+        notes: 'Depreciación y fondo de ahorro para comprar una plancha nueva al cumplir 15.000 planchados.'
+    },
+    {
+        id: 'op_impresora_sub',
+        category: 'maquinaria',
+        name: 'Impresora de Sublimación A4',
+        unitLabel: 'impresión',
+        purchaseCost: 210000,
+        salvageValue: 0,
+        lifespanUses: 15000,
+        usedCount: 0,
+        autoTrackOnExtraCost: true,
+        notes: 'Vida útil estimada del cabezal/equipo antes de renovación.'
+    },
+    {
+        id: 'op_plotter_corte',
+        category: 'maquinaria',
+        name: 'Plotter de Corte de Vinilo',
+        unitLabel: 'trabajo',
+        purchaseCost: 270000,
+        salvageValue: 0,
+        lifespanUses: 15000,
+        usedCount: 0,
+        autoTrackOnExtraCost: false,
+        notes: 'Amortización del plotter + cuchillas por cada corte.'
+    },
+    {
+        id: 'op_elec_plancha',
+        category: 'electricidad',
+        name: 'Electricidad Plancha Térmica (1800W)',
+        unitLabel: 'prenda',
+        watts: 1800,
+        minutesPerUse: 1, // 60 segundos por prenda
+        customKwhPrice: 0, // 0 = usa tarifa global kwhPrice
+        notes: '1800W equivalen a 30 Wh por minuto de planchado.'
+    },
+    {
+        id: 'op_elec_tazas',
+        category: 'electricidad',
+        name: 'Electricidad Prensa de Tazones (350W)',
+        unitLabel: 'taza',
+        watts: 350,
+        minutesPerUse: 3, // 180 segundos por taza
+        customKwhPrice: 0,
+        notes: '350W durante 3 minutos por cada taza sublimada.'
+    },
+    {
+        id: 'op_mano_obra_est',
+        category: 'operativo',
+        name: 'Mano de Obra Estampado / Planchado',
+        unitLabel: 'prenda',
+        calcMode: 'tiempo', // 'tiempo' | 'lote' | 'fijo'
+        hourlyRate: 4500,
+        minutesPerUse: 4,
+        purchaseCost: 0,
+        yieldUnits: 1,
+        fixedUnitCost: 300,
+        notes: 'Tiempo de preparación, posicionamiento y planchado por prenda.'
+    },
+    {
+        id: 'op_empaque_bolsa',
+        category: 'operativo',
+        name: 'Bolsa / Empaque Individual Presentación',
+        unitLabel: 'unidad',
+        calcMode: 'lote',
+        hourlyRate: 0,
+        minutesPerUse: 0,
+        purchaseCost: 3500,
+        yieldUnits: 100,
+        fixedUnitCost: 35,
+        notes: 'Paquete de 100 bolsas autoadhesivas.'
+    },
+    {
+        id: 'op_transporte_lote',
+        category: 'operativo',
+        name: 'Pasaje / Retiro de Mercadería (Prorrateado)',
+        unitLabel: 'unidad',
+        calcMode: 'lote',
+        hourlyRate: 0,
+        minutesPerUse: 0,
+        purchaseCost: 2000,
+        yieldUnits: 20,
+        fixedUnitCost: 100,
+        notes: 'Costo de pasaje o envío dividido entre las prendas del pedido.'
+    }
+];
 
 // Categorías Iniciales
 const DEFAULT_CATEGORIES = [
@@ -638,13 +770,15 @@ class Database {
                     localStorage.setItem(DB_KEYS.QUOTES, JSON.stringify(data.quotes));
                 }
 
-                // 4. Categorías, Perfil, Vinilos, GlobalTiers, Stock & Hojas de Salida
+                // 4. Categorías, Perfil, Vinilos, GlobalTiers, Stock, Hojas de Salida y Costos Operativos
                 if (data.categories !== undefined) localStorage.setItem(DB_KEYS.CATEGORIES, JSON.stringify(data.categories));
                 if (data.profile !== undefined) localStorage.setItem(DB_KEYS.PROFILE, JSON.stringify(data.profile));
                 if (data.globalTiers !== undefined) localStorage.setItem(DB_KEYS.GLOBAL_TIERS, JSON.stringify(data.globalTiers));
                 if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
                 if (Array.isArray(data.stockMovements)) localStorage.setItem(DB_KEYS.STOCK_MOVEMENTS, JSON.stringify(data.stockMovements));
                 if (Array.isArray(data.stockDispatches)) localStorage.setItem(DB_KEYS.STOCK_DISPATCHES, JSON.stringify(data.stockDispatches));
+                if (Array.isArray(data.operationalCosts)) localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(data.operationalCosts));
+                if (data.costSettings !== undefined) localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
 
                 console.log('✅ Datos sincronizados y actualizados con Firestore.');
             } else {
@@ -706,6 +840,14 @@ class Database {
                 }
                 if (Array.isArray(data.stockDispatches)) {
                     localStorage.setItem(DB_KEYS.STOCK_DISPATCHES, JSON.stringify(data.stockDispatches));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.operationalCosts)) {
+                    localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(data.operationalCosts));
+                    hasChanges = true;
+                }
+                if (data.costSettings !== undefined) {
+                    localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
                     hasChanges = true;
                 }
                 if (Array.isArray(data.products) && data.products.length > 0) {
@@ -839,16 +981,18 @@ class Database {
             }
 
             const cleanData = JSON.parse(JSON.stringify({
-                categories:  this.getCategories(),
-                profile:     this.getProfile(),
-                globalTiers: this.getGlobalTiers(),
-                suppliers:   this.getSuppliers(),
-                products:    prods,
-                vinyls:      this.getVinylPresets(),
-                quotes:          this.getQuotes(),
-                stockMovements:  this.getStockMovements(),
-                stockDispatches: this.getStockDispatches(),
-                updatedAt:       firebase.firestore.FieldValue.serverTimestamp(),
+                categories:       this.getCategories(),
+                profile:          this.getProfile(),
+                globalTiers:      this.getGlobalTiers(),
+                suppliers:        this.getSuppliers(),
+                products:         prods,
+                vinyls:           this.getVinylPresets(),
+                quotes:           this.getQuotes(),
+                stockMovements:   this.getStockMovements(),
+                stockDispatches:  this.getStockDispatches(),
+                operationalCosts: this.getOperationalCosts(),
+                costSettings:     this.getCostSettings(),
+                updatedAt:        firebase.firestore.FieldValue.serverTimestamp(),
             }));
             await docRef.set(cleanData, { merge: true });
 
@@ -924,6 +1068,12 @@ class Database {
         if (!localStorage.getItem(DB_KEYS.QUOTES)) {
             this.set(DB_KEYS.QUOTES, DEFAULT_QUOTES);
         }
+        if (!localStorage.getItem(DB_KEYS.OPERATIONAL_COSTS)) {
+            this.set(DB_KEYS.OPERATIONAL_COSTS, DEFAULT_OPERATIONAL_COSTS);
+        }
+        if (!localStorage.getItem(DB_KEYS.COST_SETTINGS)) {
+            this.set(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
+        }
     }
 
     get(key, defaultValue = null) {
@@ -988,15 +1138,17 @@ class Database {
     /** Mapea las claves de localStorage a los campos de Firestore */
     _localKeyToFirestoreKey(localKey) {
         const map = {
-            [DB_KEYS.CATEGORIES]:   'categories',
-            [DB_KEYS.PROFILE]:      'profile',
-            [DB_KEYS.GLOBAL_TIERS]: 'globalTiers',
-            [DB_KEYS.SUPPLIERS]:    'suppliers',
-            [DB_KEYS.PRODUCTS]:     'products',
-            [DB_KEYS.VINYLS]:           'vinyls',
-            [DB_KEYS.QUOTES]:           'quotes',
-            [DB_KEYS.STOCK_MOVEMENTS]:  'stockMovements',
-            [DB_KEYS.STOCK_DISPATCHES]: 'stockDispatches',
+            [DB_KEYS.CATEGORIES]:        'categories',
+            [DB_KEYS.PROFILE]:           'profile',
+            [DB_KEYS.GLOBAL_TIERS]:      'globalTiers',
+            [DB_KEYS.SUPPLIERS]:         'suppliers',
+            [DB_KEYS.PRODUCTS]:          'products',
+            [DB_KEYS.VINYLS]:            'vinyls',
+            [DB_KEYS.QUOTES]:            'quotes',
+            [DB_KEYS.STOCK_MOVEMENTS]:   'stockMovements',
+            [DB_KEYS.STOCK_DISPATCHES]:  'stockDispatches',
+            [DB_KEYS.OPERATIONAL_COSTS]: 'operationalCosts',
+            [DB_KEYS.COST_SETTINGS]:     'costSettings',
         };
         return map[localKey] || null;
     }
@@ -1114,29 +1266,37 @@ class Database {
         return parseFloat(product?.costPrice) || 0;
     }
 
-    getSalePriceForQuantity(product, quantity) {
+    getSalePriceForQuantity(product, quantity, includeExtraCost = true) {
         const qty = parseFloat(quantity) || 1;
         const baseCost = this.getCostForQuantity(product, qty);
-        const extraCost = parseFloat(product?.extraCost) || 0;
+        const prodExtraCost = parseFloat(product?.extraCost) || 0;
+        const extraCost = includeExtraCost ? prodExtraCost : 0;
         const totalUnitCost = baseCost + extraCost;
 
         // 1. Si el producto tiene escalas de volumen configuradas con su propio precio de venta
         if (product && product.costTiers && product.costTiers.length > 0) {
             const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
-            if (matchedTier && matchedTier.salePrice !== undefined && matchedTier.salePrice !== null && !isNaN(parseFloat(matchedTier.salePrice)) && parseFloat(matchedTier.salePrice) > 0) {
-                return parseFloat(matchedTier.salePrice);
-            }
-            if (matchedTier && matchedTier.margin !== undefined && matchedTier.margin !== null && !isNaN(parseFloat(matchedTier.margin))) {
-                return Number((totalUnitCost * (1 + parseFloat(matchedTier.margin) / 100)).toFixed(2));
+            if (matchedTier) {
+                if (includeExtraCost && matchedTier.salePrice !== undefined && matchedTier.salePrice !== null && !isNaN(parseFloat(matchedTier.salePrice)) && parseFloat(matchedTier.salePrice) > 0) {
+                    return parseFloat(matchedTier.salePrice);
+                }
+                if (matchedTier.margin !== undefined && matchedTier.margin !== null && !isNaN(parseFloat(matchedTier.margin))) {
+                    return Number((totalUnitCost * (1 + parseFloat(matchedTier.margin) / 100)).toFixed(2));
+                }
+                if (!includeExtraCost && matchedTier.salePrice !== undefined && matchedTier.salePrice !== null && !isNaN(parseFloat(matchedTier.salePrice)) && parseFloat(matchedTier.salePrice) > 0) {
+                    const fullTierCost = (parseFloat(matchedTier.cost) || baseCost) + prodExtraCost;
+                    const effMargin = fullTierCost > 0 ? (((parseFloat(matchedTier.salePrice) / fullTierCost) - 1) * 100) : (this.getMarginForQuantity(product, qty) || 0);
+                    return Number((totalUnitCost * (1 + effMargin / 100)).toFixed(2));
+                }
             }
         }
 
-        // 2. Si qty <= 1 y el producto tiene salePrice guardado
-        if (qty <= 1 && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(parseFloat(product.salePrice)) && parseFloat(product.salePrice) > 0) {
+        // 2. Si qty <= 1 y el producto tiene salePrice guardado (cuando incluye costo adicional)
+        if (includeExtraCost && qty <= 1 && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(parseFloat(product.salePrice)) && parseFloat(product.salePrice) > 0) {
             return parseFloat(product.salePrice);
         }
 
-        // 3. Fallback: calcular aplicando el margen sobre el costo total
+        // 3. Fallback: calcular aplicando el margen sobre el costo unitario correspondiente (con o sin adicional)
         const margin = this.getMarginForQuantity(product, qty);
         return Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
     }
@@ -1845,6 +2005,14 @@ class Database {
                 quotes.unshift(quote);
             }
         }
+        // Si la cotización está Aprobada y aún no ha registrado el uso de maquinaria, procesarlo automáticamente
+        if (quote.status === 'Aprobada' && !quote.machineUsageRecorded) {
+            const usageUnits = this.processQuoteMachineUsage(quote);
+            if (usageUnits > 0) {
+                quote.machineUsageRecorded = true;
+                quote.machineUsageRecordedAt = new Date().toISOString();
+            }
+        }
         this.set(DB_KEYS.QUOTES, quotes);
         return quote;
     }
@@ -2130,11 +2298,180 @@ class Database {
     }
 
     // ==========================================
+    // MÓDULO DE COSTOS OPERATIVOS, INSUMOS Y MAQUINARIA
+    // ==========================================
+    getCostSettings() {
+        const s = this.get(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
+        return {
+            kwhPrice: (s && s.kwhPrice !== undefined && !isNaN(parseFloat(s.kwhPrice))) ? parseFloat(s.kwhPrice) : 220,
+            operatorHourlyRate: (s && s.operatorHourlyRate !== undefined && !isNaN(parseFloat(s.operatorHourlyRate))) ? parseFloat(s.operatorHourlyRate) : 4500
+        };
+    }
+
+    saveCostSettings(settingsData) {
+        const current = this.getCostSettings();
+        const updated = { ...current, ...settingsData };
+        this.set(DB_KEYS.COST_SETTINGS, updated);
+        return updated;
+    }
+
+    getOperationalCosts() {
+        return this.get(DB_KEYS.OPERATIONAL_COSTS, DEFAULT_OPERATIONAL_COSTS);
+    }
+
+    getOperationalCostById(id) {
+        return this.getOperationalCosts().find(c => c.id === id);
+    }
+
+    saveOperationalCostItem(item) {
+        const list = this.getOperationalCosts();
+        if (!item.id) {
+            item.id = 'op_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+            list.unshift(item);
+        } else {
+            const idx = list.findIndex(c => c.id === item.id);
+            if (idx !== -1) {
+                list[idx] = item;
+            } else {
+                list.unshift(item);
+            }
+        }
+        this.set(DB_KEYS.OPERATIONAL_COSTS, list);
+        return item;
+    }
+
+    deleteOperationalCostItem(id) {
+        const list = this.getOperationalCosts().filter(c => c.id !== id);
+        this.set(DB_KEYS.OPERATIONAL_COSTS, list);
+        return true;
+    }
+
+    /**
+     * Calcula el costo unitario ($ por prenda/impresión/uso) de cualquier ítem de Costos & Maquinaria
+     */
+    calculateOperationalUnitCost(item, settingsOverride = null) {
+        if (!item) return 0;
+        const settings = settingsOverride || this.getCostSettings();
+        const cat = item.category || 'insumo';
+
+        if (cat === 'insumo') {
+            const cost = parseFloat(item.purchaseCost) || 0;
+            const yieldUnits = Math.max(1, parseFloat(item.yieldUnits) || 1);
+            return Number((cost / yieldUnits).toFixed(2));
+        }
+
+        if (cat === 'maquinaria') {
+            const cost = parseFloat(item.purchaseCost) || 0;
+            const salvage = Math.max(0, parseFloat(item.salvageValue) || 0);
+            const lifespan = Math.max(1, parseFloat(item.lifespanUses) || 15000);
+            const depreciable = Math.max(0, cost - salvage);
+            return Number((depreciable / lifespan).toFixed(2));
+        }
+
+        if (cat === 'electricidad') {
+            const watts = Math.max(0, parseFloat(item.watts) || 0);
+            const minutes = Math.max(0, parseFloat(item.minutesPerUse) || 0);
+            const whPerUse = watts * (minutes / 60);
+            const kwhPerUse = whPerUse / 1000;
+            const kwhRate = (parseFloat(item.customKwhPrice) > 0) ? parseFloat(item.customKwhPrice) : (parseFloat(settings.kwhPrice) || 220);
+            return Number((kwhPerUse * kwhRate).toFixed(2));
+        }
+
+        if (cat === 'operativo') {
+            const mode = item.calcMode || 'fijo';
+            if (mode === 'tiempo') {
+                const rate = (parseFloat(item.hourlyRate) > 0) ? parseFloat(item.hourlyRate) : (parseFloat(settings.operatorHourlyRate) || 4500);
+                const mins = Math.max(0, parseFloat(item.minutesPerUse) || 0);
+                return Number((rate * (mins / 60)).toFixed(2));
+            }
+            if (mode === 'lote') {
+                const cost = parseFloat(item.purchaseCost) || 0;
+                const yieldUnits = Math.max(1, parseFloat(item.yieldUnits) || 1);
+                return Number((cost / yieldUnits).toFixed(2));
+            }
+            return Number((parseFloat(item.fixedUnitCost) || 0).toFixed(2));
+        }
+
+        return 0;
+    }
+
+    /**
+     * Incrementa o ajusta el contador de usos de una máquina
+     */
+    adjustMachineUsage(machineId, deltaUses = 0, exactUses = null) {
+        const list = this.getOperationalCosts();
+        const item = list.find(c => c.id === machineId && c.category === 'maquinaria');
+        if (!item) return null;
+
+        if (exactUses !== null && !isNaN(parseFloat(exactUses))) {
+            item.usedCount = Math.max(0, Math.round(parseFloat(exactUses)));
+        } else {
+            item.usedCount = Math.max(0, Math.round((parseFloat(item.usedCount) || 0) + (parseFloat(deltaUses) || 0)));
+        }
+        this.set(DB_KEYS.OPERATIONAL_COSTS, list);
+        return item;
+    }
+
+    /**
+     * Procesa automáticamente el desgaste de maquinaria cuando una cotización pasa a 'Aprobada'
+     */
+    processQuoteMachineUsage(quote) {
+        if (!quote || !Array.isArray(quote.items) || quote.items.length === 0) return 0;
+        const costs = this.getOperationalCosts();
+        const machines = costs.filter(c => c.category === 'maquinaria');
+        if (machines.length === 0) return 0;
+
+        let totalUsesRecorded = 0;
+
+        quote.items.forEach(item => {
+            if (!item || item.includeExtraCost === false) return;
+            const qty = Math.max(1, parseFloat(item.quantity) || 1);
+
+            if (item.productId) {
+                const prod = this.getProductById(item.productId);
+                if (!prod) return;
+
+                // Caso 1: El producto tiene vinculados ítems específicos de Costos & Maquinaria
+                if (Array.isArray(prod.extraCostItems) && prod.extraCostItems.length > 0) {
+                    let matchedSpecificMachine = false;
+                    prod.extraCostItems.forEach(ref => {
+                        const mach = machines.find(m => m.id === ref.costId);
+                        if (mach) {
+                            const mult = Math.max(0.1, parseFloat(ref.multiplier) || 1);
+                            const usesToAdd = Math.round(qty * mult);
+                            mach.usedCount = Math.max(0, (parseFloat(mach.usedCount) || 0) + usesToAdd);
+                            totalUsesRecorded += usesToAdd;
+                            matchedSpecificMachine = true;
+                        }
+                    });
+                    if (matchedSpecificMachine) return;
+                }
+
+                // Caso 2: El producto tiene costo adicional > 0 y hay máquinas con autoTrackOnExtraCost activo
+                const hasExtra = (parseFloat(prod.extraCost) || 0) > 0 || (parseFloat(item.extraCostAmount) || 0) > 0;
+                if (hasExtra) {
+                    machines.forEach(mach => {
+                        if (mach.autoTrackOnExtraCost !== false) {
+                            mach.usedCount = Math.max(0, (parseFloat(mach.usedCount) || 0) + qty);
+                            totalUsesRecorded += qty;
+                        }
+                    });
+                }
+            }
+        });
+
+        if (totalUsesRecorded > 0) {
+            this.set(DB_KEYS.OPERATIONAL_COSTS, costs);
+        }
+        return totalUsesRecorded;
+    }
+
+    // ==========================================
     // RESPALDO Y RESTAURACIÓN
     // ==========================================
     exportAllData() {
         return {
-            version: '2.0',
+            version: '2.1',
             exportDate: new Date().toISOString(),
             categories: this.getCategories(),
             profile: this.getProfile(),
@@ -2144,7 +2481,9 @@ class Database {
             vinyls: this.getVinylPresets(),
             quotes: this.getQuotes(),
             stockMovements: this.getStockMovements(),
-            stockDispatches: this.getStockDispatches()
+            stockDispatches: this.getStockDispatches(),
+            operationalCosts: this.getOperationalCosts(),
+            costSettings: this.getCostSettings()
         };
     }
 
@@ -2161,6 +2500,8 @@ class Database {
         if (jsonData.quotes) this.set(DB_KEYS.QUOTES, jsonData.quotes);
         if (jsonData.stockMovements) this.set(DB_KEYS.STOCK_MOVEMENTS, jsonData.stockMovements);
         if (jsonData.stockDispatches) this.set(DB_KEYS.STOCK_DISPATCHES, jsonData.stockDispatches);
+        if (jsonData.operationalCosts) this.set(DB_KEYS.OPERATIONAL_COSTS, jsonData.operationalCosts);
+        if (jsonData.costSettings) this.set(DB_KEYS.COST_SETTINGS, jsonData.costSettings);
         return true;
     }
 
@@ -2174,6 +2515,8 @@ class Database {
         this.set(DB_KEYS.QUOTES, DEFAULT_QUOTES);
         this.set(DB_KEYS.STOCK_MOVEMENTS, []);
         this.set(DB_KEYS.STOCK_DISPATCHES, []);
+        this.set(DB_KEYS.OPERATIONAL_COSTS, DEFAULT_OPERATIONAL_COSTS);
+        this.set(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
         return true;
     }
 }

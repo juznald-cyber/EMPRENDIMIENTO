@@ -63,6 +63,7 @@ class CotizadorManager {
             this.currentQuote.date = new Date().toISOString().split('T')[0];
             this.currentQuote.validUntil = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
             this.currentQuote.status = 'Borrador';
+            this.currentQuote.machineUsageRecorded = false;
             if (!this.currentQuote.client) this.currentQuote.client = {};
             this.isEditing = false;
             this.recalculateTotals();
@@ -71,13 +72,15 @@ class CotizadorManager {
         return null;
     }
 
-    addProductItem(productId, quantity = 1, customMargin = null) {
+    addProductItem(productId, quantity = 1, customMargin = null, includeExtraCost = true) {
         const product = window.db.getProductById(productId);
         if (!product) return false;
 
         const qty = parseInt(quantity, 10) || 1;
         const baseCost = window.db.getCostForQuantity(product, qty);
-        const extraCost = parseFloat(product.extraCost) || 0;
+        const prodExtraCost = parseFloat(product.extraCost) || 0;
+        const useExtra = prodExtraCost > 0 ? (includeExtraCost !== false) : false;
+        const extraCost = useExtra ? prodExtraCost : 0;
         const totalUnitCost = baseCost + extraCost;
 
         const profile = window.db.getProfile();
@@ -90,7 +93,7 @@ class CotizadorManager {
             margin = parseFloat(customMargin);
             grossUnitPrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
         } else {
-            grossUnitPrice = window.db.getSalePriceForQuantity(product, qty);
+            grossUnitPrice = window.db.getSalePriceForQuantity(product, qty, useExtra);
             margin = totalUnitCost > 0
                 ? Number((((grossUnitPrice / totalUnitCost) - 1) * 100).toFixed(2))
                 : window.db.getMarginForQuantity(product, qty);
@@ -106,6 +109,11 @@ class CotizadorManager {
             productId: product.id,
             name: product.name,
             unit: product.unit || 'Unid',
+            baseCostPrice: baseCost,
+            extraCostAmount: prodExtraCost,
+            extraCostLabel: product.extraCostLabel || 'Costo Adicional',
+            hasProductExtraCost: prodExtraCost > 0,
+            includeExtraCost: useExtra,
             costPrice: totalUnitCost,
             margin: margin,
             quantity: qty,
@@ -188,10 +196,18 @@ class CotizadorManager {
             const product = window.db.getProductById(item.productId);
             if (product) {
                 const baseCost = window.db.getCostForQuantity(product, qty);
-                const extraCost = parseFloat(product.extraCost) || 0;
+                const prodExtraCost = parseFloat(product.extraCost) || 0;
+                const useExtra = prodExtraCost > 0 ? (item.includeExtraCost !== false) : false;
+                const extraCost = useExtra ? prodExtraCost : 0;
+
+                item.baseCostPrice = baseCost;
+                item.extraCostAmount = prodExtraCost;
+                item.extraCostLabel = product.extraCostLabel || 'Costo Adicional';
+                item.hasProductExtraCost = prodExtraCost > 0;
+                item.includeExtraCost = useExtra;
                 item.costPrice = baseCost + extraCost;
 
-                const grossUnitPrice = window.db.getSalePriceForQuantity(product, qty);
+                const grossUnitPrice = window.db.getSalePriceForQuantity(product, qty, useExtra);
                 item.grossUnitPrice = grossUnitPrice;
                 item.unitPrice = Number((grossUnitPrice / taxFactor).toFixed(2));
                 item.margin = item.costPrice > 0 
@@ -202,6 +218,15 @@ class CotizadorManager {
 
         item.total = Number((item.unitPrice * qty).toFixed(2));
         this.recalculateTotals();
+    }
+
+    toggleItemExtraCost(index) {
+        const item = this.currentQuote.items[index];
+        if (!item) return null;
+
+        item.includeExtraCost = (item.includeExtraCost === false) ? true : false;
+        this.updateItemQuantity(index, item.quantity);
+        return item;
     }
 
     updateItemMargin(index, newMargin) {

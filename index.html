@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=6.4">
+    <link rel="stylesheet" href="css/styles.css?v=6.5">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -177,6 +177,11 @@
             <button onclick="app.switchTab('tab-catalogo')" data-nav-tab="tab-catalogo" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
                 <i data-lucide="boxes" class="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors"></i>
                 <span>Proveedores & Precios</span>
+            </button>
+
+            <button onclick="app.switchTab('tab-costos')" data-nav-tab="tab-costos" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="cpu" class="w-5 h-5 text-slate-400 group-hover:text-cyan-400 transition-colors"></i>
+                <span>Costos & Maquinaria</span>
             </button>
 
             <button onclick="app.switchTab('tab-inventario')" data-nav-tab="tab-inventario" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
@@ -1187,7 +1192,182 @@
             </div>
 
             <!-- ============================================================== -->
-            <!-- TAB 5: CONFIGURACIÓN & PERFIL DE EMPRESA                       -->
+            <!-- TAB 5: COSTOS OPERATIVOS, INSUMOS, MAQUINARIA Y ELECTRICIDAD    -->
+            <!-- ============================================================== -->
+            <div id="tab-costos" class="tab-content space-y-6 max-w-7xl mx-auto">
+
+                <!-- KPIs Superiores de Costos, Depreciación, Alcancía y Tarifas -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- KPI 1: Insumos por Rendimiento -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-start gap-3">
+                        <div class="p-2.5 bg-cyan-50 text-cyan-600 rounded-xl shrink-0">
+                            <i data-lucide="droplets" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Insumos & Tintas</span>
+                            <h4 id="costos-kpi-insumos-count" class="text-lg font-black text-slate-800 leading-tight">0 insumos</h4>
+                            <p id="costos-kpi-insumos-sub" class="text-[11px] font-mono text-cyan-700 font-semibold mt-0.5">Suma unitaria: $ 0 / u</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Maquinaria & Depreciación -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-start gap-3">
+                        <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                            <i data-lucide="cpu" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Maquinaria Activa</span>
+                            <h4 id="costos-kpi-maquinaria-count" class="text-lg font-black text-slate-800 leading-tight">0 equipos</h4>
+                            <p id="costos-kpi-maquinaria-sub" class="text-[11px] font-mono text-amber-700 font-semibold mt-0.5">Desgaste: $ 0 / uso</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3: Alcancía / Fondo de Reposición Acumulado -->
+                    <div class="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm flex items-start gap-3">
+                        <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                            <i data-lucide="piggy-bank" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider block">🐷 Alcancía Reposición</span>
+                            <h4 id="costos-kpi-alcancia-amount" class="text-lg font-black font-mono text-emerald-700 leading-tight">$ 0</h4>
+                            <p id="costos-kpi-alcancia-sub" class="text-[10px] font-mono text-slate-500 mt-0.5">Ahorro acumulado por uso</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4: Tarifas Base de Electricidad y Mano de Obra -->
+                    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i> Tarifas Base del Taller
+                            </span>
+                            <span class="text-[9px] text-slate-400">Auto-recalcula</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Luz ($/kWh)</label>
+                                <input type="number" id="costos-setting-kwh" step="any" value="220"
+                                    onchange="costos.onGlobalSettingsChange()"
+                                    class="w-full px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Hora M.O. ($/h)</label>
+                                <input type="number" id="costos-setting-hourly" step="any" value="4500"
+                                    onchange="costos.onGlobalSettingsChange()"
+                                    class="w-full px-2 py-1 text-xs font-mono font-bold text-center bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Armador / Calculadora de Costo Adicional por Prenda o Producto -->
+                <div class="bg-gradient-to-br from-indigo-50/90 via-white to-amber-50/70 p-5 rounded-2xl border border-indigo-200/80 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 pb-3">
+                        <div>
+                            <h3 class="font-black text-sm text-slate-800 flex items-center gap-2">
+                                <i data-lucide="calculator" class="w-4 h-4 text-indigo-600"></i>
+                                Calculadora / Armador de Costo Adicional por Prenda o Producto
+                            </h3>
+                            <p class="text-xs text-slate-500">Suma tintas, papel, depreciación de plancha/impresora, electricidad (Wh) y mano de obra para asignarlo como Costo Adicional a cualquier producto.</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" onclick="costos.selectAllInComposer(true)" class="px-2.5 py-1 text-[11px] font-bold bg-white text-indigo-700 border border-indigo-200 rounded-xl hover:bg-indigo-50 cursor-pointer">
+                                Marcar Todos
+                            </button>
+                            <button type="button" onclick="costos.selectAllInComposer(false)" class="px-2.5 py-1 text-[11px] font-bold bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 cursor-pointer">
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                        <!-- Lista de costos sumados actualmente -->
+                        <div class="lg:col-span-7 space-y-2 max-h-60 overflow-y-auto pr-1" id="costos-composer-selected-list">
+                            <!-- Inyectado por js/costos.js -->
+                        </div>
+
+                        <!-- Panel derecho: Total calculado y botón para aplicar a un producto del catálogo -->
+                        <div class="lg:col-span-5 bg-white p-4 rounded-2xl border border-indigo-200 shadow-xs space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                <div>
+                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Costo Adicional Total por Unidad</span>
+                                    <span class="text-xs text-slate-500">Suma de los costos seleccionados</span>
+                                </div>
+                                <span id="costos-composer-total-display" class="text-xl font-black font-mono text-indigo-700">$ 0</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Concepto / Etiqueta para el Producto</label>
+                                <input type="text" id="costos-composer-label-input" value="Sublimación + Maquinaria + Luz"
+                                    oninput="this.dataset.userEdited='1'"
+                                    class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">Asignar directamente a un Producto del Catálogo:</label>
+                                <select id="costos-apply-product-select" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                                </select>
+                            </div>
+
+                            <button type="button" onclick="costos.applyComposerToSelectedProduct()" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                Guardar como Costo Adicional en este Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Filtros, Búsqueda y Botones de Creación de Costos / Maquinaria -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <!-- Pestañas de Categorías de Costo -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                            <button type="button" data-costos-filter="all" onclick="costos.setCategoryFilter('all')" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5 shrink-0">
+                                <span>Todos</span>
+                                <span id="costos-count-all" class="text-[10px] opacity-80">(0)</span>
+                            </button>
+                            <button type="button" data-costos-filter="insumo" onclick="costos.setCategoryFilter('insumo')" class="px-3.5 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-1.5 shrink-0">
+                                <span>💧 Insumos & Tintas</span>
+                                <span id="costos-count-insumo" class="text-[10px] opacity-75">(0)</span>
+                            </button>
+                            <button type="button" data-costos-filter="maquinaria" onclick="costos.setCategoryFilter('maquinaria')" class="px-3.5 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-1.5 shrink-0">
+                                <span>⚙️ Maquinaria & Alcancía</span>
+                                <span id="costos-count-maquinaria" class="text-[10px] opacity-75">(0)</span>
+                            </button>
+                            <button type="button" data-costos-filter="electricidad" onclick="costos.setCategoryFilter('electricidad')" class="px-3.5 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-1.5 shrink-0">
+                                <span>⚡ Electricidad (Wh)</span>
+                                <span id="costos-count-electricidad" class="text-[10px] opacity-75">(0)</span>
+                            </button>
+                            <button type="button" data-costos-filter="operativo" onclick="costos.setCategoryFilter('operativo')" class="px-3.5 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-1.5 shrink-0">
+                                <span>⏱️ Mano de Obra & Otros</span>
+                                <span id="costos-count-operativo" class="text-[10px] opacity-75">(0)</span>
+                            </button>
+                        </div>
+
+                        <!-- Buscador y Botón Nuevo -->
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <div class="relative flex-1 sm:w-56">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                                <input type="text" id="costos-search-input" placeholder="Buscar tinta, plancha, luz..."
+                                    oninput="costos.renderItemsGrid()"
+                                    class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                            </div>
+                            <button type="button" onclick="costos.openCostModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all cursor-pointer shrink-0">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                + Nuevo Costo / Equipo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Tarjetas de Costos Operativos y Maquinaria -->
+                    <div id="costos-items-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Inyectado dinámicamente por js/costos.js -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB 6: CONFIGURACIÓN & PERFIL DE EMPRESA                       -->
             <!-- ============================================================== -->
             <div id="tab-ajustes" class="tab-content space-y-6 max-w-5xl mx-auto">
                 
@@ -1328,30 +1508,34 @@
     </main>
 
     <!-- Mobile Bottom Navigation Bar (App Nativa) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-header border-t border-slate-200 z-40 grid grid-cols-6 items-center py-1.5 px-1 mobile-bottom-nav">
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-header border-t border-slate-200 z-40 grid grid-cols-7 items-center py-1.5 px-0.5 mobile-bottom-nav">
         <button onclick="app.switchTab('tab-cotizador')" data-mobile-nav="tab-cotizador" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-indigo-600">
-            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Cotizar</span>
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Cotizar</span>
         </button>
         <button onclick="app.switchTab('tab-vinilos')" data-mobile-nav="tab-vinilos" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
-            <i data-lucide="scissors" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Vinilos</span>
+            <i data-lucide="scissors" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Vinilos</span>
         </button>
         <button onclick="app.switchTab('tab-historial')" data-mobile-nav="tab-historial" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
-            <i data-lucide="history" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Historial</span>
+            <i data-lucide="history" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Historial</span>
         </button>
         <button onclick="app.switchTab('tab-catalogo')" data-mobile-nav="tab-catalogo" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
-            <i data-lucide="boxes" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Precios</span>
+            <i data-lucide="boxes" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Precios</span>
+        </button>
+        <button onclick="app.switchTab('tab-costos')" data-mobile-nav="tab-costos" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Costos</span>
         </button>
         <button onclick="app.switchTab('tab-inventario')" data-mobile-nav="tab-inventario" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
-            <i data-lucide="package" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Stock</span>
+            <i data-lucide="package" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Stock</span>
         </button>
         <button onclick="app.switchTab('tab-ajustes')" data-mobile-nav="tab-ajustes" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
-            <i data-lucide="settings" class="w-5 h-5"></i>
-            <span class="text-[10px] font-bold leading-none">Ajustes</span>
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Ajustes</span>
         </button>
     </nav>
 
@@ -1678,12 +1862,17 @@
 
                 <!-- Costo Adicional (ej. estampado, sublimación) -->
                 <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="plus-square" class="w-3.5 h-3.5 text-amber-600"></i>
-                        <label class="text-xs font-bold text-amber-800">Costo Adicional (opcional)</label>
-                        <span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">Se suma al costo y se le aplica el % de ganancia</span>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="plus-square" class="w-3.5 h-3.5 text-amber-600"></i>
+                            <label class="text-xs font-bold text-amber-800">Costo Adicional (opcional)</label>
+                        </div>
+                        <button type="button" onclick="costos.openPickerForProductModal()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all cursor-pointer">
+                            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                            ⚡ Armar desde Costos & Maquinaria
+                        </button>
                     </div>
-                    <p class="text-[11px] text-amber-700">Úsalo para estampado, sublimación, etc. El % de ganancia se aplicará sobre el costo total (Costo Base + Costo Adicional).</p>
+                    <p class="text-[11px] text-amber-700">Úsalo para estampado, sublimación, tinta, plancha, luz, etc. Al cotizar podrás elegir si cargar el producto CON o SIN este costo adicional.</p>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-bold text-amber-700 mb-1">Concepto del Costo Adicional</label>
@@ -2565,20 +2754,244 @@
         </div>
     </div>
 
+    <!-- ============================================================== -->
+    <!-- MODALES DE COSTOS OPERATIVOS, INSUMOS Y MAQUINARIA             -->
+    <!-- ============================================================== -->
+
+    <!-- Modal: Crear / Editar Insumo, Maquinaria, Electricidad o Costo Operativo -->
+    <div id="modal-cost-item" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i data-lucide="cpu" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 id="cost-modal-title" class="font-bold text-sm text-slate-800">Nuevo Insumo, Maquinaria o Costo Operativo</h3>
+                        <p class="text-[11px] text-slate-400">Calcula automáticamente el costo por prenda/impresión</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-cost-item')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="cost-form-id" />
+
+            <div class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-indigo-700 mb-1">Tipo de Costo / Categoría *</label>
+                        <select id="cost-form-category" onchange="costos.onCostModalCategoryChange()" class="w-full px-3 py-2 text-xs font-bold bg-indigo-50/70 border border-indigo-200 rounded-xl focus:bg-white outline-none">
+                            <option value="insumo">💧 Insumo por Rendimiento (Tinta, Papel, Cinta)</option>
+                            <option value="maquinaria">⚙️ Maquinaria, Depreciación y Alcancía (Plancha, Plotter)</option>
+                            <option value="electricidad">⚡ Consumo Eléctrico por Ciclo (Watts + Minutos)</option>
+                            <option value="operativo">⏱️ Mano de Obra, Empaque, Pasaje / Otros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Unidad de Cobro</label>
+                        <input type="text" id="cost-form-unit-label" value="prenda" placeholder="prenda, hoja, taza..."
+                            oninput="costos.updateCostModalLivePreview()"
+                            class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none text-center" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Insumo / Máquina / Proceso *</label>
+                    <input type="text" id="cost-form-name" placeholder="Ej. Tinta de Sublimación CMYK / Plancha 38x38cm"
+                        oninput="costos.updateCostModalLivePreview()"
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold" />
+                </div>
+
+                <!-- SECCIÓN 1: INSUMO POR RENDIMIENTO (O LOTE) -->
+                <div id="cost-modal-sec-insumo" class="p-3.5 bg-cyan-50/60 border border-cyan-200 rounded-2xl space-y-2.5">
+                    <p class="text-[11px] text-cyan-800 font-semibold">💧 Divide automáticamente el precio que pagaste entre la cantidad de impresiones o prendas que rinde:</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Precio Pagado / Compra ($)</label>
+                            <input type="number" id="cost-form-purchase-cost" step="any" value="18000"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-cyan-300 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Cantidad que Rinde (Unidades)</label>
+                            <input type="number" id="cost-form-yield-units" step="any" min="1" value="600"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-cyan-300 rounded-xl outline-none text-center" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: MAQUINARIA, DEPRECIACIÓN Y ALCANCÍA -->
+                <div id="cost-modal-sec-maquinaria" class="hidden p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2.5">
+                    <p class="text-[11px] text-amber-900 font-semibold">⚙️ Calcula tu costo de desgaste por prenda y lleva el control de tu Alcancía para renovar el equipo:</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Valor Compra Máquina ($)</label>
+                            <input type="number" id="cost-form-purchase-cost-maq" step="any" value="180000"
+                                oninput="document.getElementById('cost-form-purchase-cost').value=this.value; costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Vida Útil Total (Prendas/Usos)</label>
+                            <input type="number" id="cost-form-lifespan-uses" step="1" min="1" value="15000"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl outline-none text-center" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Usos ya Realizados (Contador)</label>
+                            <input type="number" id="cost-form-used-count" step="1" min="0" value="0"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Valor Residual Final ($) (Opc.)</label>
+                            <input type="number" id="cost-form-salvage-value" step="any" min="0" value="0"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none text-center" />
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs font-bold text-amber-900 pt-1 cursor-pointer">
+                        <input type="checkbox" id="cost-form-auto-track" checked class="w-4 h-4 rounded accent-amber-600 cursor-pointer" />
+                        <span>Sumar usos automáticamente cuando una cotización pase a "Aprobada"</span>
+                    </label>
+                </div>
+
+                <!-- SECCIÓN 3: CONSUMO ELÉCTRICO (WATTS + TIEMPO) -->
+                <div id="cost-modal-sec-electricidad" class="hidden p-3.5 bg-yellow-50/70 border border-yellow-300 rounded-2xl space-y-2.5">
+                    <p class="text-[11px] text-yellow-900 font-semibold">⚡ Calcula cuántos Wh consume la máquina según su potencia y los minutos que tardas por prenda:</p>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-700 mb-1">Potencia (Watts)</label>
+                            <input type="number" id="cost-form-watts" step="any" min="1" value="1800"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-2.5 py-2 text-xs font-bold bg-white border border-yellow-400 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-700 mb-1">Tiempo (Minutos)</label>
+                            <input type="number" id="cost-form-minutes" step="any" min="0.1" value="1"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-2.5 py-2 text-xs font-bold bg-white border border-yellow-400 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-700 mb-1">Tarifa $/kWh (Opc.)</label>
+                            <input type="number" id="cost-form-custom-kwh" step="any" placeholder="Global"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-2.5 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none text-center" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 4: MANO DE OBRA / EMPAQUE / PASAJE / OTROS -->
+                <div id="cost-modal-sec-operativo" class="hidden p-3.5 bg-purple-50/60 border border-purple-200 rounded-2xl space-y-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-purple-900 mb-1">Forma de Calcular este Costo</label>
+                        <select id="cost-form-calc-mode" onchange="costos.onCostModalCategoryChange()" class="w-full px-3 py-1.5 text-xs font-bold bg-white border border-purple-200 rounded-xl outline-none">
+                            <option value="tiempo">⏱️ Por Tiempo de Trabajo (Valor Hora × Minutos por Prenda)</option>
+                            <option value="lote">📦 Por Lote / Paquete / Pasaje (Costo Total ÷ Cantidad de Unidades)</option>
+                            <option value="fijo">💲 Monto Fijo Directo por Unidad</option>
+                        </select>
+                    </div>
+                    <div id="cost-modal-op-tiempo" class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Valor Hora Operador ($/hora)</label>
+                            <input type="number" id="cost-form-hourly-rate" step="any" value="4500"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-purple-200 rounded-xl outline-none text-center" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Minutos por Prenda</label>
+                            <input type="number" id="cost-form-op-minutes" step="any" value="4"
+                                oninput="costos.updateCostModalLivePreview()"
+                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-purple-200 rounded-xl outline-none text-center" />
+                        </div>
+                    </div>
+                    <div id="cost-modal-op-fijo" class="hidden">
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Costo Unitario Fijo ($)</label>
+                        <input type="number" id="cost-form-fixed-cost" step="any" value="300"
+                            oninput="costos.updateCostModalLivePreview()"
+                            class="w-full px-3 py-2 text-xs font-bold bg-white border border-purple-200 rounded-xl outline-none text-center" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalles</label>
+                    <input type="text" id="cost-form-notes" placeholder="Opcional..."
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                </div>
+
+                <!-- Caja de Resultado en Vivo -->
+                <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-800 block">Costo Unitario Calculado</span>
+                        <span id="cost-modal-live-formula" class="text-[11px] text-indigo-600">Se sumará automáticamente</span>
+                    </div>
+                    <span id="cost-modal-live-unit-cost" class="text-base font-black font-mono text-indigo-700">$ 0 / prenda</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="app.closeModal('modal-cost-item')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                <button type="button" onclick="costos.submitCostModal()" class="px-5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm">Guardar en Costos & Maquinaria</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Selector de Costos Adicionales desde el Editor de Producto -->
+    <div id="modal-pick-extra-costs" class="modal-overlay fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                        <i data-lucide="cpu" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800">Seleccionar Costos Operativos para este Producto</h3>
+                        <p class="text-[11px] text-slate-400">Marca los insumos, máquinas y luz que intervienen en este producto</p>
+                    </div>
+                </div>
+                <button type="button" onclick="app.closeModal('modal-pick-extra-costs')" class="p-1 text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div id="picker-extra-costs-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                <!-- Inyectado por js/costos.js -->
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 space-y-3 shrink-0">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
+                    <span class="text-xs font-bold text-amber-900">Costo Adicional Resultante por Unidad:</span>
+                    <span id="picker-extra-costs-total" class="text-base font-black font-mono text-amber-800">$ 0</span>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="app.closeModal('modal-pick-extra-costs')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">Cancelar</button>
+                    <button type="button" onclick="costos.confirmPickerToProductModal()" class="px-5 py-2 text-xs font-bold bg-amber-600 text-white rounded-xl hover:bg-amber-700 shadow-sm cursor-pointer">
+                        Aplicar Costo Adicional al Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=6.4"></script>
-    <script src="js/db.js?v=6.4"></script>
-    <script src="js/vinilos.js?v=6.4"></script>
-    <script src="js/pdf-generator.js?v=6.4"></script>
-    <script src="js/inventario.js?v=6.4"></script>
-    <script src="js/cotizador.js?v=6.4"></script>
-    <script src="js/app.js?v=6.4"></script>
+    <script src="js/firebase-config.js?v=6.5"></script>
+    <script src="js/db.js?v=6.5"></script>
+    <script src="js/vinilos.js?v=6.5"></script>
+    <script src="js/pdf-generator.js?v=6.5"></script>
+    <script src="js/inventario.js?v=6.5"></script>
+    <script src="js/costos.js?v=6.5"></script>
+    <script src="js/cotizador.js?v=6.5"></script>
+    <script src="js/app.js?v=6.5"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6.4').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=6.5').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });

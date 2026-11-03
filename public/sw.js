@@ -1,5 +1,5 @@
 // sw.js - Service Worker con auto-actualización forzada y purga de caché vieja
-const CACHE_NAME = 'cotizador-pro-v6.4';
+const CACHE_NAME = 'cotizador-pro-v6.5';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
     './js/vinilos.js',
     './js/pdf-generator.js',
     './js/inventario.js',
+    './js/costos.js',
     './js/cotizador.js',
     './js/app.js',
     './manifest.json'
