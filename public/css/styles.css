@@ -554,6 +554,11 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.02) !important;
     border: 1.5px dashed rgba(0, 0, 0, 0.15) !important;
     border-radius: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    padding: 8px !important;
 }
 
 html.dark .vinyl-preview-box {
@@ -566,6 +571,13 @@ html.dark .vinyl-preview-box {
     border: 2px solid var(--apple-blue) !important;
     border-radius: 10px !important;
     box-shadow: 0 4px 15px rgba(0, 113, 227, 0.15) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    text-align: center !important;
 }
 
 html.dark .vinyl-piece-rect {
@@ -1072,4 +1084,824 @@ html.dark .combine-tier-row button:hover {
     color: #fb7185 !important;
     background: rgba(244, 63, 94, 0.2) !important;
 }
+
+/* ============================================================== */
+/* DISEÑO MÓVIL NATIVO (MODO APP PARA TELÉFONOS < 768px)          */
+/* No altera la vista de escritorio (>= 768px)                    */
+/* ============================================================== */
+@media (max-width: 767px) {
+    html, body {
+        width: 100% !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        overflow-x: hidden !important;
+        overscroll-behavior-y: none;
+    }
+
+    /* Evitar zoom automático en iOS al tocar inputs manteniendo legibilidad */
+    input, select, textarea {
+        font-size: 14px !important;
+    }
+
+    /* Top App Bar Móvil */
+    .mobile-app-topbar {
+        padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: 10px !important;
+        background: rgba(255, 255, 255, 0.88) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+    }
+
+    html.dark .mobile-app-topbar {
+        background: rgba(20, 20, 22, 0.92) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    html.dark #mobile-header-title {
+        color: #ffffff !important;
+    }
+
+    html.dark #mobile-header-subtitle {
+        color: #47a6ff !important;
+    }
+
+    /* Contenedor Principal de Scroll */
+    #main-scroll-area {
+        padding: 12px 12px calc(92px + env(safe-area-inset-bottom, 0px)) 12px !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    .tab-content {
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Compactar tarjetas en móvil para aprovechar toda la pantalla */
+    .tab-content .p-5,
+    .tab-content .p-6 {
+        padding: 14px !important;
+        border-radius: 18px !important;
+    }
+
+    /* Barra de Navegación Inferior estilo App Nativa */
+    .mobile-bottom-nav {
+        padding: 6px 6px calc(8px + env(safe-area-inset-bottom, 0px)) 6px !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+        backdrop-filter: blur(28px) !important;
+        -webkit-backdrop-filter: blur(28px) !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    html.dark .mobile-bottom-nav {
+        background: rgba(20, 20, 22, 0.94) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    .mobile-bottom-nav .mobile-nav-item {
+        border-radius: 12px !important;
+        padding: 5px 2px !important;
+        transition: all 0.18s ease !important;
+    }
+
+    .mobile-bottom-nav .mobile-nav-item.text-indigo-600 {
+        background: rgba(0, 113, 227, 0.12) !important;
+        color: var(--apple-blue) !important;
+    }
+
+    html.dark .mobile-bottom-nav .mobile-nav-item.text-indigo-600 {
+        background: rgba(41, 151, 255, 0.2) !important;
+        color: #2997ff !important;
+    }
+
+    /* ========================================================== */
+    /* BOTONERAS Y BARRAS DE ACCIÓN EN ORDEN (SIN DESPARRAMARSE)  */
+    /* ========================================================== */
+
+    /* Cotizador: Botones de añadir ítems (+ Catálogo, + Vinilo, + Ítem Libre) */
+    #tab-cotizador .flex.flex-wrap.items-center.gap-2:has(button[onclick*="openAddProductModal"]) {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    #tab-cotizador .flex.flex-wrap.items-center.gap-2:has(button[onclick*="openAddProductModal"]) > button:first-child {
+        grid-column: 1 / -1 !important;
+        justify-content: center !important;
+    }
+    #tab-cotizador .flex.flex-wrap.items-center.gap-2:has(button[onclick*="openAddProductModal"]) > button {
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 9px 10px !important;
+    }
+
+    /* Cotizador: Barra inferior de acciones (Guardar, Limpiar, PDF, Correo, WhatsApp) */
+    #tab-cotizador > div:last-child {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    #tab-cotizador > div:last-child > div {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    #tab-cotizador > div:last-child button {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 10px 8px !important;
+        font-size: 11.5px !important;
+    }
+
+    /* Catálogo: Sub-pestañas (Todos, Individuales, Combos, Proveedores, Categorías) */
+    #tab-catalogo > div:first-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    #tab-catalogo > div:first-child > div:first-child {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    #tab-catalogo > div:first-child button {
+        width: 100% !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 8px 8px !important;
+        font-size: 11px !important;
+    }
+
+    /* Catálogo: Barra de filtros y botones (Nuevo Producto, Nuevo con Foto, Carga Masiva, etc.) */
+    #subtab-view-products .flex.flex-wrap.items-center.gap-2:has(#products-category-filter) {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    #subtab-view-products #products-category-filter {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+    #subtab-view-products .flex.flex-wrap.items-center.gap-2:has(#products-category-filter) > button {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 9px 8px !important;
+        font-size: 11px !important;
+    }
+
+    /* Catálogo: Barra de selección masiva (Combinar / Eliminar) */
+    #products-bulk-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    #products-bulk-bar > div:last-child {
+        display: grid !important;
+        grid-template-columns: 1fr auto auto !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    #products-bulk-bar button {
+        justify-content: center !important;
+        font-size: 11px !important;
+        padding: 8px 10px !important;
+    }
+
+    /* Inventario: Sub-pestañas y botones rápidos */
+    #tab-inventario > div:first-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+    #tab-inventario > div:first-child > div {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    #tab-inventario > div:first-child button {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 8px 6px !important;
+        font-size: 10.5px !important;
+        text-align: center !important;
+    }
+
+    /* Filtros de Historial e Inventario en móvil */
+    #tab-historial .flex.items-center.gap-2.w-full,
+    #subtab-stock-view-inventory .flex.flex-wrap.items-center.gap-2,
+    #subtab-stock-view-movements .flex.flex-wrap.items-center.gap-2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    #tab-historial .flex.items-center.gap-2.w-full > *,
+    #subtab-stock-view-inventory .flex.flex-wrap.items-center.gap-2 > *,
+    #subtab-stock-view-movements .flex.flex-wrap.items-center.gap-2 > * {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* KPIs y Métricas: Evitar que montos grandes se salgan de su tarjeta */
+    #metric-total-quotes,
+    #metric-approved-quotes,
+    #metric-sent-quotes,
+    #metric-approved-amount,
+    #kpi-stock-total-products,
+    #kpi-stock-total-units,
+    #kpi-stock-low-count,
+    #kpi-stock-valuation,
+    #kpi-stock-dispatches-count {
+        font-size: 1.2rem !important;
+        line-height: 1.25 !important;
+        word-break: break-word !important;
+    }
+
+    /* Calculadora de Vinilos: Ajustar contenedores y proporción visual en móvil */
+    #tab-vinilos .sticky.top-4 {
+        position: static !important;
+    }
+    #vinyl-cost-m2-display {
+        font-size: 1.1rem !important;
+    }
+    #calc-total-sale-display {
+        font-size: 1.35rem !important;
+    }
+
+    /* ========================================================== */
+    /* TRANSFORMACIÓN DE TABLAS A TARJETAS DE APP MÓVIL           */
+    /* ========================================================== */
+    .overflow-x-auto {
+        overflow-x: visible !important;
+    }
+
+    #tab-cotizador table,
+    #tab-historial table,
+    #subtab-view-products table,
+    #tab-inventario table,
+    #modal-product-kardex table {
+        min-width: 0 !important;
+        width: 100% !important;
+        display: block !important;
+    }
+
+    #quote-items-tbody,
+    #history-quotes-tbody,
+    #products-tbody,
+    #stock-table-body,
+    #stock-dispatches-table-body,
+    #stock-movements-table-body,
+    #product-kardex-table-body {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    /* Ocultar cabeceras de tabla de escritorio en móvil (excepto catálogo que se vuelve barra de ordenamiento) */
+    #tab-cotizador thead,
+    #tab-historial thead,
+    #tab-inventario thead,
+    #modal-product-kardex thead {
+        display: none !important;
+    }
+
+    /* Barra de ordenamiento deslizable tipo píldoras en Catálogo de Productos */
+    #subtab-view-products thead {
+        display: block !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    #subtab-view-products thead tr {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    #subtab-view-products thead th:first-child,
+    #subtab-view-products thead th:last-child {
+        display: none !important;
+    }
+    #subtab-view-products thead th {
+        padding: 6px 11px !important;
+        border-radius: 980px !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        width: auto !important;
+        white-space: nowrap !important;
+        font-size: 10.5px !important;
+        color: var(--apple-text) !important;
+    }
+    html.dark #subtab-view-products thead th {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.14) !important;
+        color: #f5f5f7 !important;
+    }
+
+    /* Estilo base de tarjeta móvil para cada fila (tr) */
+    #quote-items-tbody > tr,
+    #history-quotes-tbody > tr,
+    #products-tbody > tr,
+    #stock-table-body > tr,
+    #stock-dispatches-table-body > tr,
+    #stock-movements-table-body > tr,
+    #product-kardex-table-body > tr {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        align-items: center !important;
+        padding: 12px !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        background: rgba(255, 255, 255, 0.96) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03) !important;
+        width: 100% !important;
+    }
+
+    html.dark #quote-items-tbody > tr,
+    html.dark #history-quotes-tbody > tr,
+    html.dark #products-tbody > tr,
+    html.dark #stock-table-body > tr,
+    html.dark #stock-dispatches-table-body > tr,
+    html.dark #stock-movements-table-body > tr,
+    html.dark #product-kardex-table-body > tr {
+        background: rgba(34, 34, 38, 0.92) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Filas de estado vacío (colspan) */
+    #quote-items-tbody > tr:has(td[colspan]),
+    #history-quotes-tbody > tr:has(td[colspan]),
+    #products-tbody > tr:has(td[colspan]),
+    #stock-table-body > tr:has(td[colspan]),
+    #stock-dispatches-table-body > tr:has(td[colspan]),
+    #stock-movements-table-body > tr:has(td[colspan]),
+    #product-kardex-table-body > tr:has(td[colspan]) {
+        display: block !important;
+        text-align: center !important;
+    }
+
+    /* Reset de celdas en tarjetas móviles */
+    #quote-items-tbody > tr > td,
+    #history-quotes-tbody > tr > td,
+    #products-tbody > tr > td,
+    #stock-table-body > tr > td,
+    #stock-dispatches-table-body > tr > td,
+    #stock-movements-table-body > tr > td,
+    #product-kardex-table-body > tr > td {
+        padding: 0 !important;
+        border: none !important;
+        min-width: 0 !important;
+    }
+
+    /* 1) TARJETA MÓVIL: ÍTEMS DE COTIZACIÓN (#quote-items-tbody) */
+    #quote-items-tbody > tr > td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
+        background: rgba(0, 113, 227, 0.1);
+        color: var(--apple-blue) !important;
+        border-radius: 8px;
+        padding: 2px 8px !important;
+        font-size: 11px;
+    }
+    #quote-items-tbody > tr > td:nth-child(6) {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+    }
+    #quote-items-tbody > tr > td:nth-child(2) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        padding: 2px 0 6px 0 !important;
+    }
+    #quote-items-tbody > tr > td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 3;
+        justify-self: start;
+        align-self: end;
+    }
+    #quote-items-tbody > tr > td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 3;
+        text-align: center !important;
+        align-self: end;
+    }
+    #quote-items-tbody > tr > td:nth-child(4)::before {
+        content: "P. Unitario";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+    #quote-items-tbody > tr > td:nth-child(5) {
+        grid-column: 3;
+        grid-row: 3;
+        text-align: right !important;
+        align-self: end;
+    }
+    #quote-items-tbody > tr > td:nth-child(5)::before {
+        content: "Total Neto";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+
+    /* 2) TARJETA MÓVIL: CATÁLOGO DE PRODUCTOS (#products-tbody) */
+    #products-tbody > tr > td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
+        z-index: 2;
+    }
+    #products-tbody > tr > td:nth-child(2) {
+        grid-column: 1 / 3;
+        grid-row: 1;
+        padding-left: 24px !important;
+    }
+    #products-tbody > tr > td:nth-child(4) {
+        grid-column: 3;
+        grid-row: 1;
+        text-align: right !important;
+        font-size: 11px !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    #products-tbody > tr > td:nth-child(3) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        padding: 4px 0 !important;
+    }
+    #products-tbody > tr > td:nth-child(5) {
+        display: none !important;
+    }
+    #products-tbody > tr > td:nth-child(6) {
+        grid-column: 1;
+        grid-row: 3;
+        text-align: left !important;
+        background: rgba(0, 0, 0, 0.03);
+        padding: 6px 8px !important;
+        border-radius: 10px;
+    }
+    html.dark #products-tbody > tr > td:nth-child(6),
+    html.dark #products-tbody > tr > td:nth-child(7) {
+        background: rgba(255, 255, 255, 0.06);
+    }
+    #products-tbody > tr > td:nth-child(6)::before {
+        content: "Costo Prov.";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    #products-tbody > tr > td:nth-child(7) {
+        grid-column: 2;
+        grid-row: 3;
+        text-align: center !important;
+        background: rgba(0, 0, 0, 0.03);
+        padding: 6px 8px !important;
+        border-radius: 10px;
+    }
+    #products-tbody > tr > td:nth-child(7)::before {
+        content: "Margen";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    #products-tbody > tr > td:nth-child(8) {
+        grid-column: 3;
+        grid-row: 3;
+        text-align: right !important;
+        background: rgba(52, 199, 89, 0.08);
+        padding: 6px 8px !important;
+        border-radius: 10px;
+    }
+    html.dark #products-tbody > tr > td:nth-child(8) {
+        background: rgba(48, 209, 88, 0.14);
+    }
+    #products-tbody > tr > td:nth-child(8)::before {
+        content: "Precio Venta";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #16a34a;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    #products-tbody > tr > td:nth-child(9) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+        padding-top: 8px !important;
+    }
+    html.dark #products-tbody > tr > td:nth-child(9) {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    #products-tbody > tr > td:nth-child(9) > div {
+        justify-content: space-around !important;
+        width: 100% !important;
+    }
+
+    /* 3) TARJETA MÓVIL: HISTORIAL DE COTIZACIONES (#history-quotes-tbody) */
+    #history-quotes-tbody > tr > td:nth-child(1) {
+        grid-column: 1 / 3;
+        grid-row: 1;
+        text-align: left !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(5) {
+        grid-column: 3;
+        grid-row: 1;
+        text-align: right !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(2) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        padding: 2px 0 !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 3;
+        text-align: left !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(3)::before {
+        content: "Fecha";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+    #history-quotes-tbody > tr > td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 3;
+        text-align: center !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(4)::before {
+        content: "Ítems";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+    #history-quotes-tbody > tr > td:nth-child(6) {
+        grid-column: 3;
+        grid-row: 3;
+        text-align: right !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(6)::before {
+        content: "Total";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+    #history-quotes-tbody > tr > td:nth-child(7) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+        padding-top: 8px !important;
+    }
+    html.dark #history-quotes-tbody > tr > td:nth-child(7) {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    #history-quotes-tbody > tr > td:nth-child(7) > div {
+        justify-content: space-around !important;
+        width: 100% !important;
+    }
+
+    /* 4) TARJETA MÓVIL: EXISTENCIAS Y STOCK (#stock-table-body) */
+    #stock-table-body > tr > td:nth-child(1) {
+        grid-column: 1 / 3;
+        grid-row: 1;
+    }
+    #stock-table-body > tr > td:nth-child(3) {
+        grid-column: 3;
+        grid-row: 1;
+        text-align: right !important;
+        align-self: start;
+    }
+    #stock-table-body > tr > td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 2;
+        text-align: left !important;
+    }
+    #stock-table-body > tr > td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 2;
+        text-align: center !important;
+    }
+    #stock-table-body > tr > td:nth-child(4)::before {
+        content: "Mín: ";
+        font-size: 10px;
+        color: #86868b;
+    }
+    #stock-table-body > tr > td:nth-child(5) {
+        grid-column: 3;
+        grid-row: 2;
+        text-align: right !important;
+    }
+    #stock-table-body > tr > td:nth-child(6) {
+        grid-column: 1;
+        grid-row: 3;
+        text-align: left !important;
+        background: rgba(0, 0, 0, 0.03);
+        padding: 6px 8px !important;
+        border-radius: 10px;
+    }
+    #stock-table-body > tr > td:nth-child(6)::before {
+        content: "Costo Unit.";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #86868b;
+        text-transform: uppercase;
+    }
+    #stock-table-body > tr > td:nth-child(7) {
+        grid-column: 2 / 4;
+        grid-row: 3;
+        text-align: right !important;
+        background: rgba(0, 113, 227, 0.06);
+        padding: 6px 8px !important;
+        border-radius: 10px;
+    }
+    #stock-table-body > tr > td:nth-child(7)::before {
+        content: "Valorización";
+        display: block;
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--apple-blue);
+        text-transform: uppercase;
+    }
+    #stock-table-body > tr > td:nth-child(8) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+        padding-top: 8px !important;
+    }
+    html.dark #stock-table-body > tr > td:nth-child(8) {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    #stock-table-body > tr > td:nth-child(8) > div {
+        justify-content: space-between !important;
+        width: 100% !important;
+    }
+
+    /* 5) TARJETA MÓVIL: HOJAS DE SALIDA (#stock-dispatches-table-body) */
+    #stock-dispatches-table-body > tr > td:nth-child(1) {
+        grid-column: 1 / 2;
+        grid-row: 1;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(2) {
+        grid-column: 2 / 4;
+        grid-row: 1;
+        text-align: right !important;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(3) {
+        grid-column: 1 / 3;
+        grid-row: 2;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(5) {
+        grid-column: 3;
+        grid-row: 2;
+        text-align: right !important;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(4) {
+        grid-column: 1;
+        grid-row: 3;
+        font-size: 11px !important;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(6) {
+        grid-column: 2 / 4;
+        grid-row: 3;
+        text-align: right !important;
+        max-width: 100% !important;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(7) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+        padding-top: 8px !important;
+    }
+    #stock-dispatches-table-body > tr > td:nth-child(7) button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* 6) TARJETA MÓVIL: KARDEX / MOVIMIENTOS (#stock-movements-table-body y #product-kardex-table-body) */
+    #stock-movements-table-body > tr > td:nth-child(1),
+    #product-kardex-table-body > tr > td:nth-child(1) {
+        grid-column: 1 / 3;
+        grid-row: 1;
+    }
+    #stock-movements-table-body > tr > td:nth-child(2),
+    #product-kardex-table-body > tr > td:nth-child(2) {
+        grid-column: 3;
+        grid-row: 1;
+        text-align: right !important;
+    }
+    #stock-movements-table-body > tr > td:nth-child(3) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+    #stock-movements-table-body > tr > td:nth-child(4),
+    #product-kardex-table-body > tr > td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 3;
+        text-align: left !important;
+    }
+    #stock-movements-table-body > tr > td:nth-child(5),
+    #product-kardex-table-body > tr > td:nth-child(4) {
+        grid-column: 2 / 4;
+        grid-row: 3;
+        text-align: right !important;
+    }
+    #stock-movements-table-body > tr > td:nth-child(6),
+    #product-kardex-table-body > tr > td:nth-child(5) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+    }
+    #stock-movements-table-body > tr > td:nth-child(7),
+    #product-kardex-table-body > tr > td:nth-child(6) {
+        grid-column: 1 / -1;
+        grid-row: 5;
+    }
+
+    /* ========================================================== */
+    /* MODALES COMO VENTANAS DE APP NATIVA (BOTTOM SHEETS)        */
+    /* ========================================================== */
+    .modal-overlay {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+
+    .modal-overlay > div {
+        width: 100% !important;
+        max-width: 100vw !important;
+        max-height: 92dvh !important;
+        margin: 0 !important;
+        border-radius: 24px 24px 0 0 !important;
+        padding: 16px 14px calc(20px + env(safe-area-inset-bottom, 0px)) 14px !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Vista previa de PDF y Comprobante de Salida adaptados al ancho del teléfono */
+    #pdf-preview-render-area,
+    #dispatch-preview-render-area {
+        padding: 8px !important;
+        overflow-x: auto !important;
+        justify-content: flex-start !important;
+    }
+
+    #pdf-preview-render-area #pdf-container-doc,
+    #dispatch-preview-render-area #dispatch-voucher-doc {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: auto !important;
+        padding: 12px !important;
+    }
+
+    #pdf-preview-render-area #pdf-container-doc .grid-cols-12 {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    /* Filas de rangos de precios por volumen dentro de modales */
+    .cost-tier-row,
+    .combine-tier-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        padding: 10px !important;
+    }
+    .cost-tier-row > div:first-child,
+    .combine-tier-row > div:first-child {
+        grid-column: 1 / -1 !important;
+    }
+}
+
 

@@ -286,8 +286,13 @@ class AppController {
 
         const pageTitle = document.getElementById('page-current-title');
         const pageSub = document.getElementById('page-current-subtitle');
+        const mobileSub = document.getElementById('mobile-header-subtitle');
         if (pageTitle && titleMap[tabId]) pageTitle.innerText = titleMap[tabId].title;
         if (pageSub && titleMap[tabId]) pageSub.innerText = titleMap[tabId].sub;
+        if (mobileSub && titleMap[tabId]) mobileSub.innerText = titleMap[tabId].title;
+
+        const scrollArea = document.getElementById('main-scroll-area');
+        if (scrollArea) scrollArea.scrollTop = 0;
 
         if (tabId === 'tab-inventario' && window.inventario) {
             window.inventario.render();
@@ -2071,8 +2076,8 @@ class AppController {
                 : '<span class="text-[11px] text-slate-400 italic">Sin enlace</span>';
 
             return `
-                <div class="p-2.5 bg-white rounded-xl border border-indigo-100 flex items-center justify-between gap-3 shadow-xs">
-                    <div class="flex items-center gap-2 min-w-0">
+                <div class="p-2.5 bg-white rounded-xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
                         <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0">
                             ${idx + 1}
                         </span>
@@ -2081,7 +2086,7 @@ class AppController {
                             <span class="text-[10px] font-mono text-slate-400 block">${safeSku}</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                         <button type="button" onclick="app.closeModal('modal-edit-product'); app.openRootProduct('${c.id}');" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 rounded-lg transition-colors cursor-pointer" title="Cerrar este combo y abrir el producto raíz original">
                             <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-600"></i>
                             Ver Producto Raíz ↗
