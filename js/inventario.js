@@ -183,6 +183,7 @@ class InventarioManager {
         if (!tbody) return;
 
         const products = window.db.getProducts();
+        const suppliers = window.db.getSuppliers();
         const profile = window.db.getProfile();
         const currency = profile.currency || '$';
 
@@ -214,7 +215,7 @@ class InventarioManager {
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="text-center py-12 text-slate-400">
+                    <td colspan="9" class="text-center py-12 text-slate-400">
                         <div class="flex flex-col items-center justify-center gap-2">
                             <i data-lucide="package-search" class="w-10 h-10 text-slate-300"></i>
                             <p class="text-sm font-semibold">No se encontraron productos con los filtros seleccionados.</p>
@@ -232,6 +233,9 @@ class InventarioManager {
             const minStock = (p.minStock !== undefined && p.minStock !== null) ? Number(p.minStock) : 5;
             const cost = Number(p.costPrice) || 0;
             const valuation = stock * cost;
+
+            const sup = suppliers.find(s => s.id === p.supplierId || s.name === p.supplierId);
+            const supName = sup ? sup.name : (p.supplierId || 'Sin Asignar');
 
             // Determinar estado de stock y color
             let statusBadge = '';
@@ -270,6 +274,21 @@ class InventarioManager {
                     </td>
                     <td class="py-3 px-3">
                         <span class="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200/60 font-medium">${p.category || 'General'}</span>
+                    </td>
+                    <td class="py-3 px-3">
+                        <div class="flex flex-col gap-1 items-start">
+                            <span class="font-semibold text-slate-800 leading-tight text-xs">${supName}</span>
+                            ${p.url ? `
+                                <a href="${p.url}" target="_blank" rel="noopener noreferrer" 
+                                   class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors shadow-xs" 
+                                   title="Abrir enlace del proveedor">
+                                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                                    <span>Web Proveedor</span>
+                                </a>
+                            ` : `
+                                <span class="text-[10px] text-slate-400 italic">Sin enlace</span>
+                            `}
+                        </div>
                     </td>
                     <td class="py-3 px-3 text-center">
                         ${statusBadge}
@@ -867,10 +886,13 @@ class InventarioManager {
         if (refInput) refInput.value = '';
         if (notesInput) notesInput.value = '';
 
+        const activeProductId = productId || prodSelect?.value || (products[0] ? products[0].id : null);
         if (costInput) {
-            const p = productId ? window.db.getProductById(productId) : null;
+            const p = activeProductId ? window.db.getProductById(activeProductId) : null;
             costInput.value = p ? p.costPrice : '';
         }
+
+        this.onEntryProductChange(activeProductId);
 
         window.app.openModal('modal-stock-entry');
         if (window.lucide) window.lucide.createIcons();
@@ -882,6 +904,29 @@ class InventarioManager {
         if (costInput && p) {
             costInput.value = p.costPrice || '';
         }
+
+        const supNameEl = document.getElementById('entry-stock-supplier-name');
+        const supUrlInput = document.getElementById('entry-stock-supplier-url');
+        const supLinkBtn = document.getElementById('entry-stock-supplier-link-btn');
+
+        if (p) {
+            const suppliers = window.db.getSuppliers();
+            const sup = suppliers.find(s => s.id === p.supplierId || s.name === p.supplierId);
+            if (supNameEl) supNameEl.innerText = sup ? sup.name : (p.supplierId || 'Sin Asignar');
+            if (supUrlInput) supUrlInput.value = p.url || '';
+            if (supLinkBtn) {
+                if (p.url) {
+                    supLinkBtn.href = p.url;
+                    supLinkBtn.classList.remove('hidden');
+                } else {
+                    supLinkBtn.classList.add('hidden');
+                }
+            }
+        } else {
+            if (supNameEl) supNameEl.innerText = 'Sin Asignar';
+            if (supUrlInput) supUrlInput.value = '';
+            if (supLinkBtn) supLinkBtn.classList.add('hidden');
+        }
     }
 
     submitQuickEntry() {
@@ -892,6 +937,7 @@ class InventarioManager {
         const costVal = document.getElementById('entry-stock-cost')?.value;
         const cost = (costVal !== '' && !isNaN(parseFloat(costVal))) ? parseFloat(costVal) : null;
         const notes = document.getElementById('entry-stock-notes')?.value.trim() || '';
+        const supplierUrl = document.getElementById('entry-stock-supplier-url')?.value.trim();
 
         if (!productId) {
             window.app.showToast('Por favor selecciona un producto.', 'warning');
@@ -902,7 +948,7 @@ class InventarioManager {
             return;
         }
 
-        const updated = window.db.addStockToProduct(productId, qty, reason, reference, cost, notes);
+        const updated = window.db.addStockToProduct(productId, qty, reason, reference, cost, notes, supplierUrl);
         if (updated) {
             window.app.closeModal('modal-stock-entry');
             this.render();
@@ -1003,6 +1049,8 @@ class InventarioManager {
         const currentStockDisplay = document.getElementById('adjust-stock-current');
         const exactInput = document.getElementById('adjust-stock-exact-qty');
         const minStockInput = document.getElementById('adjust-stock-min-qty');
+        const urlInput = document.getElementById('adjust-stock-url');
+        const urlBtn = document.getElementById('adjust-stock-url-btn');
         const reasonInput = document.getElementById('adjust-stock-reason');
         const notesInput = document.getElementById('adjust-stock-notes');
 
@@ -1014,6 +1062,15 @@ class InventarioManager {
         if (currentStockDisplay) currentStockDisplay.innerText = `${currentStock} ${p.unit || 'unidades'}`;
         if (exactInput) exactInput.value = currentStock;
         if (minStockInput) minStockInput.value = minStock;
+        if (urlInput) urlInput.value = p.url || '';
+        if (urlBtn) {
+            if (p.url) {
+                urlBtn.href = p.url;
+                urlBtn.classList.remove('hidden');
+            } else {
+                urlBtn.classList.add('hidden');
+            }
+        }
         if (reasonInput) reasonInput.value = 'Conteo / Inventario Físico';
         if (notesInput) notesInput.value = '';
 
@@ -1025,6 +1082,7 @@ class InventarioManager {
         const productId = document.getElementById('adjust-stock-product-id')?.value;
         const exactQty = parseFloat(document.getElementById('adjust-stock-exact-qty')?.value);
         const minQty = parseFloat(document.getElementById('adjust-stock-min-qty')?.value);
+        const newUrl = document.getElementById('adjust-stock-url')?.value.trim();
         const reason = document.getElementById('adjust-stock-reason')?.value.trim() || 'Ajuste Físico';
         const notes = document.getElementById('adjust-stock-notes')?.value.trim() || '';
 
@@ -1033,7 +1091,7 @@ class InventarioManager {
             return;
         }
 
-        const updated = window.db.adjustProductStock(productId, exactQty, minQty, reason, notes);
+        const updated = window.db.adjustProductStock(productId, exactQty, minQty, reason, notes, newUrl);
         if (updated) {
             window.app.closeModal('modal-stock-adjust');
             this.render();

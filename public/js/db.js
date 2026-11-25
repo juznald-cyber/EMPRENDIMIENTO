@@ -2389,7 +2389,7 @@ class Database {
     /**
      * Entrada de stock (compras, carga inicial, devoluciones)
      */
-    addStockToProduct(productId, quantityToAdd, reason = 'Compra a Proveedor', reference = '', cost = null, notes = '') {
+    addStockToProduct(productId, quantityToAdd, reason = 'Compra a Proveedor', reference = '', cost = null, notes = '', url = null) {
         const qty = parseFloat(quantityToAdd) || 0;
         if (qty <= 0) return null;
 
@@ -2402,6 +2402,9 @@ class Database {
         p.stock = newStock;
         if (cost !== null && !isNaN(cost) && cost > 0) {
             p.costPrice = Number(cost);
+        }
+        if (url !== null && typeof url === 'string' && url.trim() !== '') {
+            p.url = url.trim();
         }
 
         const now = new Date();
@@ -2468,7 +2471,7 @@ class Database {
     /**
      * Ajuste físico directo de stock (inventario físico, corrección)
      */
-    adjustProductStock(productId, exactNewStock, minStock = null, reason = 'Ajuste de Inventario Físico', notes = '') {
+    adjustProductStock(productId, exactNewStock, minStock = null, reason = 'Ajuste de Inventario Físico', notes = '', url = null) {
         const newStockNum = Math.max(0, parseFloat(exactNewStock) || 0);
         const products = this.getProducts();
         const p = products.find(item => item.id === productId);
@@ -2479,6 +2482,9 @@ class Database {
         p.stock = newStockNum;
         if (minStock !== null && !isNaN(minStock) && minStock >= 0) {
             p.minStock = Number(minStock);
+        }
+        if (url !== null && typeof url === 'string') {
+            p.url = url.trim();
         }
 
         const now = new Date();
