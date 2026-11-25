@@ -179,6 +179,12 @@
                 <span>Proveedores & Precios</span>
             </button>
 
+            <button onclick="app.switchTab('tab-estampados')" data-nav-tab="tab-estampados" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
+                <i data-lucide="shirt" class="w-5 h-5 text-slate-400 group-hover:text-pink-400 transition-colors"></i>
+                <span>Estampados</span>
+                <span id="estampados-count-badge" class="ml-auto bg-pink-500/20 text-pink-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-pink-500/30">0</span>
+            </button>
+
             <button onclick="app.switchTab('tab-costos')" data-nav-tab="tab-costos" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:bg-slate-800 hover:text-white group">
                 <i data-lucide="cpu" class="w-5 h-5 text-slate-400 group-hover:text-cyan-400 transition-colors"></i>
                 <span>Costos & Maquinaria</span>
@@ -861,12 +867,6 @@
                         <button onclick="app.switchCatalogSubTab('products')" id="subtab-btn-products" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white transition-all">
                             📦 Todos los Productos <span id="count-all-products" class="ml-1 opacity-80 text-[10px]"></span>
                         </button>
-                        <button onclick="app.switchCatalogSubTab('single')" id="subtab-btn-single" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
-                            ✨ Individuales / Insumos <span id="count-single-products" class="ml-1 opacity-80 text-[10px]"></span>
-                        </button>
-                        <button onclick="app.switchCatalogSubTab('combos')" id="subtab-btn-combos" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
-                            🔥 Productos en Combo <span id="count-combos-products" class="ml-1 opacity-80 text-[10px]"></span>
-                        </button>
                         <button onclick="app.switchCatalogSubTab('suppliers')" id="subtab-btn-suppliers" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all">
                             🏭 Base de Proveedores (con RUT)
                         </button>
@@ -916,13 +916,10 @@
                                 <span id="products-bulk-count" class="text-xs font-bold text-indigo-900"></span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="app.openCombineProductsModal()" id="btn-bulk-combine" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-all">
-                                    <i data-lucide="layers" class="w-3.5 h-3.5"></i> Combinar en Nuevo Producto
+                                <button onclick="app.deleteSelectedProducts()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-all cursor-pointer">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar Seleccionados
                                 </button>
-                                <button onclick="app.deleteSelectedProducts()" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-all">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
-                                </button>
-                                <button onclick="app.clearProductSelection()" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
+                                <button onclick="app.clearProductSelection()" class="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer">
                                     Cancelar
                                 </button>
                             </div>
@@ -975,6 +972,59 @@
                             <!-- Inyectado dinámicamente -->
                         </div>
                     </div>
+                </div>
+
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- TAB: MÓDULO DE FORMATOS & PRECIOS DE ESTAMPADOS                -->
+            <!-- ============================================================== -->
+            <div id="tab-estampados" class="tab-content space-y-6 max-w-7xl mx-auto">
+                
+                <!-- Encabezado con Métricas y Botón Nuevo -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 bg-pink-50 text-pink-600 rounded-2xl shadow-xs">
+                                <i data-lucide="shirt" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-base font-extrabold text-slate-800">Catálogo de Formatos & Precios de Estampados</h2>
+                                    <span id="estampados-total-count" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200">0 formatos</span>
+                                </div>
+                                <p class="text-xs text-slate-500">Configura técnicas (DTF, Sublimación, Vinilo), medidas, costos de producción y precios de venta para aplicarlos a prendas textiles.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <button type="button" onclick="estampados.openModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all cursor-pointer">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                + Nuevo Formato de Estampado
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Buscador y Filtro por Técnica -->
+                    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+                        <!-- Filtros por Técnica -->
+                        <div id="estampados-technique-filters" class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                            <!-- Inyectado dinámicamente por js/estampados.js -->
+                        </div>
+
+                        <!-- Buscador -->
+                        <div class="relative w-full md:w-72 shrink-0">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                            <input type="text" id="estampados-search-input" placeholder="Buscar por formato, técnica, medidas..."
+                                oninput="estampados.onSearchInput(this.value)"
+                                class="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid de Tarjetas de Estampados -->
+                <div id="estampados-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Inyectado dinámicamente por js/estampados.js -->
                 </div>
 
             </div>
@@ -1526,6 +1576,10 @@
             <i data-lucide="boxes" class="w-4 h-4"></i>
             <span class="text-[9px] font-bold leading-none">Precios</span>
         </button>
+        <button onclick="app.switchTab('tab-estampados')" data-mobile-nav="tab-estampados" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
+            <i data-lucide="shirt" class="w-4 h-4"></i>
+            <span class="text-[9px] font-bold leading-none">Estampados</span>
+        </button>
         <button onclick="app.switchTab('tab-costos')" data-mobile-nav="tab-costos" class="mobile-nav-item flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl text-slate-400">
             <i data-lucide="cpu" class="w-4 h-4"></i>
             <span class="text-[9px] font-bold leading-none">Costos</span>
@@ -1800,7 +1854,7 @@
                         <div class="relative">
                             <input type="text" id="prod-form-category-input" placeholder="Escribe o selecciona..." autocomplete="off"
                                 onclick="app.openCustomDropdown('category')"
-                                oninput="app.filterCustomDropdown('category', this.value)"
+                                oninput="app.filterCustomDropdown('category', this.value); app.onProductCategoryChange();"
                                 class="w-full pl-3 pr-8 py-2 text-xs bg-indigo-50/50 border border-indigo-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all cursor-pointer" />
                             <button type="button" onclick="app.toggleCustomDropdown('category')" tabindex="-1" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-indigo-600 transition-colors">
                                 <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
@@ -1858,6 +1912,46 @@
                             <input type="number" id="prod-form-min-stock" step="any" min="0" value="5"
                                 class="w-full px-3 py-2 text-xs font-bold text-amber-700 bg-white border border-slate-200 rounded-xl focus:border-amber-500 outline-none text-center" />
                         </div>
+                    </div>
+                </div>
+
+                <!-- Sección Especial: Formatos de Estampados para Productos de Categoría Textil -->
+                <div id="prod-form-textil-estampados-section" class="hidden p-3.5 bg-gradient-to-br from-pink-50/70 via-purple-50/40 to-indigo-50/60 rounded-2xl border-2 border-pink-200/90 space-y-3 transition-all">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-pink-100 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <div class="p-1.5 bg-pink-100 text-pink-700 rounded-xl">
+                                <i data-lucide="shirt" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                                    Estampados Disponibles para esta Prenda Textil
+                                    <span id="prod-textil-selected-badge" class="text-[10px] font-bold text-pink-700 bg-white px-2 py-0.5 rounded-full border border-pink-200">0 activos</span>
+                                </h4>
+                                <p class="text-[11px] text-slate-500">Activa los formatos del módulo Estampados que aplican a esta prenda. Puedes activar todos, uno o dos.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.toggleAllTextilEstampados(true)" class="px-2.5 py-1 text-[11px] font-bold bg-white text-indigo-700 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors shadow-xs cursor-pointer">
+                                Activar Todos
+                            </button>
+                            <button type="button" onclick="app.toggleAllTextilEstampados(false)" class="px-2.5 py-1 text-[11px] font-bold bg-white text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer">
+                                Desactivar Todos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Checkboxes con los Estampados del Módulo -->
+                    <div id="prod-form-estampados-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1">
+                        <!-- Inyectado dinámicamente por js/app.js -->
+                    </div>
+
+                    <!-- Resumen y costo adicional resultante -->
+                    <div class="p-2.5 bg-white/95 rounded-xl border border-pink-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-600 font-medium text-[11px]">Costo adicional acumulado por estampado(s):</span>
+                            <strong id="prod-textil-estampados-cost-sum" class="font-bold text-pink-700 font-mono text-xs">$ 0</strong>
+                        </div>
+                        <span class="text-[10px] text-slate-400 italic">Se actualiza automáticamente en el costo adicional y precio de venta</span>
                     </div>
                 </div>
 
@@ -1927,18 +2021,12 @@
                     </div>
                 </div>
 
-                <!-- Opciones de Producto: Combo y Anclado -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <!-- Opciones de Producto: Anclado al inicio -->
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                     <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
                         <input type="checkbox" id="prod-form-is-pinned" class="w-4 h-4 rounded text-amber-500 accent-amber-500 cursor-pointer" />
                         <span class="inline-flex items-center gap-1.5 text-amber-700">
-                            📌 Anclar al inicio del catálogo
-                        </span>
-                    </label>
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
-                        <input type="checkbox" id="prod-form-is-combo" class="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer" />
-                        <span class="inline-flex items-center gap-1.5 text-indigo-700">
-                            🔥 Es un Producto en Combo
+                            📌 Anclar al inicio del catálogo (Fijar arriba)
                         </span>
                     </label>
                 </div>
@@ -1949,21 +2037,6 @@
                         <input type="url" id="prod-form-url" placeholder="https://proveedor.com/producto-o-catalogo..." 
                             class="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none" />
                         <i data-lucide="link" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
-                    </div>
-                </div>
-
-                <!-- Sección: Productos Componentes del Combo (Solo visible si es combo) -->
-                <div id="prod-form-combo-components-container" class="hidden p-3.5 bg-indigo-50/50 rounded-2xl border border-indigo-200/80 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                            <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
-                            Productos Componentes que forman este Combo
-                        </label>
-                        <span id="prod-form-combo-components-count" class="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200">0 items</span>
-                    </div>
-                    <p class="text-[11px] text-slate-500">Puedes acceder directamente al producto raíz individual o ver su enlace web de proveedor:</p>
-                    <div id="prod-form-combo-components-list" class="space-y-1.5 pt-1">
-                        <!-- Componentes inyectados dinámicamente -->
                     </div>
                 </div>
 
@@ -2028,151 +2101,146 @@
         </div>
     </div>
 
-    <!-- Modal: Combinar Productos Seleccionados -->
-    <div id="modal-combine-products" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
+    <!-- Modal: Crear / Editar Formato de Estampado -->
+    <div id="modal-estampado-form" class="modal-overlay fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden p-6 space-y-4 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2.5">
-                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    <div class="p-2 bg-pink-50 text-pink-600 rounded-xl">
+                        <i data-lucide="shirt" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-sm text-slate-800">Combinar Productos en uno Nuevo</h3>
-                        <p class="text-[11px] text-slate-400">Crea un producto nuevo sumando sus valores sin borrar los originales</p>
+                        <h3 id="estampado-modal-title" class="font-bold text-sm text-slate-800">Nuevo Formato de Estampado</h3>
+                        <p class="text-[11px] text-slate-400">Configura técnica, medidas, costos de producción y precio de venta</p>
                     </div>
                 </div>
-                <button type="button" onclick="app.closeModal('modal-combine-products')" class="p-1 text-slate-400 hover:text-slate-700">
+                <button type="button" onclick="app.closeModal('modal-estampado-form')" class="p-1 text-slate-400 hover:text-slate-700">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <!-- Lista de productos que se están combinando -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <label class="block text-xs font-bold text-slate-700">Componentes a Combinar (Orden de aparición):</label>
-                    <button type="button" onclick="app.swapCombineItems(0, 1)" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-sm">
-                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i> Intercambiar Orden (1 ⇄ 2)
-                    </button>
-                </div>
-                <p class="text-[11px] text-slate-400">💡 Usa los botones con flechas <span class="font-bold text-indigo-600">▲</span> y <span class="font-bold text-indigo-600">▼</span> para cambiar qué producto va primero en el nombre.</p>
-                <div id="combine-products-list" class="space-y-2 max-h-52 overflow-y-auto p-1">
-                    <!-- Inyectado dinámicamente -->
-                </div>
-            </div>
+            <input type="hidden" id="estampado-form-id" />
 
-            <!-- Formulario del Nuevo Producto Combinado -->
-            <div class="space-y-3 pt-2 border-t border-slate-100">
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="col-span-1">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Código / SKU</label>
-                        <input type="text" id="combine-form-sku" placeholder="COMBO-001" 
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-mono" />
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Nombre del Producto Combinado *</label>
-                        <input type="text" id="combine-form-name" placeholder="Nombre combinado..." 
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-800" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
-                        <input type="text" id="combine-form-category" placeholder="Ej. Combos, Textil..." 
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+            <div class="space-y-3.5">
+                <!-- Nombre y Técnica -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nombre / Formato del Estampado *</label>
+                        <input type="text" id="estampado-form-name" placeholder="Ej: Logo Pecho 10x10 cm, Estampado A3 Espalda..." 
+                            class="w-full px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none text-slate-800" />
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Unidad</label>
-                        <input type="text" id="combine-form-unit" value="Unidad" 
-                            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none" />
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Técnica de Estampado *</label>
+                        <select id="estampado-form-technique" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                            <option value="DTF Textil">DTF Textil</option>
+                            <option value="Sublimación">Sublimación</option>
+                            <option value="Vinilo Textil">Vinilo Textil</option>
+                            <option value="Serigrafía">Serigrafía</option>
+                            <option value="DTF UV">DTF UV</option>
+                            <option value="Bordado">Bordado</option>
+                            <option value="Otro">Otro / Personalizado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Ubicación Sugerida en Prenda</label>
+                        <select id="estampado-form-location" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none">
+                            <option value="Pecho">Pecho Central</option>
+                            <option value="Pecho Izquierdo">Pecho Izquierdo / Escudo</option>
+                            <option value="Frente Completo">Frente Completo (A4 / A3)</option>
+                            <option value="Espalda">Espalda Central</option>
+                            <option value="Espalda Completa">Espalda Completa (A3)</option>
+                            <option value="Manga">Manga (Izquierda/Derecha)</option>
+                            <option value="Bolsillo">Bolsillo</option>
+                            <option value="Gorra">Gorra Frontal</option>
+                            <option value="Libre">Ubicación Libre</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Resumen Financiero Combinado -->
-                <div class="p-3.5 bg-gradient-to-br from-indigo-50/80 to-emerald-50/80 rounded-2xl border border-indigo-100/80 space-y-3">
+                <!-- Dimensiones / Medidas en cm -->
+                <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Ancho (cm)</label>
+                        <input type="number" id="estampado-form-width" step="any" min="0" placeholder="Ej: 21" 
+                            class="w-full px-3 py-1.5 text-xs text-center font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Alto (cm)</label>
+                        <input type="number" id="estampado-form-height" step="any" min="0" placeholder="Ej: 29.7" 
+                            class="w-full px-3 py-1.5 text-xs text-center font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-400" />
+                    </div>
+                </div>
+
+                <!-- Finanzas: Costo Base + Margen = Precio Venta -->
+                <div class="p-4 bg-gradient-to-br from-pink-50/70 via-purple-50/50 to-indigo-50/70 border border-pink-200/70 rounded-2xl space-y-3">
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Costo Base Total ($)</label>
-                            <input type="number" id="combine-form-cost" step="any"
-                                oninput="app.onCombineCostChange()"
-                                class="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-slate-800 text-center" />
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Costo Unitario ($) *</label>
+                            <input type="number" id="estampado-form-cost" step="any" min="0" value="0"
+                                oninput="estampados.onCostChange()"
+                                class="w-full px-3 py-2 text-xs font-bold text-center bg-white border border-slate-200 rounded-xl focus:border-indigo-400 outline-none text-slate-800" />
+                            <span class="text-[10px] text-slate-400 block text-center mt-0.5">Insumos y mano de obra</span>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-indigo-700 mb-1">Margen Resultante (%)</label>
-                            <input type="number" id="combine-form-margin" step="any"
-                                oninput="app.onCombineMarginChange()"
-                                class="w-full px-3 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl focus:border-indigo-400 outline-none text-center" />
+                            <label class="block text-xs font-bold text-indigo-700 mb-1">Margen Ganancia (%)</label>
+                            <input type="number" id="estampado-form-margin" step="any" value="50"
+                                oninput="estampados.onMarginChange()"
+                                class="w-full px-3 py-2 text-xs font-bold text-center text-indigo-700 bg-white border border-indigo-200 rounded-xl focus:border-indigo-400 outline-none" />
+                            <span class="text-[10px] text-indigo-400 block text-center mt-0.5">Sobre costo</span>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-emerald-700 mb-1">Precio Venta Total ($)</label>
-                            <input type="number" id="combine-form-sale-price" step="any"
-                                oninput="app.onCombineSalePriceChange()"
-                                class="w-full px-3 py-2 text-xs font-black text-emerald-700 bg-white border border-emerald-300 rounded-xl focus:border-emerald-500 outline-none text-center" />
+                            <label class="block text-xs font-bold text-emerald-700 mb-1">Precio Venta ($) *</label>
+                            <input type="number" id="estampado-form-sale-price" step="any" min="0" value="0"
+                                oninput="estampados.onSalePriceChange()"
+                                class="w-full px-3 py-2 text-xs font-black text-center text-emerald-700 bg-white border border-emerald-300 rounded-xl focus:border-emerald-500 outline-none" />
+                            <span class="text-[10px] text-emerald-500 block text-center mt-0.5">Precio sugerido</span>
                         </div>
                     </div>
-                    <p class="text-[11px] text-slate-500 text-center">
-                        💡 Suma el costo y precio de venta de los componentes. Los valores son totalmente editables.
-                    </p>
                 </div>
 
-                <!-- Escala de Precios y Costos por Volumen Combinada -->
-                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+                <!-- Escalas de Descuento por Volumen (Opcional) -->
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                <i data-lucide="trending-down" class="w-4 h-4 text-indigo-600"></i>
-                                Escala de Costos y Precios por Volumen Combinada
-                            </h4>
-                            <p class="text-[11px] text-slate-600">Combina y calcula automáticamente los rangos de precios de los componentes.</p>
+                            <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                Escala de Precios por Volumen de Estampado (Opcional)
+                            </label>
+                            <p class="text-[11px] text-slate-500">Descuentos automáticos si el cliente estampa en cantidad (ej. docenas o cientos)</p>
                         </div>
-                        <button type="button" onclick="app.addCombineCostTierRow()" 
-                            class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-sm">
+                        <button type="button" onclick="estampados.addTierRow()" 
+                            class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 rounded-xl border border-indigo-200 transition-all cursor-pointer shadow-xs">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar Rango
                         </button>
                     </div>
 
-                    <!-- Encabezados de Columnas para los Rangos -->
-                    <div class="hidden sm:grid sm:grid-cols-12 gap-2 text-[10px] font-black text-slate-600 uppercase tracking-wider px-2">
-                        <div class="sm:col-span-3 text-center">Cantidades</div>
-                        <div class="sm:col-span-3 text-center">Costo ($)</div>
-                        <div class="sm:col-span-2 text-center text-indigo-700">Margen (%)</div>
-                        <div class="sm:col-span-3 text-center text-emerald-700">Precio Venta ($)</div>
-                        <div class="sm:col-span-1 text-center">Acción</div>
+                    <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-2 pt-1">
+                        <div class="col-span-3 text-center">Cantidades</div>
+                        <div class="col-span-3 text-center">Costo ($)</div>
+                        <div class="col-span-2 text-center">Margen (%)</div>
+                        <div class="col-span-3 text-center">Precio Venta ($)</div>
+                        <div class="col-span-1 text-center"></div>
                     </div>
 
-                    <div id="combine-cost-tiers-container" class="space-y-2 max-h-48 overflow-y-auto p-0.5">
-                        <!-- Filas de rangos combinados generadas dinámicamente -->
+                    <div id="estampado-tiers-container" class="space-y-1.5 max-h-40 overflow-y-auto">
+                        <!-- Filas de rangos inyectadas -->
                     </div>
                 </div>
 
-                <!-- Previsualización de Fotos Combinadas y Enlaces -->
-                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            <i data-lucide="images" class="w-4 h-4 text-indigo-600"></i>
-                            Fotos Combinadas Anexadas
-                        </label>
-                        <span id="combine-images-counter" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">0 fotos</span>
-                    </div>
-                    <p class="text-[11px] text-slate-500">Se adjuntan automáticamente las fotos de todos los productos seleccionados para el nuevo combo.</p>
-                    <div id="combine-images-preview-list" class="flex flex-wrap gap-2 pt-1 min-h-[44px] items-center">
-                        <!-- Thumbs inyectados dinámicamente -->
-                    </div>
-                </div>
-
+                <!-- Descripción / Notas -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Notas / Detalle de Componentes</label>
-                    <textarea id="combine-form-notes" rows="2" placeholder="Opcional..." 
-                        class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Descripción / Recomendaciones Técnicas</label>
+                    <textarea id="estampado-form-desc" rows="2" placeholder="Ej: Temperatura de planchado 160°C por 15 segundos, pelado en frío..." 
+                        class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none resize-none"></textarea>
                 </div>
             </div>
 
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="app.closeModal('modal-combine-products')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all">
+                <button type="button" onclick="app.closeModal('modal-estampado-form')" class="px-4 py-2 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all">
                     Cancelar
                 </button>
-                <button type="button" onclick="app.submitCombineProducts()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all">
-                    <i data-lucide="check" class="w-4 h-4"></i> Guardar Producto Combinado
+                <button type="button" onclick="estampados.saveModal()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all cursor-pointer">
+                    <i data-lucide="check" class="w-4 h-4"></i> Guardar Formato
                 </button>
             </div>
         </div>
@@ -3018,6 +3086,7 @@
     <script src="js/pdf-generator.js?v=6.9"></script>
     <script src="js/inventario.js?v=6.9"></script>
     <script src="js/costos.js?v=6.9"></script>
+    <script src="js/estampados.js?v=6.9"></script>
     <script src="js/cotizador.js?v=6.9"></script>
     <script src="js/app.js?v=6.9"></script>
 

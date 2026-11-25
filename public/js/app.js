@@ -286,6 +286,7 @@ class AppController {
             'tab-vinilos': { title: 'Calculadora de Vinilos por m²', sub: 'Corte, UV y Textil' },
             'tab-historial': { title: 'Historial de Cotizaciones', sub: 'Gestión y Seguimiento' },
             'tab-catalogo': { title: 'Catálogo de Precios & Proveedores', sub: 'Costos y Márgenes' },
+            'tab-estampados': { title: 'Formatos & Precios de Estampados', sub: 'Técnicas, Medidas y Costos para Textiles' },
             'tab-costos': { title: 'Costos Operativos & Maquinaria', sub: 'Insumos, Depreciación, Alcancía y Electricidad' },
             'tab-inventario': { title: 'Control de Stock & Inventario', sub: 'Existencias, Hojas de Salida y Kardex' },
             'tab-ajustes': { title: 'Configuración & Identidad', sub: 'Logotipo y Empresa' }
@@ -301,6 +302,9 @@ class AppController {
         const scrollArea = document.getElementById('main-scroll-area');
         if (scrollArea) scrollArea.scrollTop = 0;
 
+        if (tabId === 'tab-estampados' && window.estampados) {
+            window.estampados.render();
+        }
         if (tabId === 'tab-inventario' && window.inventario) {
             window.inventario.render();
         }
@@ -312,54 +316,11 @@ class AppController {
     }
 
     isComboProduct(p) {
-        if (!p) return false;
-        if (p.isCombo === true || p.isCombo === 'true' || p.isCombo === 1) return true;
-        if (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0) return true;
-        if (Array.isArray(p.componentDetails) && p.componentDetails.length > 0) return true;
-        if (Array.isArray(p.componentSkus) && p.componentSkus.length > 0) return true;
-        if ((p.notes || '').toLowerCase().includes('producto combinado')) return true;
-        const sku = (p.sku || '').toUpperCase();
-        if (sku.startsWith('COMBO') || sku.includes('COMBO') || sku.includes('PACK')) return true;
-        const cat = (p.category || '').toLowerCase();
-        if (cat.includes('combo') || cat.includes('pack')) return true;
-        const name = (p.name || '').toLowerCase();
-        if (name.includes('combo') || name.includes('pack') || name.includes('+') || name.startsWith('combo')) return true;
         return false;
     }
 
     getProductComboCount(productId, allProducts = null) {
-        if (!productId) return 0;
-        const products = allProducts || window.db.getProducts();
-        const p = products.find(item => item.id === productId);
-        if (!p || this.isComboProduct(p)) return 0;
-
-        const combos = products.filter(item => this.isComboProduct(item));
-        let count = 0;
-        const pNameLower = (p.name || '').trim().toLowerCase();
-        const pSkuLower = (p.sku || '').trim().toLowerCase();
-
-        combos.forEach(combo => {
-            // 1. Verificación directa por ID si se guardó en componentProductIds
-            if (Array.isArray(combo.componentProductIds) && combo.componentProductIds.includes(productId)) {
-                count++;
-                return;
-            }
-            // 2. Verificación si el SKU está en componentSkus
-            if (pSkuLower && Array.isArray(combo.componentSkus) && combo.componentSkus.map(s => (s || '').toLowerCase()).includes(pSkuLower)) {
-                count++;
-                return;
-            }
-            // 3. Verificación heurística por notas ("Producto combinado formado por: • ...") o nombre ("Item1 + Item2")
-            if (pNameLower && pNameLower.length >= 3) {
-                const cNotes = (combo.notes || '').toLowerCase();
-                const cName = (combo.name || '').toLowerCase();
-                if (cNotes.includes(pNameLower) || cName.includes(pNameLower)) {
-                    count++;
-                }
-            }
-        });
-
-        return count;
+        return 0;
     }
 
     togglePinProduct(productId) {
@@ -379,8 +340,6 @@ class AppController {
     switchCatalogSubTab(subTab) {
         this.catalogSubTab = subTab;
         const btnProducts = document.getElementById('subtab-btn-products');
-        const btnSingle = document.getElementById('subtab-btn-single');
-        const btnCombos = document.getElementById('subtab-btn-combos');
         const btnSuppliers = document.getElementById('subtab-btn-suppliers');
         const viewProd = document.getElementById('subtab-view-products');
         const viewSup = document.getElementById('subtab-view-suppliers');
@@ -389,8 +348,6 @@ class AppController {
         const inactiveClass = 'px-4 py-2 text-xs font-bold rounded-xl text-slate-600 hover:bg-slate-200 transition-all';
 
         if (btnProducts) btnProducts.className = subTab === 'products' ? activeClass : inactiveClass;
-        if (btnSingle) btnSingle.className = subTab === 'single' ? activeClass : inactiveClass;
-        if (btnCombos) btnCombos.className = subTab === 'combos' ? activeClass : inactiveClass;
         if (btnSuppliers) btnSuppliers.className = subTab === 'suppliers' ? activeClass : inactiveClass;
 
         if (subTab === 'suppliers') {
@@ -400,17 +357,6 @@ class AppController {
         } else {
             if (viewSup) viewSup.classList.add('hidden');
             if (viewProd) viewProd.classList.remove('hidden');
-            // Si cambia a la subpestaña de combos, asegurar que no quede filtrado por una categoría que no tenga combos
-            if (subTab === 'combos') {
-                const catFilterEl = document.getElementById('products-category-filter');
-                if (catFilterEl && catFilterEl.value !== 'todas') {
-                    const products = window.db.getProducts();
-                    const hasCombosInCat = products.some(p => this.isComboProduct(p) && p.category === catFilterEl.value);
-                    if (!hasCombosInCat) {
-                        catFilterEl.value = 'todas';
-                    }
-                }
-            }
             this.renderProducts();
         }
     }
@@ -681,6 +627,7 @@ class AppController {
         const input = document.getElementById(inputId);
         if (input) input.value = cleanName;
         this.closeCustomDropdown(type);
+        if (type !== 'sup-category') this.onProductCategoryChange();
         this.showToast(`Categoría "${cleanName}" creada y seleccionada ✓`, 'success');
     }
 
@@ -696,6 +643,7 @@ class AppController {
             this.renderCategoriesDataLists();
             const input = document.getElementById('prod-form-category-input');
             if (input) input.value = clean;
+            this.onProductCategoryChange();
             this.showToast(`Categoría "${clean}" creada y seleccionada ✓`, 'success');
         }
     }
@@ -710,6 +658,7 @@ class AppController {
         } else if (type === 'category') {
             const input = document.getElementById('prod-form-category-input');
             if (input) input.value = value;
+            this.onProductCategoryChange();
         } else if (type === 'sup-category') {
             const input = document.getElementById('sup-form-category');
             if (input) input.value = value;
@@ -1686,31 +1635,11 @@ class AppController {
                 ? imgs.map((src, i) => `<img src="${this.escapeHTML(src)}" alt="Img ${i+1}" class="product-img-thumb" onclick="app.openProductLightbox('${p.id}',${i})" onerror="this.style.display='none'" />`).join('')
                 : `<div class="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-slate-300"></i></div>`;
 
-            // Indicador de cuántas veces ha sido combinado (puntos según cantidad)
-            let comboIndicatorHtml = '';
-            if (!isCombo) {
-                const comboCount = this.getProductComboCount(p.id, products);
-                if (comboCount > 0) {
-                    const maxDotsToShow = Math.min(comboCount, 8);
-                    const dotsHtml = Array.from({ length: maxDotsToShow }, () => 
-                        `<span class="inline-block w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-400 ring-1 ring-white shadow-xs"></span>`
-                    ).join('');
-                    const extraPlus = comboCount > 8 ? `+${comboCount - 8}` : '';
-                    const timesText = comboCount === 1 ? '1 vez en combo' : `${comboCount} veces en combos`;
-
-                    comboIndicatorHtml = `
-                        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 shadow-xs cursor-help select-none" 
-                             title="Este producto ha sido combinado ${timesText}">
-                            <div class="flex items-center gap-1">
-                                ${dotsHtml}
-                            </div>
-                            <span class="text-[10px] font-black tracking-tight text-indigo-700">
-                                ${comboCount}${extraPlus} ${comboCount === 1 ? 'combo' : 'combos'}
-                            </span>
-                        </div>
-                    `;
-                }
-            }
+            // Indicador de estampados asignados si es textil
+            const printCount = Array.isArray(p.enabledPrintIds) ? p.enabledPrintIds.length : (Array.isArray(p.extraCostItems) ? p.extraCostItems.length : 0);
+            const printBadge = printCount > 0
+                ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 rounded-md" title="Tiene ${printCount} formato(s) de estampado activo(s)">🎨 ${printCount} estampado${printCount === 1 ? '' : 's'}</span>`
+                : '';
 
             return `
                 <tr class="hover:bg-slate-50 transition-colors ${isPinned ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : ''}">
@@ -1729,16 +1658,14 @@ class AppController {
                             <div>
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="font-bold text-slate-800 text-sm">${this.escapeHTML(p.name)}</span>
-                                    ${isCombo ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-extrabold bg-indigo-100 text-indigo-800 rounded-md border border-indigo-200">🔥 COMBO</span>' : ''}
-                                    ${comboIndicatorHtml}
+                                    ${printBadge}
                                     ${isPinned ? '<span class="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-800 rounded-md">ANCLADO</span>' : ''}
                                 </div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">${p.category || 'General'}</span>
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
-                                    ${p.url && !isCombo ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
+                                    ${p.url ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
                                 </div>
-                                ${isCombo ? this._renderComboComponentsChips(p) : ''}
                             </div>
                         </div>
                     </td>
@@ -2062,11 +1989,9 @@ class AppController {
             const minStockInput = document.getElementById('prod-form-min-stock');
             if (minStockInput) minStockInput.value = (p.minStock !== undefined && p.minStock !== null) ? p.minStock : 5;
 
-            // Opciones de Combo y Anclado
+            // Opciones de Anclado
             const pinnedEl = document.getElementById('prod-form-is-pinned');
             if (pinnedEl) pinnedEl.checked = !!p.isPinned;
-            const comboEl = document.getElementById('prod-form-is-combo');
-            if (comboEl) comboEl.checked = this.isComboProduct(p);
 
             // Precio de venta calculado (incluye costo adicional + margen sobre el costo total)
             const cost1u      = parseFloat(String(p.costPrice).replace(',', '.')) || 0;
@@ -2137,8 +2062,8 @@ class AppController {
                     this.addCostTierRow(t.min, t.max, tierTotalCost, tierMargin, tierSalePrice, tierBaseCost);
                 });
             }
-            // Componentes del combo adentro del modal de edición
-            this._renderProductModalComboComponents(p);
+            // Formatos de estampados si el producto es textil
+            this.renderTextilEstampadosList(p);
         } else {
             const titleEl = document.getElementById('product-modal-title');
             if (titleEl) titleEl.innerText = 'Nuevo Producto / Insumo';
@@ -2167,91 +2092,155 @@ class AppController {
             if (stockInputNew) stockInputNew.value = '0';
             const minStockInputNew = document.getElementById('prod-form-min-stock');
             if (minStockInputNew) minStockInputNew.value = '5';
-            // Opciones de Combo y Anclado
+            // Opciones de Anclado
             const pinnedElNew = document.getElementById('prod-form-is-pinned');
             if (pinnedElNew) pinnedElNew.checked = false;
-            const comboElNew = document.getElementById('prod-form-is-combo');
-            if (comboElNew) comboElNew.checked = (this.catalogSubTab === 'combos');
             // Imagen de referencia - limpiar
             document.getElementById('prod-form-image-data').value = '';
             document.getElementById('prod-form-image-file').value = '';
             this._renderProductImageThumbs([]);
-            this._renderProductModalComboComponents(null);
+            this.renderTextilEstampadosList(null);
         }
         this._updateProductTotalCostSummary();
         this._initProductImagePaste();
         this.openModal('modal-edit-product');
     }
 
-    _renderProductModalComboComponents(p) {
-        const container = document.getElementById('prod-form-combo-components-container');
-        const list = document.getElementById('prod-form-combo-components-list');
-        const countEl = document.getElementById('prod-form-combo-components-count');
-        if (!container || !list) return;
+    // ==========================================
+    // INTEGRACIÓN ESTAMPADOS EN PRODUCTOS TEXTILES
+    // ==========================================
+    onProductCategoryChange() {
+        const cat = (document.getElementById('prod-form-category-input')?.value || '').toLowerCase();
+        const sec = document.getElementById('prod-form-textil-estampados-section');
+        if (sec) {
+            const isTextil = cat.includes('textil');
+            sec.classList.toggle('hidden', !isTextil);
+            if (isTextil) {
+                this.renderTextilEstampadosList();
+            }
+        }
+    }
 
-        if (!p || !this.isComboProduct(p)) {
-            container.classList.add('hidden');
-            list.innerHTML = '';
+    renderTextilEstampadosList(product = null) {
+        const cat = (document.getElementById('prod-form-category-input')?.value || product?.category || '').toLowerCase();
+        const sec = document.getElementById('prod-form-textil-estampados-section');
+        const list = document.getElementById('prod-form-estampados-list');
+        if (!sec || !list) return;
+
+        const isTextil = cat.includes('textil');
+        sec.classList.toggle('hidden', !isTextil);
+        if (!isTextil) return;
+
+        const estampados = (window.db && typeof window.db.getEstampados === 'function') ? window.db.getEstampados() : [];
+        if (estampados.length === 0) {
+            list.innerHTML = `
+                <div class="col-span-full p-4 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">
+                    Aún no hay formatos en el módulo Estampados.
+                    <button type="button" onclick="estampados.openModal()" class="block mx-auto mt-2 font-bold text-pink-600 hover:text-pink-700 hover:underline">+ Crear Formato de Estampado</button>
+                </div>
+            `;
+            const badge = document.getElementById('prod-textil-selected-badge');
+            if (badge) badge.innerText = '0 activos';
+            const sumDisplay = document.getElementById('prod-textil-estampados-cost-sum');
+            if (sumDisplay) sumDisplay.innerText = '+ $ 0';
             return;
         }
 
-        let components = [];
-        if (Array.isArray(p.componentDetails) && p.componentDetails.length > 0) {
-            components = p.componentDetails.map(cd => {
-                const live = window.db.getProductById(cd.id);
-                return {
-                    id: cd.id,
-                    name: live ? live.name : cd.name,
-                    sku: live ? (live.sku || cd.sku) : cd.sku,
-                    url: (live && live.url) ? live.url : (cd.url || '')
-                };
-            });
-        } else if (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0) {
-            components = p.componentProductIds.map(id => {
-                const prod = window.db.getProductById(id);
-                return prod ? { id: prod.id, name: prod.name, sku: prod.sku, url: prod.url || '' } : null;
-            }).filter(Boolean);
-        }
+        const activeIds = new Set(
+            product?.enabledPrintIds || (Array.isArray(product?.extraCostItems) ? product.extraCostItems.map(i => i.id) : [])
+        );
 
-        if (components.length === 0) {
-            container.classList.add('hidden');
-            list.innerHTML = '';
-            return;
-        }
+        const profile = (window.db && typeof window.db.getProfile === 'function') ? window.db.getProfile() : {};
+        const currency = profile.currency || '$';
 
-        container.classList.remove('hidden');
-        if (countEl) countEl.innerText = `${components.length} ${components.length === 1 ? 'producto' : 'productos'}`;
-
-        list.innerHTML = components.map((c, idx) => {
-            const safeName = this.escapeHTML(c.name);
-            const safeSku = c.sku ? `(${this.escapeHTML(c.sku)})` : '';
-            const webLinkHtml = c.url 
-                ? `<a href="${this.escapeHTML(c.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg shadow-xs transition-colors"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Link Web Proveedor</a>` 
-                : '<span class="text-[11px] text-slate-400 italic">Sin enlace</span>';
+        list.innerHTML = estampados.map(est => {
+            const isChecked = activeIds.has(est.id);
+            const cost = parseFloat(est.costPrice) || 0;
+            const price = parseFloat(est.salePrice) || Number((cost * (1 + (est.defaultMargin || 50) / 100)).toFixed(2));
+            const dims = (est.widthCm && est.heightCm) ? `${est.widthCm}x${est.heightCm} cm` : (est.widthCm || est.heightCm || '');
 
             return `
-                <div class="p-2.5 bg-white rounded-xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                    <div class="flex items-center gap-2 min-w-0 flex-1">
-                        <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0">
-                            ${idx + 1}
-                        </span>
-                        <div class="truncate">
-                            <span class="font-bold text-xs text-slate-800 block truncate">${safeName}</span>
-                            <span class="text-[10px] font-mono text-slate-400 block">${safeSku}</span>
+                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer select-none ${isChecked ? 'bg-pink-50/80 border-pink-300 shadow-xs' : 'bg-white border-slate-200 hover:border-pink-200'}">
+                    <input type="checkbox" class="prod-textil-estampado-check mt-0.5 rounded text-pink-600 accent-pink-600 cursor-pointer" 
+                        data-id="${est.id}" data-cost="${cost}" data-name="${this.escapeHTML(est.name)}" 
+                        ${isChecked ? 'checked' : ''} onchange="app.onTextilEstampadoCheckChange(true)" />
+                    <div class="min-w-0 flex-1 space-y-0.5">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="font-bold text-xs text-slate-800 truncate">${this.escapeHTML(est.name)}</span>
+                            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-pink-100 text-pink-700">${this.escapeHTML(est.technique || 'DTF')}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                            <span>${dims ? `📏 ${dims}` : ''}</span>
+                            <span>Costo: <strong class="text-pink-700 font-bold">+${currency} ${window.formatMoney(cost)}</strong> | Vta: ${currency} ${window.formatMoney(price)}</span>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center gap-1.5 shrink-0">
-                        <button type="button" onclick="app.closeModal('modal-edit-product'); app.openRootProduct('${c.id}');" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 rounded-lg transition-colors cursor-pointer" title="Cerrar este combo y abrir el producto raíz original">
-                            <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-600"></i>
-                            Ver Producto Raíz ↗
-                        </button>
-                        ${webLinkHtml}
-                    </div>
-                </div>
+                </label>
             `;
         }).join('');
 
-        if (window.lucide) window.lucide.createIcons();
+        this.onTextilEstampadoCheckChange(false);
+    }
+
+    onTextilEstampadoCheckChange(updateInput = true) {
+        const checkboxes = document.querySelectorAll('.prod-textil-estampado-check');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        const badge = document.getElementById('prod-textil-selected-badge');
+        const sumDisplay = document.getElementById('prod-textil-estampados-cost-sum');
+        const profile = (window.db && typeof window.db.getProfile === 'function') ? window.db.getProfile() : {};
+        const currency = profile.currency || '$';
+
+        if (badge) badge.innerText = `${checked.length} activo${checked.length === 1 ? '' : 's'}`;
+
+        let sumCost = 0;
+        const selectedItems = checked.map(cb => {
+            const cost = parseFloat(cb.dataset.cost) || 0;
+            sumCost += cost;
+            return { id: cb.dataset.id, name: cb.dataset.name, cost };
+        });
+
+        sumCost = Number(sumCost.toFixed(2));
+        if (sumDisplay) sumDisplay.innerText = `+${currency} ${window.formatMoney(sumCost)}`;
+
+        // Actualizar apariencia de tarjetas
+        checkboxes.forEach(cb => {
+            const parentLabel = cb.closest('label');
+            if (parentLabel) {
+                if (cb.checked) {
+                    parentLabel.classList.add('bg-pink-50/80', 'border-pink-300', 'shadow-xs');
+                    parentLabel.classList.remove('bg-white', 'border-slate-200');
+                } else {
+                    parentLabel.classList.remove('bg-pink-50/80', 'border-pink-300', 'shadow-xs');
+                    parentLabel.classList.add('bg-white', 'border-slate-200');
+                }
+            }
+        });
+
+        if (updateInput) {
+            const extraCostInput = document.getElementById('prod-form-extra-cost');
+            const extraLabelInput = document.getElementById('prod-form-extra-cost-label');
+            if (checked.length > 0) {
+                if (extraCostInput) extraCostInput.value = sumCost;
+                if (extraLabelInput) {
+                    extraLabelInput.value = checked.length === 1
+                        ? `Estampado: ${checked[0].dataset.name}`
+                        : `Estampados (${checked.length}): ` + checked.map(c => c.dataset.name).join(' + ');
+                }
+                this._currentProductExtraCostItems = selectedItems;
+            } else {
+                if (extraCostInput && (extraLabelInput?.value || '').toLowerCase().includes('estampado')) {
+                    extraCostInput.value = '0';
+                    if (extraLabelInput) extraLabelInput.value = '';
+                    this._currentProductExtraCostItems = [];
+                }
+            }
+            this.onProductCostChange();
+        }
+    }
+
+    toggleAllTextilEstampados(activateAll) {
+        const checkboxes = document.querySelectorAll('.prod-textil-estampado-check');
+        checkboxes.forEach(cb => { cb.checked = activateAll; });
+        this.onTextilEstampadoCheckChange(true);
     }
 
     addCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '', baseCostOverride = null) {
@@ -2469,9 +2458,11 @@ class AppController {
         window.db.saveCategory(category);
 
         const isPinned = document.getElementById('prod-form-is-pinned')?.checked || false;
-        const isCombo = document.getElementById('prod-form-is-combo')?.checked || false;
         const existingProd = id ? window.db.getProductById(id) : null;
         const pinnedAt = isPinned ? (existingProd?.pinnedAt || Date.now()) : null;
+
+        // Formatos de estampados seleccionados (si aplica textil)
+        const enabledPrintIds = Array.from(document.querySelectorAll('.prod-textil-estampado-check:checked')).map(cb => cb.dataset.id);
 
         const calculatedSalePrice = typedSalePrice > 0 ? typedSalePrice : (totalUnitCost > 0 ? Number((totalUnitCost * (1 + defaultMargin / 100)).toFixed(2)) : 0);
 
@@ -2480,9 +2471,6 @@ class AppController {
             costTiers[0].salePrice = calculatedSalePrice;
             costTiers[0].margin = defaultMargin;
         }
-
-        const wasCombo = existingProd ? this.isComboProduct(existingProd) : false;
-        const finalIsCombo = isCombo || wasCombo;
 
         const stockInput = document.getElementById('prod-form-stock');
         const minStockInput = document.getElementById('prod-form-min-stock');
@@ -2507,15 +2495,12 @@ class AppController {
             extraCost: extraCost || 0,
             extraCostLabel: extraCostLabel || '',
             extraCostItems: (extraCost > 0 && Array.isArray(this._currentProductExtraCostItems)) ? this._currentProductExtraCostItems : [],
+            enabledPrintIds: enabledPrintIds || [],
             images: images || [],
             imageData: imageData || '',
             isPinned,
             pinnedAt,
-            isCombo: finalIsCombo,
-            componentProductIds: existingProd?.componentProductIds || [],
-            componentDetails: existingProd?.componentDetails || [],
-            componentSkus: existingProd?.componentSkus || [],
-            componentUrls: existingProd?.componentUrls || [],
+            isCombo: false,
             useGlobalTiers: true
         };
 
@@ -2529,13 +2514,6 @@ class AppController {
         window.db.saveProduct(product);
         this.renderCategoriesDataLists();
 
-        // Asegurar que el producto guardado sea inmediatamente visible en pantalla
-        // 1) Si está en la pestaña contraria (ej. combo guardado mientras estaba en tab "single" o viceversa)
-        if (product.isCombo && this.catalogSubTab === 'single') {
-            this.switchCatalogSubTab('combos');
-        } else if (!product.isCombo && this.catalogSubTab === 'combos') {
-            this.switchCatalogSubTab('single');
-        }
         // 2) Si hay un filtro de categoría activo que ocultaría el producto, resetearlo a 'todas'
         const catFilterEl = document.getElementById('products-category-filter');
         if (catFilterEl && catFilterEl.value !== 'todas' && catFilterEl.value !== product.category) {
@@ -2700,21 +2678,11 @@ class AppController {
         const checked = document.querySelectorAll('.product-row-check:checked');
         const bar = document.getElementById('products-bulk-bar');
         const count = document.getElementById('products-bulk-count');
-        const combineBtn = document.getElementById('btn-bulk-combine');
         if (!bar) return;
         if (checked.length > 0) {
             bar.classList.remove('hidden');
             bar.classList.add('flex');
             if (count) count.textContent = `${checked.length} producto${checked.length > 1 ? 's' : ''} seleccionado${checked.length > 1 ? 's' : ''}`;
-            if (combineBtn) {
-                if (checked.length >= 2) {
-                    combineBtn.classList.remove('opacity-50', 'pointer-events-none');
-                    combineBtn.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> Combinar en Nuevo Producto (${checked.length})`;
-                } else {
-                    combineBtn.classList.add('opacity-50', 'pointer-events-none');
-                    combineBtn.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> Selecciona 2+ para Combinar`;
-                }
-            }
         } else {
             bar.classList.add('hidden');
             bar.classList.remove('flex');
@@ -2728,588 +2696,11 @@ class AppController {
         if (!confirm(`¿Eliminar ${checked.length} producto${checked.length > 1 ? 's' : ''} del catálogo? Esta acción no se puede deshacer.`)) return;
         checked.forEach(cb => window.db.deleteProduct(cb.dataset.id));
         this.renderProducts();
+        this.clearProductSelection();
         this.showToast(`${checked.length} producto${checked.length > 1 ? 's eliminados' : ' eliminado'}.`, 'info');
     }
 
     // ==========================================
-    // COMBINACIÓN DE PRODUCTOS EN UNO NUEVO
-    // ==========================================
-    openCombineProductsModal() {
-        const checked = document.querySelectorAll('.product-row-check:checked');
-        const selectedIds = Array.from(checked).map(cb => cb.dataset.id);
-        
-        if (selectedIds.length < 2) {
-            this.showToast('Selecciona al menos 2 productos para combinarlos en uno nuevo.', 'warning');
-            return;
-        }
-
-        const products = selectedIds.map(id => window.db.getProductById(id)).filter(Boolean);
-        if (products.length < 2) {
-            this.showToast('No se pudieron cargar los productos seleccionados.', 'error');
-            return;
-        }
-
-        this._combineSelectedProducts = products;
-        this._renderCombineModalContent();
-        this.openModal('modal-combine-products');
-    }
-
-    _renderCombineModalContent() {
-        const products = this._combineSelectedProducts || [];
-        const container = document.getElementById('combine-products-list');
-        if (!container) return;
-        const profile = window.db.getProfile();
-        const currency = profile.currency || '$';
-
-        let totalCost = 0;
-        let totalSalePrice = 0;
-        const names = [];
-        const images = [];
-
-        container.innerHTML = products.map((p, idx) => {
-            const cost1u = window.db.getCostForQuantity(p, 1);
-            const extraCost = parseFloat(p.extraCost) || 0;
-            const unitCost = cost1u + extraCost;
-            const unitSalePrice = window.db.getSalePriceForQuantity(p, 1);
-
-            totalCost += unitCost;
-            totalSalePrice += unitSalePrice;
-            names.push(p.name);
-
-            // Anexar todas las fotos de cada producto (desde IndexedDB o propiedad images/imageData)
-            let pImgs = [];
-            if (this._indexedDbImagesMap && this._indexedDbImagesMap[p.id] && this._indexedDbImagesMap[p.id].length > 0) {
-                pImgs = this._indexedDbImagesMap[p.id];
-            } else if (Array.isArray(p.images) && p.images.length > 0) {
-                pImgs = p.images;
-            } else if (p.imageData) {
-                pImgs = [p.imageData];
-            }
-
-            pImgs.forEach(img => {
-                if (img && !images.includes(img)) {
-                    images.push(img);
-                }
-            });
-
-            const isFirst = idx === 0;
-            const isLast = idx === products.length - 1;
-
-            return `
-                <div class="p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 flex items-center justify-between gap-2.5 text-xs transition-all">
-                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span class="w-6 h-6 bg-indigo-600 text-white font-black rounded-full flex items-center justify-center text-xs shrink-0 shadow-sm" title="Posición ${idx + 1}">
-                            ${idx + 1}
-                        </span>
-                        <div class="truncate">
-                            <span class="font-bold text-slate-800 text-xs block truncate">${this.escapeHTML(p.name)}</span>
-                            <span class="text-[10px] text-slate-400 font-mono block">
-                                ${p.sku || ''} · ${p.category || 'General'}
-                                ${p.url ? `· <a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">🔗 Link</a>` : ''}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2.5 shrink-0">
-                        <div class="text-right font-mono hidden sm:block">
-                            <div class="text-slate-500 text-[10px]">Costo: ${currency} ${window.formatMoney(unitCost)}</div>
-                            <div class="text-emerald-700 font-bold text-xs">Venta: ${currency} ${window.formatMoney(unitSalePrice)}</div>
-                        </div>
-
-                        <!-- Botones de Reordenar Arriba / Abajo -->
-                        <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                            <button type="button" onclick="app.moveCombineItem(${idx}, -1)" ${isFirst ? 'disabled' : ''} 
-                                class="p-1 rounded-lg ${isFirst ? 'text-slate-300 opacity-30 cursor-not-allowed' : 'text-indigo-600 hover:bg-indigo-50 active:scale-95 cursor-pointer'} transition-all" 
-                                title="Mover hacia arriba (poner antes en el nombre)">
-                                <i data-lucide="arrow-up" class="w-4 h-4"></i>
-                            </button>
-                            <button type="button" onclick="app.moveCombineItem(${idx}, 1)" ${isLast ? 'disabled' : ''} 
-                                class="p-1 rounded-lg ${isLast ? 'text-slate-300 opacity-30 cursor-not-allowed' : 'text-indigo-600 hover:bg-indigo-50 active:scale-95 cursor-pointer'} transition-all" 
-                                title="Mover hacia abajo (poner después en el nombre)">
-                                <i data-lucide="arrow-down" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-
-                        ${products.length > 2 ? `
-                        <button type="button" onclick="app.removeCombineItem(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Quitar de la combinación">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>` : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        this._combineImages = images;
-
-        // Renderizar previsualización de imágenes anexadas
-        const previewContainer = document.getElementById('combine-images-preview-list');
-        const counterEl = document.getElementById('combine-images-counter');
-        if (counterEl) {
-            counterEl.innerText = `${images.length} ${images.length === 1 ? 'foto' : 'fotos'}`;
-        }
-        if (previewContainer) {
-            if (images.length === 0) {
-                previewContainer.innerHTML = `<span class="text-xs text-slate-400 italic">Los productos seleccionados no tienen fotos cargadas.</span>`;
-            } else {
-                previewContainer.innerHTML = images.map((src, i) => `
-                    <div class="relative group w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-xs shrink-0">
-                        <img src="${this.escapeHTML(src)}" alt="Foto ${i + 1}" class="w-full h-full object-cover" />
-                        <span class="absolute bottom-0 inset-x-0 bg-slate-900/60 text-white text-[8px] text-center font-bold py-0.5">#${i + 1}</span>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // Auto-generar nombre concatenando con + en el orden exacto actual
-        const combinedName = names.join(' + ');
-        document.getElementById('combine-form-name').value = combinedName;
-        document.getElementById('combine-form-sku').value = 'COMBO-' + Math.floor(Math.random() * 900 + 100);
-        document.getElementById('combine-form-category').value = products[0]?.category || 'Combos';
-        document.getElementById('combine-form-unit').value = 'Unidad';
-
-        // Setear costos y precios sumados
-        document.getElementById('combine-form-cost').value = Number(totalCost.toFixed(2));
-        document.getElementById('combine-form-sale-price').value = Number(totalSalePrice.toFixed(2));
-
-        const margin = totalCost > 0 ? (((totalSalePrice / totalCost) - 1) * 100) : 50;
-        document.getElementById('combine-form-margin').value = Number(margin.toFixed(2));
-
-        const notes = 'Producto combinado formado por:\n' + products.map(p => {
-            const sp = window.db.getSalePriceForQuantity(p, 1);
-            const linkStr = p.url ? ` | Link: ${p.url}` : '';
-            return `• ${p.name} (Venta: ${currency} ${window.formatMoney(sp)})${linkStr}`;
-        }).join('\n');
-        document.getElementById('combine-form-notes').value = notes;
-        
-        // Generar y poblar las escalas de volumen combinadas
-        const tierContainer = document.getElementById('combine-cost-tiers-container');
-        if (tierContainer) {
-            tierContainer.innerHTML = '';
-            const combinedTiers = this._computeCombinedCostTiers(products);
-            if (combinedTiers.length > 0) {
-                combinedTiers.forEach(t => {
-                    this.addCombineCostTierRow(t.min, t.max, t.cost, t.margin, t.salePrice);
-                });
-            } else {
-                tierContainer.innerHTML = `
-                    <div class="combine-tiers-empty-msg text-center py-3 text-slate-400 text-xs italic bg-white/50 rounded-xl border border-dashed border-slate-200">
-                        Los productos seleccionados no tienen escalas de volumen configuradas.<br>
-                        <span class="text-[11px] text-indigo-500 font-medium">Puedes agregar escalas personalizadas con el botón "+ Agregar Rango" arriba.</span>
-                    </div>
-                `;
-            }
-        }
-        
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    _computeCombinedCostTiers(products) {
-        if (!Array.isArray(products) || products.length === 0) return [];
-
-        const hasAnyTiers = products.some(p => p.costTiers && p.costTiers.length > 0);
-        if (!hasAnyTiers) return [];
-
-        // Recolectar todos los puntos de quiebre (cantidades mínimas y máximas + 1)
-        const cutPoints = new Set();
-        products.forEach(p => {
-            if (p.costTiers && p.costTiers.length > 0) {
-                p.costTiers.forEach(t => {
-                    const min = parseInt(t.min, 10);
-                    const max = parseInt(t.max, 10);
-                    if (!isNaN(min) && min >= 1) cutPoints.add(min);
-                    if (!isNaN(max) && max >= 1 && max < 999999) cutPoints.add(max + 1);
-                });
-            }
-        });
-
-        const sortedCuts = Array.from(cutPoints).filter(n => n > 1).sort((a, b) => a - b);
-        if (sortedCuts.length === 0) return [];
-
-        // Determinar cota superior máxima entre los productos
-        let globalMax = 999;
-        products.forEach(p => {
-            if (p.costTiers) {
-                p.costTiers.forEach(t => {
-                    const max = parseInt(t.max, 10);
-                    if (!isNaN(max) && max > 0 && max < 999999) {
-                        if (max > globalMax || globalMax === 999) globalMax = Math.max(globalMax, max);
-                    }
-                });
-            }
-        });
-
-        const combinedTiers = [];
-        for (let i = 0; i < sortedCuts.length; i++) {
-            const min = sortedCuts[i];
-            let max;
-            if (i + 1 < sortedCuts.length) {
-                max = sortedCuts[i + 1] - 1;
-            } else {
-                max = globalMax >= min ? globalMax : min + 50;
-            }
-
-            if (max < min) continue;
-
-            // Evaluar costos y precios de cada producto en la cantidad 'min'
-            let totalCost = 0;
-            let totalSalePrice = 0;
-
-            products.forEach(p => {
-                const costAtQty = window.db.getCostForQuantity(p, min);
-                const extraCost = parseFloat(p.extraCost) || 0;
-                const unitCost = costAtQty + extraCost;
-                const unitSalePrice = window.db.getSalePriceForQuantity(p, min);
-
-                totalCost += unitCost;
-                totalSalePrice += unitSalePrice;
-            });
-
-            const tierMargin = totalCost > 0 ? (((totalSalePrice / totalCost) - 1) * 100) : 50;
-
-            combinedTiers.push({
-                min,
-                max,
-                cost: Number(totalCost.toFixed(2)),
-                margin: Number(tierMargin.toFixed(2)),
-                salePrice: Number(totalSalePrice.toFixed(2))
-            });
-        }
-
-        // Fusionar rangos consecutivos si el costo y precio resultante son idénticos
-        const merged = [];
-        for (const t of combinedTiers) {
-            if (merged.length > 0) {
-                const prev = merged[merged.length - 1];
-                if (prev.cost === t.cost && prev.margin === t.margin && prev.salePrice === t.salePrice && prev.max + 1 === t.min) {
-                    prev.max = t.max;
-                    continue;
-                }
-            }
-            merged.push(t);
-        }
-
-        return merged;
-    }
-
-    addCombineCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '') {
-        const container = document.getElementById('combine-cost-tiers-container');
-        if (!container) return;
-
-        const placeholder = container.querySelector('.combine-tiers-empty-msg');
-        if (placeholder) placeholder.remove();
-
-        const baseCost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
-        const baseMargin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 50;
-
-        const existingRows = container.querySelectorAll('.combine-tier-row');
-        let autoMin = 1;
-        let autoMax = 10;
-        if (min === null) {
-            if (existingRows.length > 0) {
-                const lastRow = existingRows[existingRows.length - 1];
-                const lastMax = parseInt(lastRow.querySelector('.combine-tier-max')?.value, 10);
-                if (!isNaN(lastMax) && lastMax > 0) {
-                    autoMin = lastMax + 1;
-                    autoMax = autoMin + 10;
-                } else {
-                    autoMin = 11;
-                    autoMax = 50;
-                }
-            } else {
-                autoMin = 6;
-                autoMax = 12;
-            }
-        } else {
-            autoMin = min;
-            autoMax = max === 999999 ? '' : max;
-        }
-
-        const tierCost = (cost !== '' && cost !== null && !isNaN(cost)) ? cost : (baseCost > 0 ? baseCost : '');
-        let tierMargin = (margin !== '' && margin !== null && !isNaN(margin)) ? margin : baseMargin;
-        let tierSalePrice = salePrice;
-
-        const numCost = parseFloat(tierCost) || 0;
-        if ((tierSalePrice === '' || tierSalePrice === null || isNaN(tierSalePrice)) && numCost > 0) {
-            tierSalePrice = Number((numCost * (1 + (parseFloat(tierMargin) || 0) / 100)).toFixed(2));
-        } else if (tierSalePrice !== '' && numCost > 0 && (margin === '' || margin === null)) {
-            tierMargin = Number((((parseFloat(tierSalePrice) / numCost) - 1) * 100).toFixed(2));
-        }
-
-        const row = document.createElement('div');
-        row.className = 'combine-tier-row bg-white p-2 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-1.5 items-center';
-        row.innerHTML = `
-            <!-- Cantidades Min a Max -->
-            <div class="sm:col-span-3 flex items-center gap-1 min-w-0">
-                <input type="number" min="1" value="${autoMin}" placeholder="Min" 
-                    class="combine-tier-min w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
-                <span class="text-xs text-slate-500 font-bold px-0.5 shrink-0">a</span>
-                <input type="number" min="1" value="${autoMax}" placeholder="Max (+)" 
-                    class="combine-tier-max w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
-            </div>
-
-            <!-- Costo del Rango -->
-            <div class="sm:col-span-3 relative min-w-0">
-                <span class="text-[10px] text-slate-500 font-bold sm:hidden block mb-0.5">Costo ($):</span>
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold pointer-events-none">$</span>
-                    <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
-                        oninput="app.onCombineTierCostChange(this)"
-                        class="combine-tier-cost w-full pl-5 pr-1 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
-                </div>
-            </div>
-
-            <!-- Margen del Rango -->
-            <div class="sm:col-span-2 relative min-w-0">
-                <span class="text-[10px] text-indigo-600 font-bold sm:hidden block mb-0.5">Margen (%):</span>
-                <input type="number" step="any" value="${tierMargin !== '' ? Number(parseFloat(tierMargin).toFixed(2)) : ''}" placeholder="%" 
-                    oninput="app.onCombineTierMarginChange(this)"
-                    class="combine-tier-margin w-full px-1 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-200 rounded-lg outline-none focus:bg-white text-center" />
-            </div>
-
-            <!-- Precio Venta del Rango -->
-            <div class="sm:col-span-3 relative min-w-0">
-                <span class="text-[10px] text-emerald-600 font-bold sm:hidden block mb-0.5">Precio Venta ($):</span>
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-emerald-600 font-bold pointer-events-none">$</span>
-                    <input type="number" step="any" value="${tierSalePrice !== '' ? Number(parseFloat(tierSalePrice).toFixed(2)) : ''}" placeholder="Venta" 
-                        oninput="app.onCombineTierSalePriceChange(this)"
-                        class="combine-tier-sale-price w-full pl-5 pr-1 py-1.5 text-xs font-black text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-lg outline-none focus:bg-white text-center" />
-                </div>
-            </div>
-
-            <!-- Botón Eliminar -->
-            <div class="sm:col-span-1 text-center shrink-0">
-                <button type="button" onclick="this.closest('.combine-tier-row').remove()" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer" title="Eliminar este rango">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-        `;
-        container.appendChild(row);
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    onCombineTierCostChange(inputEl) {
-        const row = inputEl.closest('.combine-tier-row');
-        if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
-        const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.')) || 0;
-        const salePriceInp = row.querySelector('.combine-tier-sale-price');
-        if (salePriceInp && cost > 0) {
-            salePriceInp.value = Number((cost * (1 + margin / 100)).toFixed(2));
-        }
-    }
-
-    onCombineTierMarginChange(inputEl) {
-        const row = inputEl.closest('.combine-tier-row');
-        if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
-        const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.')) || 0;
-        const salePriceInp = row.querySelector('.combine-tier-sale-price');
-        if (salePriceInp && cost > 0) {
-            salePriceInp.value = Number((cost * (1 + margin / 100)).toFixed(2));
-        }
-    }
-
-    onCombineTierSalePriceChange(inputEl) {
-        const row = inputEl.closest('.combine-tier-row');
-        if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.')) || 0;
-        const salePrice = parseFloat(String(row.querySelector('.combine-tier-sale-price')?.value).replace(',', '.')) || 0;
-        const marginInp = row.querySelector('.combine-tier-margin');
-        if (marginInp && cost > 0 && salePrice > 0) {
-            const margin = ((salePrice / cost) - 1) * 100;
-            marginInp.value = Number(margin.toFixed(2));
-        }
-    }
-
-    moveCombineItem(index, direction) {
-        const newIdx = index + direction;
-        if (!this._combineSelectedProducts || newIdx < 0 || newIdx >= this._combineSelectedProducts.length) return;
-        const temp = this._combineSelectedProducts[index];
-        this._combineSelectedProducts[index] = this._combineSelectedProducts[newIdx];
-        this._combineSelectedProducts[newIdx] = temp;
-        this._renderCombineModalContent();
-    }
-
-    swapCombineItems(idx1 = 0, idx2 = 1) {
-        if (!this._combineSelectedProducts || this._combineSelectedProducts.length < 2) return;
-        const temp = this._combineSelectedProducts[idx1];
-        this._combineSelectedProducts[idx1] = this._combineSelectedProducts[idx2];
-        this._combineSelectedProducts[idx2] = temp;
-        this._renderCombineModalContent();
-    }
-
-    removeCombineItem(index) {
-        if (!this._combineSelectedProducts || this._combineSelectedProducts.length <= 2) {
-            this.showToast('Debes mantener al menos 2 productos para combinarlos.', 'warning');
-            return;
-        }
-        this._combineSelectedProducts.splice(index, 1);
-        this._renderCombineModalContent();
-    }
-
-    onCombineCostChange() {
-        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
-        const margin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 0;
-        const spEl = document.getElementById('combine-form-sale-price');
-        if (spEl && cost > 0) {
-            spEl.value = Number((cost * (1 + margin / 100)).toFixed(2));
-        }
-    }
-
-    onCombineMarginChange() {
-        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
-        const margin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.')) || 0;
-        const spEl = document.getElementById('combine-form-sale-price');
-        if (spEl && cost > 0) {
-            spEl.value = Number((cost * (1 + margin / 100)).toFixed(2));
-        }
-    }
-
-    onCombineSalePriceChange() {
-        const cost = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
-        const salePrice = parseFloat(String(document.getElementById('combine-form-sale-price')?.value).replace(',', '.')) || 0;
-        const marginEl = document.getElementById('combine-form-margin');
-        if (marginEl && cost > 0 && salePrice > 0) {
-            const margin = ((salePrice / cost) - 1) * 100;
-            marginEl.value = Number(margin.toFixed(2));
-        }
-    }
-
-    submitCombineProducts() {
-        const name = (document.getElementById('combine-form-name')?.value || '').trim();
-        const sku = (document.getElementById('combine-form-sku')?.value || '').trim();
-        const category = (document.getElementById('combine-form-category')?.value || '').trim() || 'Combos';
-        const unit = (document.getElementById('combine-form-unit')?.value || '').trim() || 'Unidad';
-        const costPrice = parseFloat(String(document.getElementById('combine-form-cost')?.value).replace(',', '.')) || 0;
-        const typedSalePrice = parseFloat(String(document.getElementById('combine-form-sale-price')?.value).replace(',', '.')) || 0;
-        let defaultMargin = parseFloat(String(document.getElementById('combine-form-margin')?.value).replace(',', '.'));
-        if (isNaN(defaultMargin)) defaultMargin = 50;
-
-        if (!name) {
-            this.showToast('Por favor escribe un nombre para el producto combinado.', 'warning');
-            return;
-        }
-
-        if (typedSalePrice > 0 && costPrice > 0) {
-            const exactMargin = ((typedSalePrice / costPrice) - 1) * 100;
-            if (Math.abs(exactMargin - defaultMargin) < 0.15) {
-                defaultMargin = exactMargin;
-            }
-        }
-
-        // Extraer escalas de costos/precios combinadas
-        const costTiers = [];
-        const tierRows = document.querySelectorAll('#combine-cost-tiers-container .combine-tier-row');
-        tierRows.forEach(row => {
-            const min = parseInt(row.querySelector('.combine-tier-min')?.value, 10);
-            const maxVal = row.querySelector('.combine-tier-max')?.value;
-            const max = maxVal === '' || maxVal === null ? 999999 : parseInt(maxVal, 10);
-            const cost = parseFloat(String(row.querySelector('.combine-tier-cost')?.value).replace(',', '.'));
-            const margin = parseFloat(String(row.querySelector('.combine-tier-margin')?.value).replace(',', '.'));
-            const salePrice = parseFloat(String(row.querySelector('.combine-tier-sale-price')?.value).replace(',', '.'));
-
-            if (!isNaN(min) && min > 0 && !isNaN(cost) && cost >= 0) {
-                let tierMarg = margin;
-                if (!isNaN(salePrice) && salePrice > 0 && cost > 0) {
-                    const exactMargin = ((salePrice / cost) - 1) * 100;
-                    if (isNaN(tierMarg) || Math.abs(exactMargin - tierMarg) < 0.15) {
-                        tierMarg = exactMargin;
-                    }
-                }
-                costTiers.push({
-                    min,
-                    max: isNaN(max) ? 999999 : max,
-                    cost,
-                    margin: !isNaN(tierMarg) ? tierMarg : defaultMargin,
-                    salePrice: !isNaN(salePrice) && salePrice > 0 ? salePrice : Number((cost * (1 + (!isNaN(tierMarg) ? tierMarg : defaultMargin) / 100)).toFixed(2))
-                });
-            }
-        });
-        costTiers.sort((a, b) => a.min - b.min);
-
-        // Si se especificó un precio de venta para el combo completo y la escala empieza en 1, asegurar consistencia
-        if (typedSalePrice > 0 && costTiers.length > 0 && costTiers[0].min === 1) {
-            costTiers[0].salePrice = typedSalePrice;
-            costTiers[0].margin = defaultMargin;
-        }
-
-        const notes = (document.getElementById('combine-form-notes')?.value || '').trim();
-        const images = this._combineImages || [];
-        const firstProd = (this._combineSelectedProducts && this._combineSelectedProducts[0]) || null;
-        const supplierId = firstProd ? firstProd.supplierId : '';
-
-        window.db.saveCategory(category);
-
-        const componentDetails = (this._combineSelectedProducts || []).map(cp => {
-            let cpImgs = [];
-            if (this._indexedDbImagesMap && this._indexedDbImagesMap[cp.id]) {
-                cpImgs = this._indexedDbImagesMap[cp.id];
-            } else if (Array.isArray(cp.images)) {
-                cpImgs = cp.images;
-            } else if (cp.imageData) {
-                cpImgs = [cp.imageData];
-            }
-            return {
-                id: cp.id,
-                name: cp.name,
-                sku: cp.sku || '',
-                url: cp.url || '',
-                image: cpImgs[0] || ''
-            };
-        });
-
-        const componentUrls = componentDetails.map(c => c.url).filter(Boolean);
-
-        const newProduct = {
-            id: 'prod_' + Date.now(),
-            name,
-            sku: sku || ('COMBO-' + Math.floor(Math.random() * 900 + 100)),
-            supplierId: supplierId || '',
-            category,
-            unit,
-            costPrice,
-            salePrice: typedSalePrice > 0 ? typedSalePrice : Number((costPrice * (1 + defaultMargin / 100)).toFixed(2)),
-            costTiers: costTiers || [],
-            defaultMargin,
-            url: componentUrls[0] || '',
-            notes,
-            extraCost: 0,
-            extraCostLabel: '',
-            images,
-            imageData: images.length > 0 ? images[0] : '',
-            isCombo: true,
-            componentProductIds: (this._combineSelectedProducts || []).map(cp => cp.id),
-            componentSkus: (this._combineSelectedProducts || []).map(cp => cp.sku).filter(Boolean),
-            componentDetails,
-            componentUrls,
-            useGlobalTiers: true
-        };
-
-        if (images.length > 0) {
-            if (!this._indexedDbImagesMap) this._indexedDbImagesMap = {};
-            this._indexedDbImagesMap[newProduct.id] = images;
-            if (window.imageDb) {
-                window.imageDb.saveImages(newProduct.id, images);
-            }
-        }
-
-        window.db.saveProduct(newProduct);
-        this.renderCategoriesDataLists();
-        this.closeModal('modal-combine-products');
-        this.clearProductSelection();
-
-        // Limpiar buscador y resetear categoría para que el nuevo combo sea visible de inmediato
-        const searchInput = document.getElementById('products-search-input');
-        if (searchInput) searchInput.value = '';
-        const catFilterEl = document.getElementById('products-category-filter');
-        if (catFilterEl) catFilterEl.value = 'todas';
-
-        // Cambiar automáticamente a la subpestaña de Combos
-        this.switchCatalogSubTab('combos');
-
-        this.showToast('¡Producto combinado creado exitosamente en el catálogo!', 'success');
-    }
-
     clearProductSelection() {
         document.querySelectorAll('.product-row-check').forEach(cb => { cb.checked = false; });
         const sel = document.getElementById('products-select-all');

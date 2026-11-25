@@ -217,13 +217,107 @@ const DB_KEYS = {
     STOCK_MOVEMENTS: 'cotizador_stock_movements',
     STOCK_DISPATCHES: 'cotizador_stock_dispatches',
     OPERATIONAL_COSTS: 'cotizador_operational_costs',
-    COST_SETTINGS: 'cotizador_cost_settings'
+    COST_SETTINGS: 'cotizador_cost_settings',
+    ESTAMPADOS: 'cotizador_estampados'
 };
 
 const DEFAULT_COST_SETTINGS = {
     kwhPrice: 220, // Tarifa eléctrica referencial por kWh ($)
     operatorHourlyRate: 4500 // Valor hora referencial de mano de obra ($)
 };
+
+const DEFAULT_ESTAMPADOS = [
+    {
+        id: 'est_dtf_pecho',
+        name: 'Logo Pecho / Bolsillo (10x10 cm)',
+        technique: 'DTF Textil',
+        location: 'Pecho',
+        widthCm: 10,
+        heightCm: 10,
+        costPrice: 1.20,
+        defaultMargin: 60,
+        salePrice: 3.00,
+        costTiers: [
+            { min: 1, max: 11, cost: 1.20, margin: 60, salePrice: 3.00 },
+            { min: 12, max: 49, cost: 1.00, margin: 55, salePrice: 2.25 },
+            { min: 50, max: 999999, cost: 0.85, margin: 50, salePrice: 1.70 }
+        ],
+        description: 'Estampado digital DTF full color alta resistencia en pecho o manga.'
+    },
+    {
+        id: 'est_dtf_a4',
+        name: 'Estampado Mediano Frente/Espalda A4 (21x29.7 cm)',
+        technique: 'DTF Textil',
+        location: 'Frente / Espalda',
+        widthCm: 21,
+        heightCm: 29.7,
+        costPrice: 2.50,
+        defaultMargin: 50,
+        salePrice: 5.00,
+        costTiers: [
+            { min: 1, max: 11, cost: 2.50, margin: 50, salePrice: 5.00 },
+            { min: 12, max: 49, cost: 2.10, margin: 48, salePrice: 4.00 },
+            { min: 50, max: 999999, cost: 1.80, margin: 45, salePrice: 3.30 }
+        ],
+        description: 'Formato A4 estándar para poleras y camisetas en pecho o espalda.'
+    },
+    {
+        id: 'est_dtf_a3',
+        name: 'Estampado Grande Espalda A3 (30x42 cm)',
+        technique: 'DTF Textil',
+        location: 'Espalda Completa',
+        widthCm: 30,
+        heightCm: 42,
+        costPrice: 4.00,
+        defaultMargin: 50,
+        salePrice: 8.00,
+        costTiers: [
+            { min: 1, max: 11, cost: 4.00, margin: 50, salePrice: 8.00 },
+            { min: 12, max: 49, cost: 3.40, margin: 48, salePrice: 6.50 },
+            { min: 50, max: 999999, cost: 2.90, margin: 45, salePrice: 5.30 }
+        ],
+        description: 'Estampado gigante A3 para espalda o frente completo.'
+    },
+    {
+        id: 'est_dtf_manga',
+        name: 'Estampado Manga / Franja (8x25 cm)',
+        technique: 'DTF Textil',
+        location: 'Manga',
+        widthCm: 8,
+        heightCm: 25,
+        costPrice: 1.40,
+        defaultMargin: 55,
+        salePrice: 3.10,
+        costTiers: [],
+        description: 'Diseño alargado o texto para manga izquierda o derecha.'
+    },
+    {
+        id: 'est_sub_a4',
+        name: 'Sublimación Textil A4 (Poliéster / Polialgodón)',
+        technique: 'Sublimación',
+        location: 'Frente',
+        widthCm: 21,
+        heightCm: 29.7,
+        costPrice: 1.60,
+        defaultMargin: 50,
+        salePrice: 3.20,
+        costTiers: [],
+        description: 'Tacto cero sobre prendas blancas o claras con alto contenido de poliéster.'
+    },
+    {
+        id: 'est_gorra_frente',
+        name: 'Estampado Gorra Frontal (12x6 cm)',
+        technique: 'DTF Textil',
+        location: 'Gorra',
+        widthCm: 12,
+        heightCm: 6,
+        costPrice: 0.90,
+        defaultMargin: 65,
+        salePrice: 2.50,
+        costTiers: [],
+        description: 'Adaptado a la curvatura frontal de gorras tipo trucker o estructuradas.'
+    }
+];
 
 const DEFAULT_OPERATIONAL_COSTS = [
     {
@@ -809,6 +903,7 @@ class Database {
                     localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(mergedCosts));
                 }
                 if (data.costSettings !== undefined) localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
+                if (Array.isArray(data.estampados)) localStorage.setItem(DB_KEYS.ESTAMPADOS, JSON.stringify(data.estampados));
 
                 console.log('✅ Datos sincronizados y actualizados con Firestore.');
             } else {
@@ -886,6 +981,10 @@ class Database {
                 }
                 if (data.costSettings !== undefined) {
                     localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
+                    hasChanges = true;
+                }
+                if (Array.isArray(data.estampados)) {
+                    localStorage.setItem(DB_KEYS.ESTAMPADOS, JSON.stringify(data.estampados));
                     hasChanges = true;
                 }
                 // Nota: Los productos se sincronizan en tiempo real mediante setupProductsRealtimeSync
@@ -1046,6 +1145,7 @@ class Database {
                 stockDispatches:  this.getStockDispatches(),
                 operationalCosts: this.getOperationalCosts(),
                 costSettings:     this.getCostSettings(),
+                estampados:       this.getEstampados(),
                 updatedAt:        firebase.firestore.FieldValue.serverTimestamp(),
             }));
             await docRef.set(cleanData, { merge: true });
@@ -1147,6 +1247,9 @@ class Database {
         }
         if (!localStorage.getItem(DB_KEYS.COST_SETTINGS)) {
             this.set(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
+        }
+        if (!localStorage.getItem(DB_KEYS.ESTAMPADOS)) {
+            this.set(DB_KEYS.ESTAMPADOS, DEFAULT_ESTAMPADOS);
         }
 
         // Auto-reparación no destructiva de precios de venta de 1 unidad contaminados por escalas mayoristas
@@ -1308,6 +1411,7 @@ class Database {
             [DB_KEYS.STOCK_DISPATCHES]:  'stockDispatches',
             [DB_KEYS.OPERATIONAL_COSTS]: 'operationalCosts',
             [DB_KEYS.COST_SETTINGS]:     'costSettings',
+            [DB_KEYS.ESTAMPADOS]:        'estampados',
         };
         return map[localKey] || null;
     }
@@ -2679,6 +2783,40 @@ class Database {
     }
 
     // ==========================================
+    // FORMATOS Y PRECIOS DE ESTAMPADOS (TEXTIL)
+    // ==========================================
+    getEstampados() {
+        return this.get(DB_KEYS.ESTAMPADOS, DEFAULT_ESTAMPADOS);
+    }
+
+    getEstampadoById(id) {
+        return this.getEstampados().find(e => e.id === id);
+    }
+
+    saveEstampado(item) {
+        const list = this.getEstampados();
+        if (!item.id) {
+            item.id = 'est_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+            list.unshift(item);
+        } else {
+            const idx = list.findIndex(e => e.id === item.id);
+            if (idx !== -1) {
+                list[idx] = item;
+            } else {
+                list.unshift(item);
+            }
+        }
+        this.set(DB_KEYS.ESTAMPADOS, list);
+        return item;
+    }
+
+    deleteEstampado(id) {
+        const list = this.getEstampados().filter(e => e.id !== id);
+        this.set(DB_KEYS.ESTAMPADOS, list);
+        return true;
+    }
+
+    // ==========================================
     // RESPALDO Y RESTAURACIÓN
     // ==========================================
     exportAllData() {
@@ -2695,7 +2833,8 @@ class Database {
             stockMovements: this.getStockMovements(),
             stockDispatches: this.getStockDispatches(),
             operationalCosts: this.getOperationalCosts(),
-            costSettings: this.getCostSettings()
+            costSettings: this.getCostSettings(),
+            estampados: this.getEstampados()
         };
     }
 
@@ -2714,6 +2853,7 @@ class Database {
         if (jsonData.stockDispatches) this.set(DB_KEYS.STOCK_DISPATCHES, jsonData.stockDispatches);
         if (jsonData.operationalCosts) this.set(DB_KEYS.OPERATIONAL_COSTS, jsonData.operationalCosts);
         if (jsonData.costSettings) this.set(DB_KEYS.COST_SETTINGS, jsonData.costSettings);
+        if (jsonData.estampados) this.set(DB_KEYS.ESTAMPADOS, jsonData.estampados);
         return true;
     }
 
@@ -2729,6 +2869,7 @@ class Database {
         this.set(DB_KEYS.STOCK_DISPATCHES, []);
         this.set(DB_KEYS.OPERATIONAL_COSTS, DEFAULT_OPERATIONAL_COSTS);
         this.set(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
+        this.set(DB_KEYS.ESTAMPADOS, DEFAULT_ESTAMPADOS);
         return true;
     }
 }
