@@ -266,6 +266,18 @@ const DEFAULT_OPERATIONAL_COSTS = [
         notes: 'Depreciación y fondo de ahorro para comprar una plancha nueva al cumplir 15.000 planchados.'
     },
     {
+        id: 'op_prensa_tazas',
+        category: 'maquinaria',
+        name: 'Prensa Térmica para Tazas (Máquina de Tazas)',
+        unitLabel: 'taza',
+        purchaseCost: 95000,
+        salvageValue: 0,
+        lifespanUses: 10000,
+        usedCount: 0,
+        autoTrackOnExtraCost: true,
+        notes: 'Amortización y fondo de reserva para renovación de la máquina de tazas y resistencias.'
+    },
+    {
         id: 'op_impresora_sub',
         category: 'maquinaria',
         name: 'Impresora de Sublimación A4',
@@ -777,7 +789,25 @@ class Database {
                 if (data.vinyls !== undefined) localStorage.setItem(DB_KEYS.VINYLS, JSON.stringify(data.vinyls));
                 if (Array.isArray(data.stockMovements)) localStorage.setItem(DB_KEYS.STOCK_MOVEMENTS, JSON.stringify(data.stockMovements));
                 if (Array.isArray(data.stockDispatches)) localStorage.setItem(DB_KEYS.STOCK_DISPATCHES, JSON.stringify(data.stockDispatches));
-                if (Array.isArray(data.operationalCosts)) localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(data.operationalCosts));
+                if (Array.isArray(data.operationalCosts)) {
+                    // Combinación segura para no perder costos ni máquinas agregadas localmente
+                    const localCosts = this.get(DB_KEYS.OPERATIONAL_COSTS, []);
+                    const mergedCosts = [...data.operationalCosts];
+                    const cloudIds = new Set(data.operationalCosts.map(c => c && c.id));
+                    if (Array.isArray(localCosts)) {
+                        localCosts.forEach(lc => {
+                            if (lc && lc.id && !cloudIds.has(lc.id)) mergedCosts.push(lc);
+                        });
+                    }
+                    const hasTazaMachine = mergedCosts.some(c => 
+                        c && (c.id === 'op_prensa_tazas' || (c.category === 'maquinaria' && /taza/i.test(c.name || '')))
+                    );
+                    if (!hasTazaMachine) {
+                        const tazaMachine = DEFAULT_OPERATIONAL_COSTS.find(c => c.id === 'op_prensa_tazas');
+                        if (tazaMachine) mergedCosts.push({ ...tazaMachine });
+                    }
+                    localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(mergedCosts));
+                }
                 if (data.costSettings !== undefined) localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
 
                 console.log('✅ Datos sincronizados y actualizados con Firestore.');
@@ -843,23 +873,23 @@ class Database {
                     hasChanges = true;
                 }
                 if (Array.isArray(data.operationalCosts)) {
-                    localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(data.operationalCosts));
+                    const localCosts = this.get(DB_KEYS.OPERATIONAL_COSTS, []);
+                    const mergedCosts = [...data.operationalCosts];
+                    const cloudIds = new Set(data.operationalCosts.map(c => c && c.id));
+                    if (Array.isArray(localCosts)) {
+                        localCosts.forEach(lc => {
+                            if (lc && lc.id && !cloudIds.has(lc.id)) mergedCosts.push(lc);
+                        });
+                    }
+                    localStorage.setItem(DB_KEYS.OPERATIONAL_COSTS, JSON.stringify(mergedCosts));
                     hasChanges = true;
                 }
                 if (data.costSettings !== undefined) {
                     localStorage.setItem(DB_KEYS.COST_SETTINGS, JSON.stringify(data.costSettings));
                     hasChanges = true;
                 }
-                if (Array.isArray(data.products) && data.products.length > 0) {
-                    localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(data.products));
-                    if (window.imageDb) {
-                        data.products.forEach(p => {
-                            const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
-                            if (imgs.length > 0) window.imageDb.saveImages(p.id, imgs);
-                        });
-                    }
-                    hasChanges = true;
-                }
+                // Nota: Los productos se sincronizan en tiempo real mediante setupProductsRealtimeSync
+                // para evitar que una copia desactualizada en el documento principal sobreescriba productos recién guardados.
 
                 if (hasChanges && typeof onUpdateCallback === 'function') {
                     console.log('🔄 Cambios remotos recibidos en tiempo real (documento principal).');
@@ -890,20 +920,44 @@ class Database {
                 if (querySnap.metadata && querySnap.metadata.hasPendingWrites) return;
 
                 if (!querySnap.empty) {
-                    const cloudProducts = [];
-                    querySnap.forEach(doc => {
-                        const p = doc.data();
-                        if (p && p.id) cloudProducts.push(p);
-                    });
+                    const localProducts = this.getProducts();
+                    const localMap = new Map(localProducts.map(p => [p.id, p]));
+                    let hasChanges = false;
 
-                    if (cloudProducts.length > 0) {
-                        localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(cloudProducts));
-                        if (window.imageDb) {
-                            cloudProducts.forEach(p => {
-                                const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
-                                if (imgs.length > 0) window.imageDb.saveImages(p.id, imgs);
-                            });
-                        }
+                    if (querySnap.docChanges && typeof querySnap.docChanges === 'function') {
+                        querySnap.docChanges().forEach(change => {
+                            const p = change.doc.data();
+                            if (!p || !p.id) return;
+
+                            if (change.type === 'added' || change.type === 'modified') {
+                                const current = localMap.get(p.id) || {};
+                                localMap.set(p.id, { ...current, ...p });
+                                hasChanges = true;
+                                if (window.imageDb) {
+                                    const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageData ? [p.imageData] : []);
+                                    if (imgs.length > 0) window.imageDb.saveImages(p.id, imgs);
+                                }
+                            } else if (change.type === 'removed') {
+                                if (localMap.has(p.id)) {
+                                    localMap.delete(p.id);
+                                    hasChanges = true;
+                                }
+                            }
+                        });
+                    } else {
+                        querySnap.forEach(doc => {
+                            const p = doc.data();
+                            if (p && p.id) {
+                                const current = localMap.get(p.id) || {};
+                                localMap.set(p.id, { ...current, ...p });
+                                hasChanges = true;
+                            }
+                        });
+                    }
+
+                    if (hasChanges) {
+                        const mergedList = Array.from(localMap.values());
+                        localStorage.setItem(DB_KEYS.PRODUCTS, JSON.stringify(mergedList));
                         if (typeof onUpdateCallback === 'function') {
                             console.log('🔄 Cambios remotos recibidos en subcolección productos.');
                             onUpdateCallback();
@@ -1070,10 +1124,115 @@ class Database {
         }
         if (!localStorage.getItem(DB_KEYS.OPERATIONAL_COSTS)) {
             this.set(DB_KEYS.OPERATIONAL_COSTS, DEFAULT_OPERATIONAL_COSTS);
+        } else {
+            // Asegurar que nunca se borren productos, configuraciones de máquinas, insumos o costos del usuario,
+            // pero si la máquina de tazas no está presente, agregarla de manera no destructiva:
+            try {
+                const existingCosts = this.get(DB_KEYS.OPERATIONAL_COSTS, []);
+                if (Array.isArray(existingCosts)) {
+                    const hasTazaMachine = existingCosts.some(c => 
+                        c && (c.id === 'op_prensa_tazas' || (c.category === 'maquinaria' && /taza/i.test(c.name || '')))
+                    );
+                    if (!hasTazaMachine) {
+                        const tazaMachine = DEFAULT_OPERATIONAL_COSTS.find(c => c.id === 'op_prensa_tazas');
+                        if (tazaMachine) {
+                            existingCosts.push({ ...tazaMachine });
+                            this.set(DB_KEYS.OPERATIONAL_COSTS, existingCosts);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Error asegurando máquina de tazas:', e);
+            }
         }
         if (!localStorage.getItem(DB_KEYS.COST_SETTINGS)) {
             this.set(DB_KEYS.COST_SETTINGS, DEFAULT_COST_SETTINGS);
         }
+
+        // Auto-reparación no destructiva de precios de venta de 1 unidad contaminados por escalas mayoristas
+        this._repairProductPricesInStorage();
+    }
+
+    /**
+     * Auto-reparación no destructiva de precios en almacenamiento local.
+     * Corrige productos cuyo precio de 1U fue asignado con el precio mayorista (ej. Cottonext)
+     * asegurando que Precio Venta (1U) = (Costo + Adicional) * (1 + Margen / 100).
+     */
+    _repairProductPricesInStorage() {
+        try {
+            const rawProducts = this.get(DB_KEYS.PRODUCTS, []);
+            if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+                let repaired = false;
+                rawProducts.forEach(p => {
+                    if (!p) return;
+                    const isCombo = !!(p.isCombo || (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0));
+                    if (isCombo) return;
+
+                    const cost1u = parseFloat(p.costPrice) || 0;
+                    const extra1u = parseFloat(p.extraCost) || 0;
+                    const totalCost1u = cost1u + extra1u;
+                    const margin1u = (p.defaultMargin !== undefined && p.defaultMargin !== null && !isNaN(parseFloat(p.defaultMargin)))
+                        ? parseFloat(p.defaultMargin)
+                        : 50;
+                    const expected1u = Number((totalCost1u * (1 + margin1u / 100)).toFixed(2));
+
+                    const hasTiers = Array.isArray(p.costTiers) && p.costTiers.length > 0;
+                    const hasWholesaleOnly = hasTiers && p.costTiers.every(t => t.min > 1);
+                    const currentSp = parseFloat(p.salePrice);
+
+                    const matchesWholesaleTier = hasWholesaleOnly && p.costTiers.some(t => 
+                        !isNaN(parseFloat(t.salePrice)) && (Math.abs(parseFloat(t.salePrice) - currentSp) <= 5.0 || (currentSp < expected1u && currentSp <= parseFloat(t.salePrice) * 1.05))
+                    );
+                    const isBelowCost = (margin1u >= 0 && totalCost1u > 0 && !isNaN(currentSp) && currentSp < totalCost1u);
+
+                    if (totalCost1u > 0 && (matchesWholesaleTier || isBelowCost)) {
+                        p.salePrice = expected1u;
+                        repaired = true;
+                    }
+                });
+
+                if (repaired) {
+                    this.set(DB_KEYS.PRODUCTS, rawProducts);
+                    console.log('✅ Auto-reparación de precios de venta (1U) completada exitosamente.');
+                }
+            }
+        } catch (e) {
+            console.warn('Alerta en auto-reparación de precios:', e);
+        }
+    }
+
+    /**
+     * Normaliza en memoria los precios de los productos asegurando consistencia matemática en 1U
+     */
+    _normalizeProductPrices(products) {
+        if (!Array.isArray(products) || products.length === 0) return products;
+        products.forEach(p => {
+            if (!p) return;
+            const isCombo = !!(p.isCombo || (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0));
+            if (isCombo) return;
+
+            const cost1u = parseFloat(p.costPrice) || 0;
+            const extra1u = parseFloat(p.extraCost) || 0;
+            const totalCost1u = cost1u + extra1u;
+            const margin1u = (p.defaultMargin !== undefined && p.defaultMargin !== null && !isNaN(parseFloat(p.defaultMargin)))
+                ? parseFloat(p.defaultMargin)
+                : 50;
+            const expected1u = Number((totalCost1u * (1 + margin1u / 100)).toFixed(2));
+
+            const hasTiers = Array.isArray(p.costTiers) && p.costTiers.length > 0;
+            const hasWholesaleOnly = hasTiers && p.costTiers.every(t => t.min > 1);
+            const currentSp = parseFloat(p.salePrice);
+
+            const matchesWholesaleTier = hasWholesaleOnly && p.costTiers.some(t => 
+                !isNaN(parseFloat(t.salePrice)) && (Math.abs(parseFloat(t.salePrice) - currentSp) <= 5.0 || (currentSp < expected1u && currentSp <= parseFloat(t.salePrice) * 1.05))
+            );
+            const isBelowCost = (margin1u >= 0 && totalCost1u > 0 && !isNaN(currentSp) && currentSp < totalCost1u);
+
+            if (totalCost1u > 0 && (matchesWholesaleTier || isBelowCost)) {
+                p.salePrice = expected1u;
+            }
+        });
+        return products;
     }
 
     get(key, defaultValue = null) {
@@ -1248,7 +1407,7 @@ class Database {
     // PRODUCTOS / INSUMOS CON ESCALA DE COSTO
     // ==========================================
     getProducts() {
-        return this.get(DB_KEYS.PRODUCTS, []);
+        return this._normalizeProductPrices(this.get(DB_KEYS.PRODUCTS, []));
     }
 
     getProductById(id) {
@@ -1257,9 +1416,20 @@ class Database {
 
     getCostForQuantity(product, quantity) {
         const qty = parseFloat(quantity) || 1;
+        const prodExtra = parseFloat(product?.extraCost) || 0;
+        // Para 1 unidad (menudeo / precio base), se respeta SIEMPRE el costo base del producto
+        if (qty <= 1 && product && product.costPrice !== undefined && product.costPrice !== null && !isNaN(parseFloat(product.costPrice))) {
+            return parseFloat(product.costPrice);
+        }
         if (product && product.costTiers && product.costTiers.length > 0) {
             const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
             if (matchedTier && !isNaN(matchedTier.cost)) {
+                if (matchedTier.costIncludesExtra) {
+                    if (matchedTier.baseCost !== undefined && !isNaN(parseFloat(matchedTier.baseCost))) {
+                        return parseFloat(matchedTier.baseCost);
+                    }
+                    return Math.max(0, Number((parseFloat(matchedTier.cost) - prodExtra).toFixed(2)));
+                }
                 return parseFloat(matchedTier.cost);
             }
         }
@@ -1273,7 +1443,38 @@ class Database {
         const extraCost = includeExtraCost ? prodExtraCost : 0;
         const totalUnitCost = baseCost + extraCost;
 
-        // 1. Si el producto tiene escalas de volumen configuradas con su propio precio de venta
+        // 1. Si qty <= 1, el precio unitario base del producto (salePrice) tiene MÁXIMA prioridad,
+        // pero validando que no sea un precio de escala mayorista contaminado ni inferior al costo con margen positivo.
+        if (qty <= 1) {
+            const margin1u = (product && product.defaultMargin !== undefined && product.defaultMargin !== null && !isNaN(parseFloat(product.defaultMargin)))
+                ? parseFloat(product.defaultMargin)
+                : 50;
+            const expected1u = Number((totalUnitCost * (1 + margin1u / 100)).toFixed(2));
+            const isCombo = !!(product?.isCombo || (Array.isArray(product?.componentProductIds) && product.componentProductIds.length > 0));
+
+            const hasWholesaleOnly = Array.isArray(product?.costTiers) && product.costTiers.length > 0 && product.costTiers.every(t => t.min > 1);
+            const currentSp = parseFloat(product?.salePrice);
+            const matchesWholesaleTier = hasWholesaleOnly && product.costTiers.some(t => 
+                !isNaN(parseFloat(t.salePrice)) && (Math.abs(parseFloat(t.salePrice) - currentSp) <= 5.0 || (currentSp < expected1u && currentSp <= parseFloat(t.salePrice) * 1.05))
+            );
+            const isBelowCost = (margin1u >= 0 && totalUnitCost > 0 && !isNaN(currentSp) && currentSp < totalUnitCost);
+
+            if (includeExtraCost && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(currentSp) && currentSp > 0) {
+                if (!isCombo && (matchesWholesaleTier || isBelowCost)) {
+                    return expected1u;
+                }
+                return currentSp;
+            }
+            if (!includeExtraCost && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(currentSp) && currentSp > 0) {
+                if (!isCombo && (matchesWholesaleTier || isBelowCost)) {
+                    return Number((baseCost * (1 + margin1u / 100)).toFixed(2));
+                }
+                return Number((baseCost * (1 + margin1u / 100)).toFixed(2));
+            }
+            return includeExtraCost ? expected1u : Number((baseCost * (1 + margin1u / 100)).toFixed(2));
+        }
+
+        // 2. Si el producto tiene escalas de volumen configuradas con su propio precio de venta
         if (product && product.costTiers && product.costTiers.length > 0) {
             const matchedTier = product.costTiers.find(tier => qty >= tier.min && qty <= tier.max);
             if (matchedTier) {
@@ -1284,16 +1485,13 @@ class Database {
                     return Number((totalUnitCost * (1 + parseFloat(matchedTier.margin) / 100)).toFixed(2));
                 }
                 if (!includeExtraCost && matchedTier.salePrice !== undefined && matchedTier.salePrice !== null && !isNaN(parseFloat(matchedTier.salePrice)) && parseFloat(matchedTier.salePrice) > 0) {
-                    const fullTierCost = (parseFloat(matchedTier.cost) || baseCost) + prodExtraCost;
+                    const fullTierCost = matchedTier.costIncludesExtra
+                        ? (parseFloat(matchedTier.cost) || (baseCost + prodExtraCost))
+                        : ((parseFloat(matchedTier.cost) || baseCost) + prodExtraCost);
                     const effMargin = fullTierCost > 0 ? (((parseFloat(matchedTier.salePrice) / fullTierCost) - 1) * 100) : (this.getMarginForQuantity(product, qty) || 0);
                     return Number((totalUnitCost * (1 + effMargin / 100)).toFixed(2));
                 }
             }
-        }
-
-        // 2. Si qty <= 1 y el producto tiene salePrice guardado (cuando incluye costo adicional)
-        if (includeExtraCost && qty <= 1 && product && product.salePrice !== undefined && product.salePrice !== null && !isNaN(parseFloat(product.salePrice)) && parseFloat(product.salePrice) > 0) {
-            return parseFloat(product.salePrice);
         }
 
         // 3. Fallback: calcular aplicando el margen sobre el costo unitario correspondiente (con o sin adicional)
@@ -1475,11 +1673,13 @@ class Database {
             const maxIdx = headersClean.findIndex(h => 
                 h === `rango${k}_max` || h === `rango_${k}_max` || h === `rango_${k}_hasta` || h === `rango${k}_hasta` ||
                 h === `max_${k}` || h === `max${k}` || h === `hasta_${k}` || h === `hasta${k}` ||
-                h === `cant_${k}_max` || h === `cant${k}_max` || h === `cantidad_${k}_max` || h === `cantidad${k}_max`
+                h === `cant_${k}_max` || h === `cant${k}_max` || h === `cantidad_${k}_max` || h === `cantidad${k}_max` ||
+                h === `max_rango${k}` || h === `max_rango_${k}`
             );
             const costIdx = headersClean.findIndex(h => 
                 h === `rango${k}_costo` || h === `rango_${k}_costo` || h === `costo_${k}` || h === `costo${k}` ||
-                h === `costo_rango_${k}` || h === `costo_escala_${k}` || h === `costo_unitario_${k}` || h === `compra_${k}`
+                h === `costo_rango_${k}` || h === `costo_rango${k}` || h === `costo_escala_${k}` || h === `costo_unitario_${k}` || h === `compra_${k}` ||
+                h === `rango${k}_cost` || h === `rango_${k}_cost`
             );
             const salePriceIdx = headersClean.findIndex(h => 
                 h === `rango${k}_precio` || h === `rango_${k}_precio` || h === `rango${k}_precio_venta` || h === `rango_${k}_precio_venta` ||
@@ -1699,10 +1899,18 @@ class Database {
 
             // Si el costo base es 0 y tenemos rangos, tomar el costo del primer rango
             if (costPrice === 0 && costTiers.length > 0) {
-                costPrice = costTiers[0].cost;
+                const tier1 = costTiers.find(t => t.min === 1) || costTiers[0];
+                costPrice = tier1.cost;
             }
-            if (typedSalePrice === 0 && costTiers.length > 0 && costTiers[0].salePrice > 0) {
-                typedSalePrice = costTiers[0].salePrice;
+            if (typedSalePrice === 0) {
+                if (costPrice > 0) {
+                    typedSalePrice = Number(((costPrice + extraCost) * (1 + defaultMargin / 100)).toFixed(2));
+                } else if (costTiers.length > 0) {
+                    const tier1 = costTiers.find(t => t.min === 1);
+                    if (tier1 && tier1.salePrice > 0) {
+                        typedSalePrice = tier1.salePrice;
+                    }
+                }
             }
 
             // Si ya procesamos una fila de este mismo producto en esta carga masiva, combinar los rangos
@@ -1885,6 +2093,12 @@ class Database {
     // Calculador de Márgenes Dinámicos según Cantidad
     getMarginForQuantity(product, quantity) {
         const qty = parseFloat(quantity) || 1;
+        const hasProductMargin = product && product.defaultMargin !== undefined && product.defaultMargin !== null && !isNaN(parseFloat(product.defaultMargin));
+
+        // Para 1 unidad (menudeo / precio base), se respeta SIEMPRE el margen propio del producto
+        if (hasProductMargin && qty <= 1) {
+            return parseFloat(product.defaultMargin);
+        }
         
         // 1. Si el producto tiene escalas de volumen configuradas con su propio margen
         if (product && product.costTiers && product.costTiers.length > 0) {
@@ -1898,14 +2112,6 @@ class Database {
         if (product && product.customTiers && product.customTiers.length > 0) {
             const matchedTier = product.customTiers.find(tier => qty >= tier.min && qty <= tier.max);
             if (matchedTier && !isNaN(matchedTier.margin)) return parseFloat(matchedTier.margin);
-        }
-
-        // 2. Si el producto tiene su margen base configurado (defaultMargin)
-        const hasProductMargin = product && product.defaultMargin !== undefined && product.defaultMargin !== null && !isNaN(parseFloat(product.defaultMargin));
-
-        // Para 1 unidad (menudeo / precio base), se respeta SIEMPRE el margen propio del producto
-        if (hasProductMargin && qty <= 1) {
-            return parseFloat(product.defaultMargin);
         }
 
         // 3. Si usa las escalas globales para mayores volúmenes (qty > 1)

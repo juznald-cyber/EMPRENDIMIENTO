@@ -313,13 +313,17 @@ class AppController {
 
     isComboProduct(p) {
         if (!p) return false;
-        if (p.isCombo === true || p.isCombo === 'true') return true;
+        if (p.isCombo === true || p.isCombo === 'true' || p.isCombo === 1) return true;
+        if (Array.isArray(p.componentProductIds) && p.componentProductIds.length > 0) return true;
+        if (Array.isArray(p.componentDetails) && p.componentDetails.length > 0) return true;
+        if (Array.isArray(p.componentSkus) && p.componentSkus.length > 0) return true;
+        if ((p.notes || '').toLowerCase().includes('producto combinado')) return true;
         const sku = (p.sku || '').toUpperCase();
-        if (sku.startsWith('COMBO')) return true;
+        if (sku.startsWith('COMBO') || sku.includes('COMBO') || sku.includes('PACK')) return true;
         const cat = (p.category || '').toLowerCase();
         if (cat.includes('combo') || cat.includes('pack')) return true;
         const name = (p.name || '').toLowerCase();
-        if (name.includes('combo ') || name.includes('+') || name.startsWith('combo')) return true;
+        if (name.includes('combo') || name.includes('pack') || name.includes('+') || name.startsWith('combo')) return true;
         return false;
     }
 
@@ -396,6 +400,17 @@ class AppController {
         } else {
             if (viewSup) viewSup.classList.add('hidden');
             if (viewProd) viewProd.classList.remove('hidden');
+            // Si cambia a la subpestaña de combos, asegurar que no quede filtrado por una categoría que no tenga combos
+            if (subTab === 'combos') {
+                const catFilterEl = document.getElementById('products-category-filter');
+                if (catFilterEl && catFilterEl.value !== 'todas') {
+                    const products = window.db.getProducts();
+                    const hasCombosInCat = products.some(p => this.isComboProduct(p) && p.category === catFilterEl.value);
+                    if (!hasCombosInCat) {
+                        catFilterEl.value = 'todas';
+                    }
+                }
+            }
             this.renderProducts();
         }
     }
@@ -1594,7 +1609,9 @@ class AppController {
             const matchQ = !query ||
                 (p.name || '').toLowerCase().includes(query) ||
                 (p.sku || '').toLowerCase().includes(query) ||
-                (p.category || '').toLowerCase().includes(query);
+                (p.category || '').toLowerCase().includes(query) ||
+                (isCombo && (p.notes || '').toLowerCase().includes(query)) ||
+                (isCombo && Array.isArray(p.componentDetails) && p.componentDetails.some(cd => (cd.name || '').toLowerCase().includes(query) || (cd.sku || '').toLowerCase().includes(query)));
             const matchC = catFilter === 'todas' || p.category === catFilter;
             return matchQ && matchC;
         });
@@ -1721,6 +1738,7 @@ class AppController {
                                     ${hasTiers ? `<span class="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">Escala x Cantidad (${p.costTiers.length} rangos)</span>` : ''}
                                     ${p.url && !isCombo ? `<a href="${this.escapeHTML(p.url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i> Web Proveedor</a>` : ''}
                                 </div>
+                                ${isCombo ? this._renderComboComponentsChips(p) : ''}
                             </div>
                         </div>
                     </td>
@@ -1799,9 +1817,9 @@ class AppController {
                 : '';
 
             return `
-                <div class="inline-flex items-center justify-end gap-1 text-[10px] text-slate-500 font-sans">
-                    <span class="truncate max-w-[120px] text-slate-600 font-normal" title="${safeName}">• ${safeName}</span>
-                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded px-1 py-0.2 cursor-pointer" title="Ver producto raíz: ${safeName}">
+                <div class="inline-flex items-center gap-1 text-[10px] text-slate-500 font-sans bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-md">
+                    <span class="truncate max-w-[130px] text-slate-700 font-medium" title="${safeName}">• ${safeName}</span>
+                    <button type="button" onclick="app.openRootProduct('${c.id}')" class="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-white hover:bg-indigo-50 border border-indigo-200 rounded px-1 py-0.2 cursor-pointer" title="Ver producto raíz: ${safeName}">
                         Raíz ↗
                     </button>
                     ${webLinkHtml}
@@ -1810,7 +1828,8 @@ class AppController {
         }).join('');
 
         return `
-            <div class="flex flex-col items-end gap-0.5 mt-1 pt-1 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-1 mt-1.5 pt-1 border-t border-slate-100">
+                <span class="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mr-0.5">Componentes:</span>
                 ${itemsHtml}
             </div>
         `;
@@ -2054,8 +2073,26 @@ class AppController {
             const extra1u     = parseFloat(String(p.extraCost).replace(',', '.')) || 0;
             const totalCost1u = cost1u + extra1u;
             const margin1u    = marginVal;
+            this._prevModalBaseCost  = cost1u;
+            this._prevModalExtraCost = extra1u;
             const spEl = document.getElementById('prod-form-sale-price');
-            if (spEl) spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
+            if (spEl) {
+                const isCombo = this.isComboProduct(p);
+                const hasWholesaleOnly = Array.isArray(p.costTiers) && p.costTiers.length > 0 && p.costTiers.every(t => t.min > 1);
+                const currentSp = parseFloat(p.salePrice);
+                const matchesWholesaleTier = hasWholesaleOnly && p.costTiers.some(t => 
+                    !isNaN(parseFloat(t.salePrice)) && (Math.abs(parseFloat(t.salePrice) - currentSp) <= 5.0 || (currentSp < expected1u && currentSp <= parseFloat(t.salePrice) * 1.05))
+                );
+                const isBelowCost = (margin1u >= 0 && totalCost1u > 0 && !isNaN(currentSp) && currentSp < totalCost1u);
+
+                if (!isCombo && (matchesWholesaleTier || isBelowCost || isNaN(currentSp) || currentSp <= 0)) {
+                    spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
+                } else if (p.salePrice !== undefined && p.salePrice !== null && !isNaN(currentSp) && currentSp > 0) {
+                    spEl.value = currentSp;
+                } else {
+                    spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
+                }
+            }
 
             // Imágenes: soporta IndexedDB (nuevo), array o string (viejo)
             let loadImgs = [];
@@ -2084,10 +2121,20 @@ class AppController {
 
             if (p.costTiers && p.costTiers.length > 0) {
                 p.costTiers.forEach(t => {
-                    const tierCost = t.cost !== undefined ? t.cost : (p.costPrice || 0);
+                    let tierTotalCost;
+                    let tierBaseCost;
+                    if (t.costIncludesExtra) {
+                        tierTotalCost = (t.cost !== undefined && !isNaN(parseFloat(t.cost))) ? parseFloat(t.cost) : totalCost1u;
+                        tierBaseCost = (t.baseCost !== undefined && !isNaN(parseFloat(t.baseCost)))
+                            ? parseFloat(t.baseCost)
+                            : Math.max(0, Number((tierTotalCost - extra1u).toFixed(2)));
+                    } else {
+                        tierBaseCost = (t.cost !== undefined && !isNaN(parseFloat(t.cost))) ? parseFloat(t.cost) : cost1u;
+                        tierTotalCost = Number((tierBaseCost + extra1u).toFixed(2));
+                    }
                     const tierMargin = t.margin !== undefined ? t.margin : (p.defaultMargin || 50);
                     const tierSalePrice = t.salePrice !== undefined ? t.salePrice : '';
-                    this.addCostTierRow(t.min, t.max, tierCost, tierMargin, tierSalePrice);
+                    this.addCostTierRow(t.min, t.max, tierTotalCost, tierMargin, tierSalePrice, tierBaseCost);
                 });
             }
             // Componentes del combo adentro del modal de edición
@@ -2104,6 +2151,8 @@ class AppController {
             document.getElementById('prod-form-unit').value = 'Unidad';
             document.getElementById('prod-form-cost').value = '5.00';
             document.getElementById('prod-form-margin').value = '50';
+            this._prevModalBaseCost  = 5;
+            this._prevModalExtraCost = 0;
             // Precio venta inicial para nuevo producto (5 * 1.5 = 7.50)
             const spElNew = document.getElementById('prod-form-sale-price');
             if (spElNew) spElNew.value = '7.50';
@@ -2205,12 +2254,13 @@ class AppController {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    addCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '') {
+    addCostTierRow(min = null, max = null, cost = '', margin = '', salePrice = '', baseCostOverride = null) {
         const container = document.getElementById('cost-tiers-rows-container');
         if (!container) return;
 
         const baseCost = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
         const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const defaultTotalCost = Number((baseCost + extraCost).toFixed(2));
         const baseMargin = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.')) || 50;
 
         // Si no se especifica min/max, inferir según filas existentes
@@ -2237,12 +2287,17 @@ class AppController {
             autoMax = max === 999999 ? '' : max;
         }
 
-        const tierCost = (cost !== '' && cost !== null && !isNaN(cost)) ? cost : (baseCost > 0 ? baseCost : '');
+        // El campo Costo ($) en el rango toma el Costo Total (Producto + Costos y Maquinaria)
+        const tierCost = (cost !== '' && cost !== null && !isNaN(cost))
+            ? Number(parseFloat(cost).toFixed(2))
+            : (defaultTotalCost > 0 ? defaultTotalCost : '');
+        const totalUnitCost = parseFloat(tierCost) || 0;
+        const tierBaseCost = (baseCostOverride !== null && !isNaN(baseCostOverride))
+            ? Number(parseFloat(baseCostOverride).toFixed(2))
+            : Math.max(0, Number((totalUnitCost - extraCost).toFixed(2)));
+
         let tierMargin = (margin !== '' && margin !== null && !isNaN(margin)) ? margin : baseMargin;
         let tierSalePrice = salePrice;
-
-        const numCost = parseFloat(tierCost) || 0;
-        const totalUnitCost = numCost + extraCost;
 
         if ((tierSalePrice === '' || tierSalePrice === null || isNaN(tierSalePrice)) && totalUnitCost > 0) {
             tierSalePrice = Number((totalUnitCost * (1 + (parseFloat(tierMargin) || 0) / 100)).toFixed(2));
@@ -2252,6 +2307,7 @@ class AppController {
 
         const row = document.createElement('div');
         row.className = 'cost-tier-row bg-white p-2 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-1.5 items-center';
+        row.dataset.baseCost = String(tierBaseCost);
         row.innerHTML = `
             <!-- Cantidades Min a Max -->
             <div class="sm:col-span-3 flex items-center gap-1 min-w-0">
@@ -2262,13 +2318,14 @@ class AppController {
                     class="tier-max w-full min-w-0 px-1 py-1.5 text-xs text-center font-bold bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white" />
             </div>
 
-            <!-- Costo del Rango -->
+            <!-- Costo Total del Rango (Producto + Costos y Maquinaria) -->
             <div class="sm:col-span-3 relative min-w-0">
-                <span class="text-[10px] text-slate-500 font-bold sm:hidden block mb-0.5">Costo ($):</span>
+                <span class="text-[10px] text-slate-500 font-bold sm:hidden block mb-0.5">Costo Total ($):</span>
                 <div class="relative">
                     <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold pointer-events-none">$</span>
-                    <input type="number" step="any" value="${tierCost}" placeholder="Costo" 
+                    <input type="number" step="any" value="${tierCost}" placeholder="Costo Total" 
                         oninput="app.onTierCostChange(this)"
+                        title="Costo Total por unidad en este rango (incluye Producto + Costos y Maquinaria)"
                         class="tier-cost w-full pl-5 pr-1 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white text-center" />
                 </div>
             </div>
@@ -2306,10 +2363,10 @@ class AppController {
     onTierCostChange(inputEl) {
         const row = inputEl.closest('.cost-tier-row');
         if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
+        const totalCost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
         const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
         const margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.')) || 0;
-        const totalCost = cost + extraCost;
+        row.dataset.baseCost = String(Math.max(0, Number((totalCost - extraCost).toFixed(2))));
         const salePriceInp = row.querySelector('.tier-sale-price');
         if (salePriceInp && totalCost > 0) {
             salePriceInp.value = Number((totalCost * (1 + margin / 100)).toFixed(2));
@@ -2319,10 +2376,8 @@ class AppController {
     onTierMarginChange(inputEl) {
         const row = inputEl.closest('.cost-tier-row');
         if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
-        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const totalCost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
         const margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.')) || 0;
-        const totalCost = cost + extraCost;
         const salePriceInp = row.querySelector('.tier-sale-price');
         if (salePriceInp && totalCost > 0) {
             salePriceInp.value = Number((totalCost * (1 + margin / 100)).toFixed(2));
@@ -2332,10 +2387,8 @@ class AppController {
     onTierSalePriceChange(inputEl) {
         const row = inputEl.closest('.cost-tier-row');
         if (!row) return;
-        const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
-        const extraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const totalCost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.')) || 0;
         const salePrice = parseFloat(String(row.querySelector('.tier-sale-price')?.value).replace(',', '.')) || 0;
-        const totalCost = cost + extraCost;
         const marginInp = row.querySelector('.tier-margin');
         if (marginInp && totalCost > 0 && salePrice > 0) {
             const margin = ((salePrice / totalCost) - 1) * 100;
@@ -2388,12 +2441,12 @@ class AppController {
             const min = parseInt(row.querySelector('.tier-min')?.value, 10) || 1;
             const maxVal = row.querySelector('.tier-max')?.value;
             const max = maxVal ? parseInt(maxVal, 10) : 999999;
-            const cost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.'));
+            const totalTierCost = parseFloat(String(row.querySelector('.tier-cost')?.value).replace(',', '.'));
             let margin = parseFloat(String(row.querySelector('.tier-margin')?.value).replace(',', '.'));
             const salePrice = parseFloat(String(row.querySelector('.tier-sale-price')?.value).replace(',', '.'));
 
-            if (!isNaN(cost) && cost >= 0) {
-                const totalTierCost = cost + extraCost;
+            if (!isNaN(totalTierCost) && totalTierCost >= 0) {
+                const baseTierCost = Math.max(0, Number((totalTierCost - extraCost).toFixed(2)));
                 if (!isNaN(salePrice) && salePrice > 0 && totalTierCost > 0) {
                     const exactMargin = ((salePrice / totalTierCost) - 1) * 100;
                     if (isNaN(margin) || Math.abs(exactMargin - margin) < 0.15) {
@@ -2403,9 +2456,11 @@ class AppController {
                 costTiers.push({
                     min,
                     max,
-                    cost,
+                    cost: Number(totalTierCost.toFixed(2)),
+                    baseCost: baseTierCost,
+                    costIncludesExtra: true,
                     margin: !isNaN(margin) ? margin : defaultMargin,
-                    salePrice: !isNaN(salePrice) && salePrice > 0 ? salePrice : Number(((cost + extraCost) * (1 + (margin || defaultMargin) / 100)).toFixed(2))
+                    salePrice: !isNaN(salePrice) && salePrice > 0 ? salePrice : Number((totalTierCost * (1 + (margin || defaultMargin) / 100)).toFixed(2))
                 });
             }
         });
@@ -2419,6 +2474,15 @@ class AppController {
         const pinnedAt = isPinned ? (existingProd?.pinnedAt || Date.now()) : null;
 
         const calculatedSalePrice = typedSalePrice > 0 ? typedSalePrice : (totalUnitCost > 0 ? Number((totalUnitCost * (1 + defaultMargin / 100)).toFixed(2)) : 0);
+
+        // Si se especificó un precio de venta para 1 unidad y la escala empieza en 1, asegurar consistencia
+        if (calculatedSalePrice > 0 && costTiers.length > 0 && costTiers[0].min === 1) {
+            costTiers[0].salePrice = calculatedSalePrice;
+            costTiers[0].margin = defaultMargin;
+        }
+
+        const wasCombo = existingProd ? this.isComboProduct(existingProd) : false;
+        const finalIsCombo = isCombo || wasCombo;
 
         const stockInput = document.getElementById('prod-form-stock');
         const minStockInput = document.getElementById('prod-form-min-stock');
@@ -2447,7 +2511,11 @@ class AppController {
             imageData: imageData || '',
             isPinned,
             pinnedAt,
-            isCombo,
+            isCombo: finalIsCombo,
+            componentProductIds: existingProd?.componentProductIds || [],
+            componentDetails: existingProd?.componentDetails || [],
+            componentSkus: existingProd?.componentSkus || [],
+            componentUrls: existingProd?.componentUrls || [],
             useGlobalTiers: true
         };
 
@@ -2460,6 +2528,29 @@ class AppController {
 
         window.db.saveProduct(product);
         this.renderCategoriesDataLists();
+
+        // Asegurar que el producto guardado sea inmediatamente visible en pantalla
+        // 1) Si está en la pestaña contraria (ej. combo guardado mientras estaba en tab "single" o viceversa)
+        if (product.isCombo && this.catalogSubTab === 'single') {
+            this.switchCatalogSubTab('combos');
+        } else if (!product.isCombo && this.catalogSubTab === 'combos') {
+            this.switchCatalogSubTab('single');
+        }
+        // 2) Si hay un filtro de categoría activo que ocultaría el producto, resetearlo a 'todas'
+        const catFilterEl = document.getElementById('products-category-filter');
+        if (catFilterEl && catFilterEl.value !== 'todas' && catFilterEl.value !== product.category) {
+            catFilterEl.value = 'todas';
+        }
+        // 3) Si hay una búsqueda activa que ocultaría el producto, limpiarla
+        const searchInputEl = document.getElementById('products-search-input');
+        if (searchInputEl && searchInputEl.value.trim() !== '') {
+            const sq = searchInputEl.value.toLowerCase().trim();
+            const matchesSearch = (product.name || '').toLowerCase().includes(sq) || (product.sku || '').toLowerCase().includes(sq);
+            if (!matchesSearch) {
+                searchInputEl.value = '';
+            }
+        }
+
         this.renderProducts();
         if (window.inventario) {
             window.inventario.render();
@@ -2486,11 +2577,50 @@ class AppController {
     // PRECIO DE VENTA ↔ MARGEN (BIDIRECCIONAL)
     // ==========================================
 
-    /** Recalcula precio de venta cuando cambia el costo o el costo adicional */
+    /** Recalcula precio de venta y escalas de volumen cuando cambia el costo base o el costo adicional */
     onProductCostChange() {
         this._updateProductTotalCostSummary();
+        this._syncCostTierRowsWithTotalCost();
         const margin = parseFloat(String(document.getElementById('prod-form-margin')?.value).replace(',', '.'));
         if (!isNaN(margin)) this._recalcSalePrice();
+    }
+
+    /** Sincroniza el Costo Total ($) de los rangos de volumen al cambiar Costo Base o Costos & Maquinaria */
+    _syncCostTierRowsWithTotalCost() {
+        const newBaseCost = parseFloat(String(document.getElementById('prod-form-cost')?.value).replace(',', '.')) || 0;
+        const newExtraCost = parseFloat(String(document.getElementById('prod-form-extra-cost')?.value).replace(',', '.')) || 0;
+        const prevBaseCost = (this._prevModalBaseCost !== undefined && !isNaN(this._prevModalBaseCost)) ? this._prevModalBaseCost : newBaseCost;
+        const prevExtraCost = (this._prevModalExtraCost !== undefined && !isNaN(this._prevModalExtraCost)) ? this._prevModalExtraCost : 0;
+
+        document.querySelectorAll('#cost-tiers-rows-container .cost-tier-row').forEach(row => {
+            const costInp = row.querySelector('.tier-cost');
+            const marginInp = row.querySelector('.tier-margin');
+            const salePriceInp = row.querySelector('.tier-sale-price');
+            if (!costInp) return;
+
+            let rowBaseCost = parseFloat(row.dataset.baseCost);
+            const currentDisplayedCost = parseFloat(String(costInp.value).replace(',', '.')) || 0;
+
+            if (isNaN(rowBaseCost)) {
+                rowBaseCost = Math.max(0, Number((currentDisplayedCost - prevExtraCost).toFixed(2)));
+            }
+            // Si el costo base del rango era igual al costo base 1u anterior, actualizarlo al nuevo costo base 1u
+            if (Math.abs(rowBaseCost - prevBaseCost) < 0.01) {
+                rowBaseCost = newBaseCost;
+            }
+
+            row.dataset.baseCost = String(rowBaseCost);
+            const newTotalTierCost = Number((rowBaseCost + newExtraCost).toFixed(2));
+            costInp.value = newTotalTierCost;
+
+            const margin = parseFloat(String(marginInp?.value).replace(',', '.')) || 0;
+            if (salePriceInp && newTotalTierCost > 0) {
+                salePriceInp.value = Number((newTotalTierCost * (1 + margin / 100)).toFixed(2));
+            }
+        });
+
+        this._prevModalBaseCost = newBaseCost;
+        this._prevModalExtraCost = newExtraCost;
     }
 
     /** Cuando el usuario cambia el % margen → actualiza el precio de venta */
@@ -3097,6 +3227,12 @@ class AppController {
         });
         costTiers.sort((a, b) => a.min - b.min);
 
+        // Si se especificó un precio de venta para el combo completo y la escala empieza en 1, asegurar consistencia
+        if (typedSalePrice > 0 && costTiers.length > 0 && costTiers[0].min === 1) {
+            costTiers[0].salePrice = typedSalePrice;
+            costTiers[0].margin = defaultMargin;
+        }
+
         const notes = (document.getElementById('combine-form-notes')?.value || '').trim();
         const images = this._combineImages || [];
         const firstProd = (this._combineSelectedProducts && this._combineSelectedProducts[0]) || null;
@@ -3159,9 +3295,18 @@ class AppController {
 
         window.db.saveProduct(newProduct);
         this.renderCategoriesDataLists();
-        this.renderProducts();
         this.closeModal('modal-combine-products');
         this.clearProductSelection();
+
+        // Limpiar buscador y resetear categoría para que el nuevo combo sea visible de inmediato
+        const searchInput = document.getElementById('products-search-input');
+        if (searchInput) searchInput.value = '';
+        const catFilterEl = document.getElementById('products-category-filter');
+        if (catFilterEl) catFilterEl.value = 'todas';
+
+        // Cambiar automáticamente a la subpestaña de Combos
+        this.switchCatalogSubTab('combos');
+
         this.showToast('¡Producto combinado creado exitosamente en el catálogo!', 'success');
     }
 

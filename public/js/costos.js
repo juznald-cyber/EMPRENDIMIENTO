@@ -531,6 +531,7 @@ class CostosManager {
         const labelInput = document.getElementById('costos-composer-label-input');
         const label = (labelInput?.value || '').trim() || 'Costo Operativo / Sublimación';
 
+        const prevExtra = parseFloat(prod.extraCost) || 0;
         prod.extraCost = totalExtra;
         prod.extraCostLabel = label;
         prod.extraCostItems = extraCostItems;
@@ -541,14 +542,21 @@ class CostosManager {
         const totalUnitCost = baseCost + totalExtra;
         prod.salePrice = Number((totalUnitCost * (1 + margin / 100)).toFixed(2));
 
-        // Actualizar también escalas por volumen si existen
+        // Actualizar también escalas por volumen si existen (el costo del rango incluye producto + costos y maquinaria)
         if (Array.isArray(prod.costTiers) && prod.costTiers.length > 0) {
             prod.costTiers = prod.costTiers.map(t => {
-                const tCost = parseFloat(t.cost) || baseCost;
+                const rawTierCost = parseFloat(t.cost);
+                const tierBaseCost = t.costIncludesExtra
+                    ? ((t.baseCost !== undefined && !isNaN(parseFloat(t.baseCost))) ? parseFloat(t.baseCost) : Math.max(0, Number(((rawTierCost || baseCost) - prevExtra).toFixed(2))))
+                    : (!isNaN(rawTierCost) ? rawTierCost : baseCost);
+                const newTierTotalCost = Number((tierBaseCost + totalExtra).toFixed(2));
                 const tMargin = (t.margin !== undefined && !isNaN(parseFloat(t.margin))) ? parseFloat(t.margin) : margin;
                 return {
                     ...t,
-                    salePrice: Number(((tCost + totalExtra) * (1 + tMargin / 100)).toFixed(2))
+                    baseCost: tierBaseCost,
+                    cost: newTierTotalCost,
+                    costIncludesExtra: true,
+                    salePrice: Number((newTierTotalCost * (1 + tMargin / 100)).toFixed(2))
                 };
             });
         }

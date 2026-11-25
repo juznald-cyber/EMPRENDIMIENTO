@@ -84,7 +84,7 @@
     <script src="/__/firebase/init.js" onerror="console.log('Modo GitHub Pages / Local')"></script>
 
     <!-- Custom Styles con Cache Busting -->
-    <link rel="stylesheet" href="css/styles.css?v=6.5">
+    <link rel="stylesheet" href="css/styles.css?v=6.7">
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden select-none md:select-auto">
 
@@ -1915,7 +1915,7 @@
                     <!-- Header de columnas en pantallas medianas -->
                     <div class="hidden sm:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 pt-1">
                         <div class="col-span-3 text-center">Cantidades</div>
-                        <div class="col-span-3 text-center">Costo ($)</div>
+                        <div class="col-span-3 text-center" title="Costo del producto + Costos y Maquinaria">Costo Total ($)</div>
                         <div class="col-span-2 text-center">Margen (%)</div>
                         <div class="col-span-3 text-center">Precio Venta ($)</div>
                         <div class="col-span-1 text-center"></div>
@@ -2978,20 +2978,20 @@
     </div>
 
     <!-- Scripts de la Aplicación con Cache Busting -->
-    <script src="js/firebase-config.js?v=6.5"></script>
-    <script src="js/db.js?v=6.5"></script>
-    <script src="js/vinilos.js?v=6.5"></script>
-    <script src="js/pdf-generator.js?v=6.5"></script>
-    <script src="js/inventario.js?v=6.5"></script>
-    <script src="js/costos.js?v=6.5"></script>
-    <script src="js/cotizador.js?v=6.5"></script>
-    <script src="js/app.js?v=6.5"></script>
+    <script src="js/firebase-config.js?v=6.9"></script>
+    <script src="js/db.js?v=6.9"></script>
+    <script src="js/vinilos.js?v=6.9"></script>
+    <script src="js/pdf-generator.js?v=6.9"></script>
+    <script src="js/inventario.js?v=6.9"></script>
+    <script src="js/costos.js?v=6.9"></script>
+    <script src="js/cotizador.js?v=6.9"></script>
+    <script src="js/app.js?v=6.9"></script>
 
     <script>
         // Registrar Service Worker y forzar actualización
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=6.5').then(reg => {
+                navigator.serviceWorker.register('./sw.js?v=6.9').then(reg => {
                     reg.update();
                 }).catch(err => console.log('SW registration error', err));
             });
