@@ -1998,6 +1998,7 @@ class AppController {
             const extra1u     = parseFloat(String(p.extraCost).replace(',', '.')) || 0;
             const totalCost1u = cost1u + extra1u;
             const margin1u    = marginVal;
+            const expected1u  = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : 0;
             this._prevModalBaseCost  = cost1u;
             this._prevModalExtraCost = extra1u;
             const spEl = document.getElementById('prod-form-sale-price');
@@ -2011,11 +2012,11 @@ class AppController {
                 const isBelowCost = (margin1u >= 0 && totalCost1u > 0 && !isNaN(currentSp) && currentSp < totalCost1u);
 
                 if (!isCombo && (matchesWholesaleTier || isBelowCost || isNaN(currentSp) || currentSp <= 0)) {
-                    spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
+                    spEl.value = totalCost1u > 0 ? expected1u : '';
                 } else if (p.salePrice !== undefined && p.salePrice !== null && !isNaN(currentSp) && currentSp > 0) {
                     spEl.value = currentSp;
                 } else {
-                    spEl.value = totalCost1u > 0 ? Number((totalCost1u * (1 + margin1u / 100)).toFixed(2)) : '';
+                    spEl.value = totalCost1u > 0 ? expected1u : '';
                 }
             }
 
